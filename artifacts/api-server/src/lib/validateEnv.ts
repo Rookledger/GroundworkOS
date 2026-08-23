@@ -56,10 +56,16 @@ const REQUIRED_ENV_VAR_MESSAGES: Partial<Record<string, string>> = {
  * but makes every Clerk SDK call fail silently, taking every route down
  * (including /healthz) with nothing logged to explain why. Validate the
  * shape here so a bad key fails loudly at boot instead.
+ *
+ * Clerk issues these keys unpadded (no trailing "="), so the padding in
+ * the trailing group below is optional — a key copied straight from the
+ * Clerk Dashboard has a body length that's rarely a multiple of 4 and
+ * carries no "=" at all. Requiring padding here rejected every real Clerk
+ * key.
  */
 const PUBLISHABLE_KEY_RE = /^pk_(test|live)_(.+)$/;
 const BASE64_RE =
-  /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+  /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}(==)?|[A-Za-z0-9+/]{3}=?)?$/;
 const HOSTNAME_RE =
   /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)+$/;
 const SECRET_KEY_RE = /^sk_(test|live)_[A-Za-z0-9]+$/;
