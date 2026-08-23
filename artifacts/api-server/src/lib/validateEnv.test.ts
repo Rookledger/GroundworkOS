@@ -34,6 +34,12 @@ const VALID_PUBLISHABLE_KEY =
 // pk_live_<base64("valid-app.clerk.accounts.dev$")>
 const VALID_LIVE_PUBLISHABLE_KEY =
   "pk_live_dmFsaWQtYXBwLmNsZXJrLmFjY291bnRzLmRldiQ=";
+// pk_test_<base64("valid-app.clerk.accounts.dev$")>, unpadded - this is the
+// shape Clerk's own Dashboard actually issues (see BASE64_RE in
+// validateEnv.ts). Same decoded value as VALID_PUBLISHABLE_KEY above, just
+// without the trailing "=".
+const VALID_UNPADDED_PUBLISHABLE_KEY =
+  "pk_test_dmFsaWQtYXBwLmNsZXJrLmFjY291bnRzLmRldiQ";
 const VALID_SECRET_KEY = "sk_test_abc123XYZ";
 
 const originalEnv = { ...process.env };
@@ -79,6 +85,16 @@ describe("validateEnv - CLERK_PUBLISHABLE_KEY", () => {
     expect(exitSpy).not.toHaveBeenCalled();
   });
 
+  it("accepts a valid unpadded key, matching the shape Clerk's Dashboard actually issues", async () => {
+    await loadValidateEnv({
+      CLERK_PUBLISHABLE_KEY: VALID_UNPADDED_PUBLISHABLE_KEY,
+      CLERK_SECRET_KEY: VALID_SECRET_KEY,
+    });
+
+    expect(errorMock).not.toHaveBeenCalled();
+    expect(exitSpy).not.toHaveBeenCalled();
+  });
+
   it("rejects a key with the wrong prefix (e.g. a secret key pasted in by mistake)", async () => {
     await loadValidateEnv({
       CLERK_PUBLISHABLE_KEY: "pk_x_dmFsaWQtYXBwLmNsZXJrLmFjY291bnRzLmRldiQ=",
@@ -94,6 +110,20 @@ describe("validateEnv - CLERK_PUBLISHABLE_KEY", () => {
   it("rejects a body that isn't valid base64", async () => {
     await loadValidateEnv({
       CLERK_PUBLISHABLE_KEY: "pk_test_not-valid-base64!!!",
+      CLERK_SECRET_KEY: VALID_SECRET_KEY,
+    });
+
+    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(errorMock).toHaveBeenCalledWith(
+      expect.stringContaining("CLERK_PUBLISHABLE_KEY"),
+    );
+  });
+
+  it("rejects a body whose length is impossible for base64 (remainder of 1)", async () => {
+    // 13 full groups of 4 plus a single leftover character - no valid
+    // padded or unpadded base64 encoding has a body shaped like this.
+    await loadValidateEnv({
+      CLERK_PUBLISHABLE_KEY: `pk_test_${"A".repeat(52)}B`,
       CLERK_SECRET_KEY: VALID_SECRET_KEY,
     });
 
