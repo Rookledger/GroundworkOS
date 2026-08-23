@@ -1,0 +1,63 @@
+@layer theme, base, clerk, components, utilities;
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap");
+@import "tailwindcss";
+@import "@clerk/themes/shadcn.css";
+
+:root {
+  --bg: #f0ede8;
+  --surface: #fafaf8;
+  --surface-2: #eeeae4;
+  --surface-3: #e8e4dd;
+  --border: #d9d4ce;
+  --border-2: #cac4be;
+  --ink: #181410;
+  --ink-2: #4a4540;
+  --muted: #7a7469;
+  --muted-2: #8a8377;
+  --accent: #1b5e78;
+  --accent-bg: #e8f3f7;
+  --success: #2a6e45;
+  --warning: #b56918;
+  --danger: #c13a2a;
+  --info: #1b5e78;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--ink);
+  font-family: "Inter", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+.gw-shadow {
+  box-shadow:
+    0 1px 3px 0 rgba(24, 20, 16, 0.08),
+    0 1px 2px -1px rgba(24, 20, 16, 0.05);
+}
+
+.cl-formFieldInput::placeholder {
+  color: #a8a099;
+  opacity: 1;
+}
+.cl-formFieldInput:focus {
+  border-color: #1b5e78 !important;
+  outline: none;
+}
+.cl-socialButtonsBlockButton:hover {
+  background-color: #f5f1ec !important;
+}
+.cl-formButtonPrimary:hover {
+  background-color: #164d62 !important;
+}

@@ -1,0 +1,1369 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: GroundworkOS API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+  - name: clients
+  - name: jobs
+  - name: quotes
+  - name: invoices
+  - name: subcontractors
+  - name: documents
+  - name: schedule
+  - name: plant
+  - name: rate-book
+  - name: dashboard
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /readyz:
+    get:
+      operationId: readinessCheck
+      tags: [health]
+      summary: Readiness check
+      responses:
+        "200":
+          description: Ready - the database is reachable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+        "503":
+          description: Not ready - the database is unreachable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [dashboard]
+      summary: Get dashboard summary stats
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  # ── CLIENTS ──────────────────────────────────────────────────────────────
+  /clients:
+    get:
+      operationId: getClients
+      tags: [clients]
+      summary: List all clients
+      responses:
+        "200":
+          description: List of clients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ClientRecord"
+    post:
+      operationId: createClient
+      tags: [clients]
+      summary: Create a client
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientRecord"
+
+  /clients/{id}:
+    get:
+      operationId: getClient
+      tags: [clients]
+      summary: Get a client
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Client
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientRecord"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateClient
+      tags: [clients]
+      summary: Update a client
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientRecord"
+    delete:
+      operationId: deleteClient
+      tags: [clients]
+      summary: Delete a client
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  # ── JOBS ─────────────────────────────────────────────────────────────────
+  /jobs:
+    get:
+      operationId: getJobs
+      tags: [jobs]
+      summary: List all jobs
+      responses:
+        "200":
+          description: List of jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/JobRecord"
+    post:
+      operationId: createJob
+      tags: [jobs]
+      summary: Create a job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobRecord"
+
+  /jobs/{id}:
+    get:
+      operationId: getJob
+      tags: [jobs]
+      summary: Get a job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobRecord"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateJob
+      tags: [jobs]
+      summary: Update a job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobRecord"
+    delete:
+      operationId: deleteJob
+      tags: [jobs]
+      summary: Delete a job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  # ── QUOTES ───────────────────────────────────────────────────────────────
+  /quotes:
+    get:
+      operationId: getQuotes
+      tags: [quotes]
+      summary: List all quotes
+      responses:
+        "200":
+          description: List of quotes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/QuoteRecord"
+    post:
+      operationId: createQuote
+      tags: [quotes]
+      summary: Create a quote
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuoteInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuoteRecord"
+
+  /quotes/{id}:
+    get:
+      operationId: getQuote
+      tags: [quotes]
+      summary: Get a quote with line items
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Quote
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuoteRecord"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateQuote
+      tags: [quotes]
+      summary: Update a quote
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuoteUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuoteRecord"
+    delete:
+      operationId: deleteQuote
+      tags: [quotes]
+      summary: Delete a quote
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  # ── INVOICES ─────────────────────────────────────────────────────────────
+  /invoices:
+    get:
+      operationId: getInvoices
+      tags: [invoices]
+      summary: List all invoices
+      responses:
+        "200":
+          description: List of invoices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InvoiceRecord"
+    post:
+      operationId: createInvoice
+      tags: [invoices]
+      summary: Create an invoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvoiceInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvoiceRecord"
+
+  /invoices/{id}:
+    get:
+      operationId: getInvoice
+      tags: [invoices]
+      summary: Get an invoice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Invoice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvoiceRecord"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateInvoice
+      tags: [invoices]
+      summary: Update an invoice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvoiceUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvoiceRecord"
+    delete:
+      operationId: deleteInvoice
+      tags: [invoices]
+      summary: Delete an invoice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  # ── SUBCONTRACTORS ───────────────────────────────────────────────────────
+  /subcontractors:
+    get:
+      operationId: getSubcontractors
+      tags: [subcontractors]
+      summary: List all subcontractors
+      responses:
+        "200":
+          description: List of subcontractors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SubcontractorRecord"
+    post:
+      operationId: createSubcontractor
+      tags: [subcontractors]
+      summary: Create a subcontractor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubcontractorInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubcontractorRecord"
+
+  /subcontractors/{id}:
+    get:
+      operationId: getSubcontractor
+      tags: [subcontractors]
+      summary: Get a subcontractor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Subcontractor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubcontractorRecord"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateSubcontractor
+      tags: [subcontractors]
+      summary: Update a subcontractor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubcontractorUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubcontractorRecord"
+    delete:
+      operationId: deleteSubcontractor
+      tags: [subcontractors]
+      summary: Delete a subcontractor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  # ── DOCUMENTS ────────────────────────────────────────────────────────────
+  /documents:
+    get:
+      operationId: getDocuments
+      tags: [documents]
+      summary: List all documents
+      responses:
+        "200":
+          description: List of documents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DocumentRecord"
+    post:
+      operationId: createDocument
+      tags: [documents]
+      summary: Create a document
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentRecord"
+
+  /documents/{id}:
+    patch:
+      operationId: updateDocument
+      tags: [documents]
+      summary: Update a document
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentRecord"
+    delete:
+      operationId: deleteDocument
+      tags: [documents]
+      summary: Delete a document
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  # ── SCHEDULE ─────────────────────────────────────────────────────────────
+  /schedule:
+    get:
+      operationId: getSchedule
+      tags: [schedule]
+      summary: List schedule entries
+      responses:
+        "200":
+          description: List of schedule entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ScheduleEntryRecord"
+    post:
+      operationId: createScheduleEntry
+      tags: [schedule]
+      summary: Create a schedule entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScheduleEntryInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduleEntryRecord"
+
+  /schedule/{id}:
+    patch:
+      operationId: updateScheduleEntry
+      tags: [schedule]
+      summary: Update a schedule entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScheduleEntryUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduleEntryRecord"
+    delete:
+      operationId: deleteScheduleEntry
+      tags: [schedule]
+      summary: Delete a schedule entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  # ── PLANT ────────────────────────────────────────────────────────────────
+  /plant:
+    get:
+      operationId: getPlant
+      tags: [plant]
+      summary: List all plant items
+      responses:
+        "200":
+          description: List of plant items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PlantRecord"
+    post:
+      operationId: createPlantItem
+      tags: [plant]
+      summary: Create a plant item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlantInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlantRecord"
+
+  /plant/{id}:
+    patch:
+      operationId: updatePlantItem
+      tags: [plant]
+      summary: Update a plant item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlantUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlantRecord"
+    delete:
+      operationId: deletePlantItem
+      tags: [plant]
+      summary: Delete a plant item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  # ── RATE BOOK ────────────────────────────────────────────────────────────
+  /rate-book:
+    get:
+      operationId: getRateBook
+      tags: [rate-book]
+      summary: List rate book entries
+      responses:
+        "200":
+          description: List of rate book entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RateBookRecord"
+    post:
+      operationId: createRateBookEntry
+      tags: [rate-book]
+      summary: Create a rate book entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RateBookInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateBookRecord"
+
+  /rate-book/{id}:
+    patch:
+      operationId: updateRateBookEntry
+      tags: [rate-book]
+      summary: Update a rate book entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RateBookUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateBookRecord"
+    delete:
+      operationId: deleteRateBookEntry
+      tags: [rate-book]
+      summary: Delete a rate book entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required: [status]
+
+    DashboardStats:
+      type: object
+      required:
+        [
+          activeJobs,
+          outstandingAmount,
+          pendingQuotes,
+          docAlerts,
+          overdueInvoices,
+          totalJobValue,
+          revenuePaid,
+          activeSubcons,
+          plantCount,
+        ]
+      properties:
+        activeJobs: { type: integer }
+        outstandingAmount: { type: number }
+        pendingQuotes: { type: integer }
+        docAlerts: { type: integer }
+        overdueInvoices: { type: integer }
+        totalJobValue: { type: number }
+        revenuePaid: { type: number }
+        activeSubcons: { type: integer }
+        plantCount: { type: integer }
+
+    # ── CLIENT ──────────────────────────────────────────────────────────────
+    ClientRecord:
+      type: object
+      required: [id, companyName, createdAt]
+      properties:
+        id: { type: string }
+        companyName: { type: string }
+        contactName: { type: ["string", "null"] }
+        email: { type: ["string", "null"] }
+        phone: { type: ["string", "null"] }
+        address: { type: ["string", "null"] }
+        vatNumber: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
+        createdAt: { type: string }
+        totalJobs: { type: integer }
+        totalValue: { type: number }
+
+    ClientInput:
+      type: object
+      required: [id, companyName]
+      properties:
+        id: { type: string }
+        companyName: { type: string }
+        contactName: { type: string }
+        email: { type: string }
+        phone: { type: string }
+        address: { type: string }
+        vatNumber: { type: string }
+        notes: { type: string }
+
+    ClientUpdate:
+      type: object
+      properties:
+        companyName: { type: string }
+        contactName: { type: string }
+        email: { type: string }
+        phone: { type: string }
+        address: { type: string }
+        vatNumber: { type: string }
+        notes: { type: string }
+
+    # ── JOB ─────────────────────────────────────────────────────────────────
+    JobRecord:
+      type: object
+      required:
+        [
+          id,
+          jobNumber,
+          title,
+          status,
+          progressPercent,
+          nrswaRequired,
+          createdAt,
+        ]
+      properties:
+        id: { type: string }
+        jobNumber: { type: string }
+        title: { type: string }
+        clientId: { type: ["string", "null"] }
+        clientName: { type: ["string", "null"] }
+        type: { type: ["string", "null"] }
+        siteAddress: { type: ["string", "null"] }
+        value: { type: ["number", "null"] }
+        startDate: { type: ["string", "null"] }
+        endDate: { type: ["string", "null"] }
+        status: { type: string }
+        progressPercent: { type: integer }
+        description: { type: ["string", "null"] }
+        foreman: { type: ["string", "null"] }
+        crewCount: { type: ["integer", "null"] }
+        nrswaRequired: { type: boolean }
+        permitNumber: { type: ["string", "null"] }
+        createdAt: { type: string }
+
+    JobInput:
+      type: object
+      required: [id, jobNumber, title]
+      properties:
+        id: { type: string }
+        jobNumber: { type: string }
+        title: { type: string }
+        clientId: { type: string }
+        type: { type: string }
+        siteAddress: { type: string }
+        value: { type: number }
+        startDate: { type: string }
+        endDate: { type: string }
+        status: { type: string }
+        progressPercent: { type: integer }
+        description: { type: string }
+        foreman: { type: string }
+        crewCount: { type: integer }
+        nrswaRequired: { type: boolean }
+        permitNumber: { type: string }
+
+    JobUpdate:
+      type: object
+      properties:
+        title: { type: string }
+        clientId: { type: string }
+        type: { type: string }
+        siteAddress: { type: string }
+        value: { type: number }
+        startDate: { type: string }
+        endDate: { type: string }
+        status: { type: string }
+        progressPercent: { type: integer }
+        description: { type: string }
+        foreman: { type: string }
+        crewCount: { type: integer }
+        nrswaRequired: { type: boolean }
+        permitNumber: { type: string }
+
+    # ── QUOTE ───────────────────────────────────────────────────────────────
+    LineItemRecord:
+      type: object
+      required: [id, quoteId, description, quantity, unit, unitPrice, total]
+      properties:
+        id: { type: string }
+        quoteId: { type: string }
+        description: { type: string }
+        quantity: { type: number }
+        unit: { type: string }
+        unitPrice: { type: number }
+        total: { type: number }
+
+    QuoteRecord:
+      type: object
+      required:
+        [
+          id,
+          quoteNumber,
+          status,
+          subtotal,
+          vatAmount,
+          totalAmount,
+          createdAt,
+          lineItems,
+        ]
+      properties:
+        id: { type: string }
+        quoteNumber: { type: string }
+        clientId: { type: ["string", "null"] }
+        clientName: { type: ["string", "null"] }
+        jobId: { type: ["string", "null"] }
+        title: { type: ["string", "null"] }
+        status: { type: string }
+        subtotal: { type: number }
+        vatAmount: { type: number }
+        totalAmount: { type: number }
+        validUntil: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
+        sentAt: { type: ["string", "null"] }
+        createdAt: { type: string }
+        lineItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/LineItemRecord"
+
+    QuoteInput:
+      type: object
+      required: [id, quoteNumber]
+      properties:
+        id: { type: string }
+        quoteNumber: { type: string }
+        clientId: { type: string }
+        jobId: { type: string }
+        title: { type: string }
+        status: { type: string }
+        subtotal: { type: number }
+        vatAmount: { type: number }
+        totalAmount: { type: number }
+        validUntil: { type: string }
+        notes: { type: string }
+        lineItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/LineItemRecord"
+
+    QuoteUpdate:
+      type: object
+      properties:
+        clientId: { type: string }
+        jobId: { type: string }
+        title: { type: string }
+        status: { type: string }
+        subtotal: { type: number }
+        vatAmount: { type: number }
+        totalAmount: { type: number }
+        validUntil: { type: string }
+        notes: { type: string }
+        sentAt: { type: string }
+        lineItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/LineItemRecord"
+
+    # ── INVOICE ─────────────────────────────────────────────────────────────
+    InvoiceRecord:
+      type: object
+      required:
+        [
+          id,
+          invoiceNumber,
+          status,
+          subtotal,
+          vatAmount,
+          totalAmount,
+          issuedDate,
+          createdAt,
+        ]
+      properties:
+        id: { type: string }
+        invoiceNumber: { type: string }
+        clientId: { type: ["string", "null"] }
+        clientName: { type: ["string", "null"] }
+        jobId: { type: ["string", "null"] }
+        jobTitle: { type: ["string", "null"] }
+        quoteId: { type: ["string", "null"] }
+        subtotal: { type: number }
+        vatAmount: { type: number }
+        totalAmount: { type: number }
+        status: { type: string }
+        issuedDate: { type: string }
+        dueDate: { type: ["string", "null"] }
+        paidAt: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
+        cisDeduction: { type: ["number", "null"] }
+        createdAt: { type: string }
+
+    InvoiceInput:
+      type: object
+      required: [id, invoiceNumber, issuedDate]
+      properties:
+        id: { type: string }
+        invoiceNumber: { type: string }
+        clientId: { type: string }
+        jobId: { type: string }
+        quoteId: { type: string }
+        subtotal: { type: number }
+        vatAmount: { type: number }
+        totalAmount: { type: number }
+        status: { type: string }
+        issuedDate: { type: string }
+        dueDate: { type: string }
+        notes: { type: string }
+        cisDeduction: { type: number }
+
+    InvoiceUpdate:
+      type: object
+      properties:
+        clientId: { type: string }
+        jobId: { type: string }
+        status: { type: string }
+        subtotal: { type: number }
+        vatAmount: { type: number }
+        totalAmount: { type: number }
+        issuedDate: { type: string }
+        dueDate: { type: string }
+        paidAt: { type: string }
+        notes: { type: string }
+        cisDeduction: { type: number }
+
+    # ── SUBCONTRACTOR ───────────────────────────────────────────────────────
+    SubcontractorRecord:
+      type: object
+      required:
+        [id, companyName, cisStatus, cisDeductionRate, active, createdAt]
+      properties:
+        id: { type: string }
+        companyName: { type: string }
+        contactName: { type: ["string", "null"] }
+        email: { type: ["string", "null"] }
+        phone: { type: ["string", "null"] }
+        utrNumber: { type: ["string", "null"] }
+        cisStatus: { type: string }
+        cisDeductionRate: { type: number }
+        trade: { type: ["string", "null"] }
+        nrswaCardNumber: { type: ["string", "null"] }
+        nrswaExpiry: { type: ["string", "null"] }
+        publicLiabilityExpiry: { type: ["string", "null"] }
+        cscsCardExpiry: { type: ["string", "null"] }
+        address: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
+        active: { type: boolean }
+        createdAt: { type: string }
+
+    SubcontractorInput:
+      type: object
+      required: [id, companyName]
+      properties:
+        id: { type: string }
+        companyName: { type: string }
+        contactName: { type: string }
+        email: { type: string }
+        phone: { type: string }
+        utrNumber: { type: string }
+        cisStatus: { type: string }
+        cisDeductionRate: { type: number }
+        trade: { type: string }
+        nrswaCardNumber: { type: string }
+        nrswaExpiry: { type: string }
+        publicLiabilityExpiry: { type: string }
+        cscsCardExpiry: { type: string }
+        address: { type: string }
+        notes: { type: string }
+        active: { type: boolean }
+
+    SubcontractorUpdate:
+      type: object
+      properties:
+        companyName: { type: string }
+        contactName: { type: string }
+        email: { type: string }
+        phone: { type: string }
+        utrNumber: { type: string }
+        cisStatus: { type: string }
+        cisDeductionRate: { type: number }
+        trade: { type: string }
+        nrswaCardNumber: { type: string }
+        nrswaExpiry: { type: string }
+        publicLiabilityExpiry: { type: string }
+        cscsCardExpiry: { type: string }
+        address: { type: string }
+        notes: { type: string }
+        active: { type: boolean }
+
+    # ── DOCUMENT ────────────────────────────────────────────────────────────
+    DocumentRecord:
+      type: object
+      required: [id, name, type, status, relatedTo, createdAt]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        type: { type: string }
+        status: { type: string }
+        expiryDate: { type: ["string", "null"] }
+        issuedDate: { type: ["string", "null"] }
+        relatedTo: { type: string }
+        relatedId: { type: ["string", "null"] }
+        relatedName: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
+        createdAt: { type: string }
+
+    DocumentInput:
+      type: object
+      required: [id, name, type, relatedTo]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        type: { type: string }
+        status: { type: string }
+        expiryDate: { type: string }
+        issuedDate: { type: string }
+        relatedTo: { type: string }
+        relatedId: { type: string }
+        relatedName: { type: string }
+        notes: { type: string }
+
+    DocumentUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        type: { type: string }
+        status: { type: string }
+        expiryDate: { type: string }
+        issuedDate: { type: string }
+        relatedTo: { type: string }
+        relatedId: { type: string }
+        relatedName: { type: string }
+        notes: { type: string }
+
+    # ── SCHEDULE ────────────────────────────────────────────────────────────
+    ScheduleEntryRecord:
+      type: object
+      required:
+        [id, title, startDatetime, endDatetime, crewCount, type, createdAt]
+      properties:
+        id: { type: string }
+        jobId: { type: ["string", "null"] }
+        jobNumber: { type: ["string", "null"] }
+        jobTitle: { type: ["string", "null"] }
+        clientName: { type: ["string", "null"] }
+        title: { type: string }
+        startDatetime: { type: string }
+        endDatetime: { type: string }
+        crewCount: { type: integer }
+        plantAssigned: { type: ["string", "null"] }
+        foreman: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
+        type: { type: string }
+        createdAt: { type: string }
+
+    ScheduleEntryInput:
+      type: object
+      required: [id, title, startDatetime, endDatetime, crewCount, type]
+      properties:
+        id: { type: string }
+        jobId: { type: string }
+        title: { type: string }
+        startDatetime: { type: string }
+        endDatetime: { type: string }
+        crewCount: { type: integer }
+        plantAssigned: { type: string }
+        foreman: { type: string }
+        notes: { type: string }
+        type: { type: string }
+
+    ScheduleEntryUpdate:
+      type: object
+      properties:
+        jobId: { type: string }
+        title: { type: string }
+        startDatetime: { type: string }
+        endDatetime: { type: string }
+        crewCount: { type: integer }
+        plantAssigned: { type: string }
+        foreman: { type: string }
+        notes: { type: string }
+        type: { type: string }
+
+    # ── PLANT ───────────────────────────────────────────────────────────────
+    PlantRecord:
+      type: object
+      required: [id, name, category, status, owned, createdAt]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        registration: { type: ["string", "null"] }
+        category: { type: string }
+        make: { type: ["string", "null"] }
+        model: { type: ["string", "null"] }
+        year: { type: ["integer", "null"] }
+        status: { type: string }
+        currentJobId: { type: ["string", "null"] }
+        currentJobTitle: { type: ["string", "null"] }
+        serviceDue: { type: ["string", "null"] }
+        motDue: { type: ["string", "null"] }
+        thoroughExamDue: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
+        dailyRate: { type: ["number", "null"] }
+        owned: { type: boolean }
+        createdAt: { type: string }
+
+    PlantInput:
+      type: object
+      required: [id, name, category]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        registration: { type: string }
+        category: { type: string }
+        make: { type: string }
+        model: { type: string }
+        year: { type: integer }
+        status: { type: string }
+        currentJobId: { type: string }
+        serviceDue: { type: string }
+        motDue: { type: string }
+        thoroughExamDue: { type: string }
+        notes: { type: string }
+        dailyRate: { type: number }
+        owned: { type: boolean }
+
+    PlantUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        registration: { type: string }
+        category: { type: string }
+        make: { type: string }
+        model: { type: string }
+        year: { type: integer }
+        status: { type: string }
+        currentJobId: { type: string }
+        serviceDue: { type: string }
+        motDue: { type: string }
+        thoroughExamDue: { type: string }
+        notes: { type: string }
+        dailyRate: { type: number }
+        owned: { type: boolean }
+
+    # ── RATE BOOK ───────────────────────────────────────────────────────────
+    RateBookRecord:
+      type: object
+      required:
+        [
+          id,
+          category,
+          description,
+          unit,
+          labourRate,
+          materialRate,
+          plantRate,
+          totalRate,
+          createdAt,
+        ]
+      properties:
+        id: { type: string }
+        category: { type: string }
+        description: { type: string }
+        unit: { type: string }
+        labourRate: { type: number }
+        materialRate: { type: number }
+        plantRate: { type: number }
+        totalRate: { type: number }
+        notes: { type: ["string", "null"] }
+        createdAt: { type: string }
+
+    RateBookInput:
+      type: object
+      required: [id, category, description, unit]
+      properties:
+        id: { type: string }
+        category: { type: string }
+        description: { type: string }
+        unit: { type: string }
+        labourRate: { type: number }
+        materialRate: { type: number }
+        plantRate: { type: number }
+        totalRate: { type: number }
+        notes: { type: string }
+
+    RateBookUpdate:
+      type: object
+      properties:
+        category: { type: string }
+        description: { type: string }
+        unit: { type: string }
+        labourRate: { type: number }
+        materialRate: { type: number }
+        plantRate: { type: number }
+        totalRate: { type: number }
+        notes: { type: string }

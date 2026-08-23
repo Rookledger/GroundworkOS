@@ -1,0 +1,7 @@
+dist
+build
+node_modules
+*.tsbuildinfo
+pnpm-lock.yaml
+**/.generated/**
+**/generated/**

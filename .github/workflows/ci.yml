@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: groundworkos
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Test
+        run: pnpm run test
+
+      - name: Push database schema
+        run: pnpm --filter @workspace/db run push-force
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/groundworkos
+
+      - name: Seed database
+        run: pnpm --filter @workspace/api-server run seed
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/groundworkos
+
+      - name: Integration test
+        run: pnpm run test:integration
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/groundworkos
+
+      - name: Build
+        run: pnpm run build
+        env:
+          BASE_PATH: /
+          VITE_CLERK_PUBLISHABLE_KEY: pk_test_dummy-key-for-ci-build
