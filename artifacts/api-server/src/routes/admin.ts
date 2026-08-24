@@ -254,61 +254,65 @@ router.delete("/admin/invitations/:id", async (req, res) => {
 
 // --- First-time admin bootstrap ---
 //
-// Unset roles now default to foreman (the lowest privilege), so nobody -
-// including the very first person to sign up - ever gets admin just by
-// being unset. That means a brand-new deployment starts with zero admins,
-// and the "admin only" guard above would lock everyone out of user
-// management forever with no way to ever grant the first admin role.
-// These two endpoints are the documented, explicit path around that:
-// any signed-in user may check whether an admin exists yet
-// (GET /admin/bootstrap-status), and may promote *themselves* to admin by
-// writing an explicit publicMetadata.role = "admin" (POST /admin/bootstrap),
-// but only while the workspace still has none. Once any user has an
+// Unset roles default to foreman (the lowest privilege), so nobody - not
+// even the very first person to sign up - ever gets admin just by being
+// unset. That means a brand-new deployment starts with zero admins, and the
+// "admin only" guard above would lock everyone out of user management
+// forever with no way to ever grant the first admin role. attemptBootstrap()
+// below is the one place that grants it: it promotes the *calling* user to
+// admin, but only while the workspace still has none. Once any user has an
 // explicit "admin" role, bootstrap permanently stops working (adminExists()
 // above returns true) and role changes must go through the admin-only
-// endpoint above. This is a one-time, explicit self-promotion - it does not
-// rely on, or interact with, the unset-role default in any way.
+// endpoint above. This does not rely on, or interact with, the unset-role
+// default in any way.
+//
+// Two entry points call it:
+// - GET /admin/bootstrap-status runs it automatically, best-effort, for
+//   any signed-in non-admin caller on an admin-less workspace - see the
+//   comment on that route below. UsersPage.tsx calls this route as soon as
+//   a non-admin opens Settings -> Users, so in practice this promotes the
+//   first person to land on that page, with no separate button click.
+// - POST /admin/bootstrap runs it on explicit request, so the frontend's
+//   "Make me admin" button (and anyone scripting against the API directly)
+//   keeps working exactly as before, and callers get a real HTTP status
+//   they can act on instead of having to poll bootstrap-status.
 //
 // Two things this can't fix on its own, and how they're handled:
 //
-// - Land grab: on an admin-less workspace, this route grants admin to
-//   whichever signed-in user calls it first - there's no way for the server
-//   to know who the "real" operator is. If BOOTSTRAP_ADMIN_EMAIL is set,
-//   POST /admin/bootstrap is restricted to that one email address; if
-//   unset, a boot-time warning is logged (see above) and the primary
-//   defense is Clerk Dashboard -> Restrictions, set to "Restricted" before
-//   the service is ever publicly reachable (RAILWAY.md Step 5).
+// - Land grab: on an admin-less workspace, this grants admin to whichever
+//   signed-in user is resolved first - there's no way for the server to
+//   know who the "real" operator is. If BOOTSTRAP_ADMIN_EMAIL is set,
+//   bootstrap is restricted to that one email address; if unset, a
+//   boot-time warning is logged (see above) and the primary defense is
+//   Clerk Dashboard -> Restrictions, set to "Restricted" before the service
+//   is ever publicly reachable (RAILWAY.md Step 5). Auto-running this from
+//   bootstrap-status (rather than requiring a manual click) makes that
+//   defense more important than before: on an admin-less, publicly
+//   reachable workspace with no BOOTSTRAP_ADMIN_EMAIL set, simply opening
+//   Settings -> Users is now enough to claim admin.
 // - TOCTOU: the adminExists() check and the metadata write below are two
 //   separate Clerk API calls, not one atomic operation, so two concurrent
 //   callers can both observe "no admin" and both write "admin" before
 //   either write is visible to the other's check. Clerk's API has no
-//   compare-and-swap for metadata, so POST /admin/bootstrap re-checks
+//   compare-and-swap for metadata, so attemptBootstrap() re-checks
 //   immediately after writing and has the loser of the race demote itself
 //   back - see the comment inline below.
-
-router.get("/admin/bootstrap-status", async (req, res) => {
-  if (!getUserId(req)) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-  try {
-    return res.json({ adminExists: await adminExists() });
-  } catch (err: any) {
-    return res
-      .status(500)
-      .json({ error: err.message ?? "Failed to check admin status" });
-  }
-});
 
 const ALREADY_BOOTSTRAPPED_ERROR = {
   error:
     "An admin already exists. Ask them to promote you from Settings > Users.",
 };
 
-router.post("/admin/bootstrap", async (req, res) => {
-  const userId = getUserId(req);
-  if (!userId) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
+/**
+ * Attempts to promote `userId` to admin on a genuinely admin-less
+ * workspace. Never throws - Clerk/network failures are caught and reported
+ * as a 500 result, same as every other route in this file, so both callers
+ * (the explicit POST route and the automatic call from bootstrap-status)
+ * can treat this as a plain result object instead of a try/catch.
+ */
+async function attemptBootstrap(
+  userId: string,
+): Promise<{ status: number; body: any }> {
   try {
     const caller = await clerkClient.users.getUser(userId);
 
@@ -316,16 +320,19 @@ router.post("/admin/bootstrap", async (req, res) => {
       const callerEmail =
         caller.primaryEmailAddress?.emailAddress?.toLowerCase();
       if (callerEmail !== BOOTSTRAP_ADMIN_EMAIL) {
-        return res.status(403).json({
-          error:
-            "Bootstrap is restricted to a specific admin email for this workspace. " +
-            "Ask that person to sign in and bootstrap, or ask an existing admin to promote you.",
-        });
+        return {
+          status: 403,
+          body: {
+            error:
+              "Bootstrap is restricted to a specific admin email for this workspace. " +
+              "Ask that person to sign in and bootstrap, or ask an existing admin to promote you.",
+          },
+        };
       }
     }
 
     if (await adminExists()) {
-      return res.status(409).json(ALREADY_BOOTSTRAPPED_ERROR);
+      return { status: 409, body: ALREADY_BOOTSTRAPPED_ERROR };
     }
 
     // The role this user held before bootstrapping - used to restore it if
@@ -362,16 +369,57 @@ router.post("/admin/bootstrap", async (req, res) => {
         await clerkClient.users.updateUserMetadata(userId, {
           publicMetadata: { role: priorRole },
         });
-        return res.status(409).json(ALREADY_BOOTSTRAPPED_ERROR);
+        return { status: 409, body: ALREADY_BOOTSTRAPPED_ERROR };
       }
     }
 
-    return res.json({ ok: true });
+    return { status: 200, body: { ok: true } };
+  } catch (err: any) {
+    return {
+      status: 500,
+      body: { error: err.message ?? "Failed to bootstrap admin" },
+    };
+  }
+}
+
+router.get("/admin/bootstrap-status", async (req, res) => {
+  const userId = getUserId(req);
+  if (!userId) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  try {
+    // Auto-bootstrap: UsersPage calls this route for any signed-in,
+    // non-admin user as soon as they open Settings -> Users, so on a still
+    // admin-less workspace this promotes the first person to land there -
+    // no separate "Make me admin" click required. attemptBootstrap() still
+    // enforces BOOTSTRAP_ADMIN_EMAIL (if set) and the TOCTOU-safe
+    // single-winner logic, so a caller who doesn't match the configured
+    // email, or who loses a concurrent race, simply doesn't get promoted.
+    //
+    // `justBootstrapped` tells the frontend this exact call is what did it,
+    // so it can reload immediately instead of rendering "Admin access
+    // required" from a stale client-side role cache (Clerk's cached role on
+    // this client hasn't caught up with the write this request just made).
+    let justBootstrapped = false;
+    if (!(await adminExists())) {
+      const result = await attemptBootstrap(userId);
+      justBootstrapped = result.status === 200;
+    }
+    return res.json({ adminExists: await adminExists(), justBootstrapped });
   } catch (err: any) {
     return res
       .status(500)
-      .json({ error: err.message ?? "Failed to bootstrap admin" });
+      .json({ error: err.message ?? "Failed to check admin status" });
   }
+});
+
+router.post("/admin/bootstrap", async (req, res) => {
+  const userId = getUserId(req);
+  if (!userId) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  const result = await attemptBootstrap(userId);
+  return res.status(result.status).json(result.body);
 });
 
 export default router;

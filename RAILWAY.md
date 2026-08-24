@@ -104,12 +104,15 @@ Optional:
 - CLERK_WEBHOOK_SIGNING_SECRET / SIGNUP_ALLOWED_EMAIL_DOMAINS — a
   server-side backstop for restricting sign-up by email domain, on top of
   Clerk Dashboard → Configure → Restrictions (the primary control)
-- BOOTSTRAP_ADMIN_EMAIL — locks the one-time `POST /admin/bootstrap`
-  first-admin flow (see Step 5) to a single known email address, matched
-  case-insensitively. Left unset, bootstrap grants admin to whichever
-  signed-in user calls it first; the server logs a boot-time warning when
-  this is unset as a reminder. See Step 5 for why Clerk Restrictions, not
-  this variable, is the primary defense against a land grab.
+- BOOTSTRAP_ADMIN_EMAIL — locks the first-admin bootstrap flow (see Step 5),
+  which now runs automatically the first time a non-admin opens
+  Settings → Users, as well as via `POST /admin/bootstrap`, to a single
+  known email address, matched case-insensitively. Left unset, bootstrap
+  grants admin to whichever signed-in user is resolved first — including
+  automatically, just from opening that page; the server logs a boot-time
+  warning when this is unset as a reminder. See Step 5 for why Clerk
+  Restrictions, not this variable, is the primary defense against a land
+  grab.
 - RESEND_API_KEY for quote/invoice emails
 - XERO*CLIENT_ID / XERO_CLIENT_SECRET / XERO_REDIRECT_URI (and the
   equivalent QUICKBOOKS*, SAGE*, FREEAGENT* variables) for accounting
@@ -161,33 +164,41 @@ artifacts/api-server/dist/index.mjs`) applies the versioned SQL migration
 ## Step 5 — First login and admin user
 
 New accounts default to the `foreman` role (lowest privilege) — nobody gets
-`admin` just by signing up, including the first user. The very first admin
-is instead granted through a one-time bootstrap flow: any signed-in user can
-claim it, but only while the workspace has no admin yet. That means whoever
-reaches your app and signs up first — not necessarily you — can also
-bootstrap first, so lock this down **before** anyone else can reach the
-app:
+`admin` just by having an unset role. The very first admin is instead
+granted through a bootstrap flow: the first signed-in, non-admin user to
+open **Settings → Users** on an admin-less workspace is promoted to admin
+automatically (that page calls `GET /api/admin/bootstrap-status`, which now
+performs the promotion itself rather than only reporting on it, then
+reloads), and a "Make me admin" button (`POST /api/admin/bootstrap`)
+remains as a manual fallback for the rare case the automatic path doesn't
+apply to you. Either way, that means whoever reaches your app and opens
+Settings → Users first — not necessarily you — can also bootstrap first,
+automatically, with no click required, so lock this down **before** anyone
+else can reach the app:
 
 1. **Prerequisite — before your Railway domain is publicly reachable**, go
    to the Clerk Dashboard → **Configure → Restrictions** and set sign-up
    mode to **Restricted** (invite-only). Do this first: an open-signup
-   instance sitting on a live public URL is a land grab, since bootstrap
-   grants admin to whichever account gets there first, and there is no way
-   to tell that account apart from a stranger's after the fact. Optionally,
-   also set `BOOTSTRAP_ADMIN_EMAIL` (see Step 3) to lock the bootstrap
-   endpoint itself to your own email address as a second layer of defense —
-   left unset, the server logs a boot-time warning that bootstrap is open to
+   instance sitting on a live public URL is a land grab, since bootstrap now
+   grants admin automatically to whichever account opens Settings → Users
+   first — no click needed — and there is no way to tell that account apart
+   from a stranger's after the fact. Optionally, also set
+   `BOOTSTRAP_ADMIN_EMAIL` (see Step 3) to lock the bootstrap endpoint
+   itself to your own email address as a second layer of defense — left
+   unset, the server logs a boot-time warning that bootstrap is open to
    whoever signs in first.
 2. Visit your Railway domain and sign up through the app.
-3. Go to **Settings → Users**. Since the workspace has no admin yet, you'll
-   see a "Make me admin" button in place of the normal admin-only view.
-4. Click it — this calls `POST /api/admin/bootstrap`, which sets your own
-   Clerk `publicMetadata.role` to `admin`, but only while no admin exists
-   yet (and only for the `BOOTSTRAP_ADMIN_EMAIL` address, if you set one).
-   Once you're the admin, this bootstrap endpoint stops working for everyone
-   else, and further role changes go through the same **Settings → Users**
-   page.
-5. Refresh — the full sidebar should now be visible.
+3. Go to **Settings → Users**. You should land there already promoted:
+   since the workspace had no admin yet, opening this page auto-promoted
+   you the moment it checked bootstrap status, and it reloads itself once
+   that happens. If for some reason you instead see a "Make me admin"
+   button in place of the normal admin-only view, click it — this calls
+   `POST /api/admin/bootstrap`, which sets your own Clerk
+   `publicMetadata.role` to `admin`, but only while no admin exists yet (and
+   only for the `BOOTSTRAP_ADMIN_EMAIL` address, if you set one). Once
+   you're the admin, both bootstrap paths stop working for everyone else,
+   and further role changes go through the same **Settings → Users** page.
+4. The full sidebar should now be visible.
 
 Fallback: if you're ever locked out with no admin account at all (e.g.
 restoring from a backup), you can set `{ "role": "admin" }` on an account's

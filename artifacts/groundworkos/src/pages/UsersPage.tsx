@@ -42,8 +42,10 @@ export function UsersPage() {
   const [inviteRole, setInviteRole] = useState<Role>("foreman");
   const [inviting, setInviting] = useState(false);
   const [revokingId, setRevokingId] = useState<string | null>(null);
-  // Only relevant for non-admins: true when the workspace has no admin yet,
-  // which unlocks the one-time "make me admin" self-promotion screen below.
+  // Only relevant for non-admins: true when the workspace has no admin yet
+  // and this caller wasn't auto-promoted (e.g. BOOTSTRAP_ADMIN_EMAIL is set
+  // to someone else), which unlocks the manual "make me admin" fallback
+  // screen below.
   const [noAdminYet, setNoAdminYet] = useState(false);
 
   const checkBootstrap = useCallback(async () => {
@@ -51,12 +53,24 @@ export function UsersPage() {
       const r = await fetch(`${BASE}/api/admin/bootstrap-status`);
       if (!r.ok) return;
       const data = await r.json();
+      if (data.justBootstrapped) {
+        // The server just promoted this caller to admin as a side effect of
+        // this same status check (see routes/admin.ts) - no button click
+        // needed. Clerk's client-side role cache hasn't caught up with that
+        // write yet, so reload the same way handleBootstrap does after a
+        // manual click, rather than briefly flashing "Admin access
+        // required".
+        toast.success("You're now an admin. Reloading...");
+        await currentUser?.reload();
+        window.location.reload();
+        return;
+      }
       setNoAdminYet(!data.adminExists);
     } catch {
       // Network error: fail closed and just show "Admin access required"
       // instead of the bootstrap screen.
     }
-  }, []);
+  }, [currentUser]);
 
   const fetchUsers = useCallback(async () => {
     try {

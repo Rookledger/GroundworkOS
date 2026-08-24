@@ -177,7 +177,90 @@ describe("GET /admin/bootstrap-status", () => {
     const handler = layer.route.stack[0].handle;
     const res = makeRes();
     await handler(makeReq({ userId: "user_1" }), res);
-    expect(res.json).toHaveBeenCalledWith({ adminExists: true });
+    expect(res.json).toHaveBeenCalledWith({
+      adminExists: true,
+      justBootstrapped: false,
+    });
+  });
+
+  it("auto-bootstraps the caller on a genuinely admin-less workspace, with no separate click", async () => {
+    const { default: router } = await loadAdminRoutes();
+    getUser.mockResolvedValue(makeUser({ id: "user_1", publicMetadata: {} }));
+    // Starts admin-less; once attemptBootstrap's write lands, subsequent
+    // scans (its own TOCTOU re-check, and this route's final report) see it.
+    let bootstrapped = false;
+    getUserList.mockImplementation(async ({ offset = 0 } = {}) => {
+      const users = bootstrapped
+        ? [makeUser({ id: "user_1", publicMetadata: { role: "admin" } })]
+        : [];
+      return { data: users.slice(offset), totalCount: users.length };
+    });
+    updateUserMetadata.mockImplementation(async () => {
+      bootstrapped = true;
+      return {};
+    });
+
+    const layer = router.stack.find(
+      (l: any) => l.route?.path === "/admin/bootstrap-status",
+    );
+    const handler = layer.route.stack[0].handle;
+    const res = makeRes();
+    await handler(makeReq({ userId: "user_1" }), res);
+
+    expect(updateUserMetadata).toHaveBeenCalledWith("user_1", {
+      publicMetadata: { role: "admin" },
+    });
+    expect(res.json).toHaveBeenCalledWith({
+      adminExists: true,
+      justBootstrapped: true,
+    });
+  });
+
+  it("does not auto-bootstrap a caller who doesn't match BOOTSTRAP_ADMIN_EMAIL", async () => {
+    const { default: router } = await loadAdminRoutes({
+      BOOTSTRAP_ADMIN_EMAIL: "owner@example.com",
+    });
+    getUser.mockResolvedValue(
+      makeUser({
+        id: "stranger",
+        publicMetadata: {},
+        primaryEmailAddress: { emailAddress: "stranger@example.com" },
+      }),
+    );
+    mockPaginatedUsers([]); // still admin-less throughout
+
+    const layer = router.stack.find(
+      (l: any) => l.route?.path === "/admin/bootstrap-status",
+    );
+    const handler = layer.route.stack[0].handle;
+    const res = makeRes();
+    await handler(makeReq({ userId: "stranger" }), res);
+
+    expect(updateUserMetadata).not.toHaveBeenCalled();
+    expect(res.json).toHaveBeenCalledWith({
+      adminExists: false,
+      justBootstrapped: false,
+    });
+  });
+
+  it("does not attempt bootstrap when an admin already exists (no wasted write)", async () => {
+    const { default: router } = await loadAdminRoutes();
+    mockPaginatedUsers([
+      makeUser({ id: "existing_admin", publicMetadata: { role: "admin" } }),
+    ]);
+    const layer = router.stack.find(
+      (l: any) => l.route?.path === "/admin/bootstrap-status",
+    );
+    const handler = layer.route.stack[0].handle;
+    const res = makeRes();
+    await handler(makeReq({ userId: "user_1" }), res);
+
+    expect(getUser).not.toHaveBeenCalled();
+    expect(updateUserMetadata).not.toHaveBeenCalled();
+    expect(res.json).toHaveBeenCalledWith({
+      adminExists: true,
+      justBootstrapped: false,
+    });
   });
 });
 
