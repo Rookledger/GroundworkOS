@@ -11,7 +11,14 @@ import {
   QueryClientProvider,
   useQueryClient,
 } from "@tanstack/react-query";
-import { ClerkProvider, SignIn, SignUp, Show, useClerk } from "@clerk/react";
+import {
+  ClerkProvider,
+  SignIn,
+  SignUp,
+  Show,
+  useClerk,
+  useUser,
+} from "@clerk/react";
 import { shadcn } from "@clerk/themes";
 import { Toaster } from "sonner";
 import { AppProvider } from "./store/AppContext";
@@ -143,6 +150,40 @@ function ClerkQueryClientCacheInvalidator() {
     });
     return unsubscribe;
   }, [addListener, qc]);
+  return null;
+}
+
+// Auto-promotes the very first signed-in user to admin, the moment the app
+// loads for them - not just when they happen to open Settings -> Users.
+// Mirrors the same GET /api/admin/bootstrap-status call UsersPage.tsx makes;
+// see routes/admin.ts on the backend for the actual promotion logic and its
+// safety guards (BOOTSTRAP_ADMIN_EMAIL, single-winner race handling). Only
+// ever promotes while the workspace has zero admins - a no-op for everyone
+// after that first signup.
+function AutoAdminBootstrap() {
+  const role = useRole();
+  const { user } = useUser();
+  const attempted = useRef(false);
+
+  useEffect(() => {
+    if (role === "admin" || attempted.current) return;
+    attempted.current = true;
+    (async () => {
+      try {
+        const r = await fetch(`${basePath}/api/admin/bootstrap-status`);
+        if (!r.ok) return;
+        const data = await r.json();
+        if (data.justBootstrapped) {
+          await user?.reload();
+          window.location.reload();
+        }
+      } catch {
+        // Best-effort - Settings -> Users still offers the manual
+        // "Make me admin" fallback if this silently fails.
+      }
+    })();
+  }, [role, user]);
+
   return null;
 }
 
@@ -296,6 +337,7 @@ function AppRoutes() {
 function AuthenticatedApp() {
   return (
     <AppProvider>
+      <AutoAdminBootstrap />
       <DataLoader />
       <AppRoutes />
     </AppProvider>
