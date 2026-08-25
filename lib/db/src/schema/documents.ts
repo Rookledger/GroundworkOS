@@ -1,22 +1,22 @@
-import { pgTable, text, date, timestamp } from "drizzle-orm/pg-core";
+import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
-export const documentsTable = pgTable("documents", {
+export const documentsTable = sqliteTable("documents", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   type: text("type").notNull(),
   status: text("status").notNull().default("valid"),
-  expiryDate: date("expiry_date", { mode: "string" }),
-  issuedDate: date("issued_date", { mode: "string" }),
+  expiryDate: text("expiry_date"),
+  issuedDate: text("issued_date"),
   relatedTo: text("related_to").notNull().default("company"),
   relatedId: text("related_id"),
   relatedName: text("related_name"),
   notes: text("notes"),
   filePath: text("file_path"),
-  createdAt: timestamp("created_at", { withTimezone: true })
+  createdAt: integer("created_at", { mode: "timestamp_ms" })
     .notNull()
-    .defaultNow(),
+    .$defaultFn(() => new Date()),
 });
 
 export const insertDocumentSchema = createInsertSchema(documentsTable).omit({

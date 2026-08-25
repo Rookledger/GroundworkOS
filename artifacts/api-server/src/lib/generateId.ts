@@ -1,35 +1,37 @@
-import { randomUUID } from "crypto";
-import { db } from "@workspace/db";
+import type { Database } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
+/**
+ * `crypto.randomUUID()` is a Web Crypto global available natively on
+ * Workers - no `node:crypto` import needed.
+ */
 export function generateId(): string {
-  return randomUUID();
+  return crypto.randomUUID();
 }
 
 /**
  * Atomically allocates the next sequence number for a given table/year using
- * a dedicated counters table. Uses INSERT ... ON CONFLICT DO UPDATE, which
- * takes a row-level lock in Postgres, so concurrent callers are serialized
- * and cannot receive the same number (unlike the previous COUNT(*)+1 scheme).
- *
- * Accepts an optional `executor` (a transaction handle) so callers that need
- * the number allocation to roll back together with other writes (e.g. quote
- * + line items) can pass their `tx` instead of using the module-level `db`.
+ * a dedicated counters table. `INSERT ... ON CONFLICT DO UPDATE ... RETURNING`
+ * is supported by D1's underlying SQLite engine the same way it was by
+ * Postgres, so this logic is unchanged - only the caller-supplied executor
+ * type changed, since there is no module-level `db` singleton to default to
+ * any more (D1 only exists per-request, as `c.env.DB`). Every call site now
+ * passes its request-scoped `db` (or an open transaction/batch handle)
+ * explicitly.
  */
 export async function nextSeqNumber(
+  db: Pick<Database, "run" | "get" | "all">,
   tableName: string,
   prefix: string,
-  executor: Pick<typeof db, "execute"> = db,
 ): Promise<string> {
   const year = new Date().getFullYear();
   const key = `${tableName}:${year}`;
-  const result = await executor.execute(sql`
+  const row = await db.get<{ value: number }>(sql`
     INSERT INTO id_counters (key, value)
     VALUES (${key}, 1)
     ON CONFLICT (key) DO UPDATE SET value = id_counters.value + 1
     RETURNING value
   `);
-  const row = (result as any).rows?.[0] ?? (result as any)[0];
   const value = Number(row?.value ?? 1);
   const n = value.toString().padStart(3, "0");
   return `${prefix}-${year}-${n}`;

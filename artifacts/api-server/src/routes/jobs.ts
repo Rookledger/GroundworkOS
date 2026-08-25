@@ -1,13 +1,16 @@
-import { Router } from "express";
-import { db, jobsTable, clientsTable } from "@workspace/db";
+import { Hono } from "hono";
+import { jobsTable, clientsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { CreateJobInput, UpdateJobInput } from "@workspace/api-zod";
 import { logAudit } from "./audit.js";
 import { requireRole } from "../lib/auth.js";
+import { generateId, nextSeqNumber } from "../lib/generateId.js";
+import type { AppEnv } from "../types";
+import type { Database } from "@workspace/db";
 
-const router = Router();
+const router = new Hono<AppEnv>();
 
-async function withClient(job: typeof jobsTable.$inferSelect) {
+async function withClient(db: Database, job: typeof jobsTable.$inferSelect) {
   const [client] = job.clientId
     ? await db
         .select({ companyName: clientsTable.companyName })
@@ -17,7 +20,8 @@ async function withClient(job: typeof jobsTable.$inferSelect) {
   return { ...job, clientName: client?.companyName ?? null };
 }
 
-router.get("/jobs", requireRole("foreman"), async (req, res) => {
+router.get("/jobs", requireRole("foreman"), async (c) => {
+  const db = c.get("db");
   const jobs = await db.select().from(jobsTable).orderBy(jobsTable.createdAt);
   const clientIds = [
     ...new Set(jobs.map((j) => j.clientId).filter(Boolean)),
@@ -27,8 +31,8 @@ router.get("/jobs", requireRole("foreman"), async (req, res) => {
         .select({ id: clientsTable.id, companyName: clientsTable.companyName })
         .from(clientsTable)
     : [];
-  const clientMap = new Map(clients.map((c) => [c.id, c.companyName]));
-  res.json(
+  const clientMap = new Map(clients.map((cl) => [cl.id, cl.companyName]));
+  return c.json(
     jobs.map((j) => ({
       ...j,
       clientName: clientMap.get(j.clientId ?? "") ?? null,
@@ -36,62 +40,64 @@ router.get("/jobs", requireRole("foreman"), async (req, res) => {
   );
 });
 
-router.post("/jobs", requireRole("foreman"), async (req, res) => {
-  const parsed = CreateJobInput.safeParse(req.body);
+router.post("/jobs", requireRole("foreman"), async (c) => {
+  const parsed = CreateJobInput.safeParse(await c.req.json());
   if (!parsed.success) {
-    return res
-      .status(400)
-      .json({ error: "Invalid request body", details: parsed.error.flatten() });
+    return c.json(
+      { error: "Invalid request body", details: parsed.error.flatten() },
+      400,
+    );
   }
+  const db = c.get("db");
   const data = parsed.data;
-  const { generateId, nextSeqNumber } = await import("../lib/generateId.js");
   const id = generateId();
-  const jobNumber = await nextSeqNumber("jobs", "GW");
+  const jobNumber = await nextSeqNumber(db, "jobs", "GW");
   const [job] = await db
     .insert(jobsTable)
     .values({ id, jobNumber, ...data })
     .returning();
-  await logAudit(
-    "job",
-    id,
-    "create",
-    { title: data.title, status: data.status },
-    req,
-  );
-  return res.status(201).json(await withClient(job));
+  await logAudit(c, "job", id, "create", {
+    title: data.title,
+    status: data.status,
+  });
+  return c.json(await withClient(db, job), 201);
 });
 
-router.get("/jobs/:id", requireRole("foreman"), async (req, res) => {
-  const [job] = await db
-    .select()
-    .from(jobsTable)
-    .where(eq(jobsTable.id, req.params.id));
-  if (!job) return res.status(404).json({ error: "Not found" });
-  return res.json(await withClient(job));
+router.get("/jobs/:id", requireRole("foreman"), async (c) => {
+  const db = c.get("db");
+  const id = c.req.param("id");
+  const [job] = await db.select().from(jobsTable).where(eq(jobsTable.id, id));
+  if (!job) return c.json({ error: "Not found" }, 404);
+  return c.json(await withClient(db, job));
 });
 
-router.patch("/jobs/:id", requireRole("foreman"), async (req, res) => {
-  const parsed = UpdateJobInput.safeParse(req.body);
+router.patch("/jobs/:id", requireRole("foreman"), async (c) => {
+  const parsed = UpdateJobInput.safeParse(await c.req.json());
   if (!parsed.success) {
-    return res
-      .status(400)
-      .json({ error: "Invalid request body", details: parsed.error.flatten() });
+    return c.json(
+      { error: "Invalid request body", details: parsed.error.flatten() },
+      400,
+    );
   }
+  const db = c.get("db");
+  const id = c.req.param("id");
   const data = parsed.data;
   const [job] = await db
     .update(jobsTable)
     .set(data)
-    .where(eq(jobsTable.id, req.params.id))
+    .where(eq(jobsTable.id, id))
     .returning();
-  if (!job) return res.status(404).json({ error: "Not found" });
-  await logAudit("job", req.params.id, "update", data, req);
-  return res.json(await withClient(job));
+  if (!job) return c.json({ error: "Not found" }, 404);
+  await logAudit(c, "job", id, "update", data);
+  return c.json(await withClient(db, job));
 });
 
-router.delete("/jobs/:id", requireRole("manager"), async (req, res) => {
-  await logAudit("job", req.params.id, "delete", null, req);
-  await db.delete(jobsTable).where(eq(jobsTable.id, req.params.id));
-  res.status(204).send();
+router.delete("/jobs/:id", requireRole("manager"), async (c) => {
+  const db = c.get("db");
+  const id = c.req.param("id");
+  await logAudit(c, "job", id, "delete", null);
+  await db.delete(jobsTable).where(eq(jobsTable.id, id));
+  return c.body(null, 204);
 });
 
 export default router;

@@ -1,29 +1,23 @@
-import type { Request, RequestHandler, Response } from "express";
-import { getAuth, clerkClient } from "@clerk/express";
+import type { Context, MiddlewareHandler } from "hono";
+import { getAuth } from "@hono/clerk-auth";
 import { type Role, ROLE_RANK, resolveRole } from "@workspace/shared-role";
+import type { AppEnv } from "../types";
 
 export type { Role };
 
-declare global {
-  // Standard pattern for augmenting Express's Request type (see @types/express).
-  // eslint-disable-next-line @typescript-eslint/no-namespace
-  namespace Express {
-    interface Request {
-      /** Per-request role cache, set by getUserRole so repeated calls within
-       * the same request don't re-hit Clerk. */
-      _role?: Role;
-      /** Populated by the top-level requireAuth middleware in routes/index.ts. */
-      userId?: string;
-    }
-  }
-}
-
-export async function getUserRole(req: Request): Promise<Role> {
-  const cached = req._role;
+/**
+ * Reads (and caches, per-request) the caller's effective role.
+ *
+ * `c.get("userId")` is populated by the top-level requireAuth middleware in
+ * routes/index.ts; `getAuth(c)` (from @hono/clerk-auth) is the fallback,
+ * matching the old Express version's `req.userId ?? auth.userId`.
+ */
+export async function getUserRole(c: Context<AppEnv>): Promise<Role> {
+  const cached = c.get("_role");
   if (cached) return cached;
 
-  const auth = getAuth(req);
-  const userId = req.userId ?? auth.userId ?? undefined;
+  const auth = getAuth(c);
+  const userId = c.get("userId") ?? auth?.userId ?? undefined;
   // Users with no explicit role default to foreman (lowest privilege), so a
   // stranger who reaches a public sign-up page never lands with elevated
   // access. An explicitly-set role always takes precedence. The first admin
@@ -31,52 +25,39 @@ export async function getUserRole(req: Request): Promise<Role> {
   // this default.
   let role: Role = "foreman";
   if (userId) {
-    // A Clerk lookup failure is intentionally NOT swallowed here. Falling back
-    // to "admin" on error would let an explicitly-demoted manager/foreman
-    // silently gain admin during a transient Clerk outage (fail-open privilege
-    // escalation). Let it throw so requireRole can fail closed with a 503.
-    const user = await clerkClient.users.getUser(userId);
+    // A Clerk lookup failure is intentionally NOT swallowed here. Falling
+    // back to "admin" on error would let an explicitly-demoted
+    // manager/foreman silently gain admin during a transient Clerk outage
+    // (fail-open privilege escalation). Let it throw so requireRole can fail
+    // closed with a 503.
+    const user = await c.get("clerk").users.getUser(userId);
     role = resolveRole(user.publicMetadata?.role);
   }
-  req._role = role;
+  c.set("_role", role);
   return role;
 }
 
 /**
- * Express middleware factory: rejects the request with 403 unless the
- * caller's role is at least `minRole` (admin > manager > foreman).
- *
- * Generic over the route's param/body/query types so TypeScript unifies it
- * with the concrete handler it's paired with in `router.METHOD(path, requireRole(...), handler)`
- * instead of falling back to a broader default `ParamsDictionary`.
+ * Hono middleware factory: rejects the request with 403 unless the caller's
+ * role is at least `minRole` (admin > manager > foreman).
  */
-export function requireRole<
-  P = any,
-  ResBody = any,
-  ReqBody = any,
-  ReqQuery = any,
->(minRole: Role): RequestHandler<P, ResBody, ReqBody, ReqQuery> {
-  return async (req, res, next) => {
+export function requireRole(minRole: Role): MiddlewareHandler<AppEnv> {
+  return async (c, next) => {
     let role: Role;
     try {
-      role = await getUserRole(req as unknown as Request);
+      role = await getUserRole(c);
     } catch {
       // Fail closed: if the caller's role can't be verified (e.g. a Clerk
-      // outage), deny the request rather than assuming the default admin role.
-      // Cast to the base Response type: this error body doesn't conform to
-      // the route's generic ResBody, which is fine since we're short-circuiting
-      // before the route handler ever runs.
-      (res as Response).status(503).json({
-        error: "Unable to verify permissions, please try again",
-      });
-      return;
+      // outage), deny the request rather than assuming the default admin
+      // role.
+      return c.json(
+        { error: "Unable to verify permissions, please try again" },
+        503,
+      );
     }
     if (ROLE_RANK[role] < ROLE_RANK[minRole]) {
-      (res as Response).status(403).json({
-        error: `Forbidden: ${minRole} role required`,
-      });
-      return;
+      return c.json({ error: `Forbidden: ${minRole} role required` }, 403);
     }
-    next();
+    return next();
   };
 }

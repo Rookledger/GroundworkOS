@@ -1,8 +1,8 @@
-import { pgTable, text, real, date, timestamp } from "drizzle-orm/pg-core";
+import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
-export const invoicesTable = pgTable("invoices", {
+export const invoicesTable = sqliteTable("invoices", {
   id: text("id").primaryKey(),
   invoiceNumber: text("invoice_number").notNull().unique(),
   clientId: text("client_id"),
@@ -13,14 +13,14 @@ export const invoicesTable = pgTable("invoices", {
   vatAmount: real("vat_amount").notNull().default(0),
   totalAmount: real("total_amount").notNull().default(0),
   status: text("status").notNull().default("draft"),
-  issuedDate: date("issued_date", { mode: "string" }).notNull(),
-  dueDate: date("due_date", { mode: "string" }),
-  paidAt: timestamp("paid_at", { withTimezone: true }),
+  issuedDate: text("issued_date").notNull(),
+  dueDate: text("due_date"),
+  paidAt: integer("paid_at", { mode: "timestamp_ms" }),
   notes: text("notes"),
   cisDeduction: real("cis_deduction"),
-  createdAt: timestamp("created_at", { withTimezone: true })
+  createdAt: integer("created_at", { mode: "timestamp_ms" })
     .notNull()
-    .defaultNow(),
+    .$defaultFn(() => new Date()),
 });
 
 export const insertInvoiceSchema = createInsertSchema(invoicesTable).omit({

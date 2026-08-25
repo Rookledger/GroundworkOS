@@ -1,26 +1,30 @@
-import { Router } from "express";
-import { db, auditLogsTable } from "@workspace/db";
+import { Hono } from "hono";
+import type { Context } from "hono";
+import { getAuth } from "@hono/clerk-auth";
+import { auditLogsTable } from "@workspace/db";
 import { desc, eq, and, gte } from "drizzle-orm";
 import { generateId } from "../lib/generateId.js";
 import { requireRole } from "../lib/auth.js";
-import type { Request } from "express";
+import type { AppEnv } from "../types";
 
-const router = Router();
+const router = new Hono<AppEnv>();
 
 export async function logAudit(
+  c: Context<AppEnv>,
   entityType: string,
   entityId: string,
   action: "create" | "update" | "delete" | (string & {}),
-  changes: Record<string, any> | null,
-  req: Request,
+  changes: Record<string, unknown> | null,
 ) {
   try {
-    const auth = (req as any).auth;
+    const auth = getAuth(c);
     const userId = auth?.userId ?? null;
-    const userName =
-      auth?.sessionClaims?.fullName ?? auth?.sessionClaims?.name ?? null;
-    const userEmail = auth?.sessionClaims?.email ?? null;
-    await db.insert(auditLogsTable).values({
+    const claims = auth?.sessionClaims as
+      | { fullName?: string; name?: string; email?: string }
+      | undefined;
+    const userName = claims?.fullName ?? claims?.name ?? null;
+    const userEmail = claims?.email ?? null;
+    await c.get("db").insert(auditLogsTable).values({
       id: generateId(),
       entityType,
       entityId,
@@ -35,14 +39,13 @@ export async function logAudit(
   }
 }
 
-router.get("/audit-logs", requireRole("admin"), async (req, res) => {
-  const {
-    entityType,
-    entityId,
-    days = "30",
-    limit = "100",
-  } = req.query as Record<string, string>;
-  const since = new Date(Date.now() - Number(days) * 86400000);
+router.get("/audit-logs", requireRole("admin"), async (c) => {
+  const db = c.get("db");
+  const entityType = c.req.query("entityType");
+  const entityId = c.req.query("entityId");
+  const days = Number(c.req.query("days") ?? "30");
+  const limit = Number(c.req.query("limit") ?? "100");
+  const since = new Date(Date.now() - days * 86400000);
 
   const conditions = [gte(auditLogsTable.createdAt, since)];
   if (entityType) conditions.push(eq(auditLogsTable.entityType, entityType));
@@ -53,9 +56,9 @@ router.get("/audit-logs", requireRole("admin"), async (req, res) => {
     .from(auditLogsTable)
     .where(and(...conditions))
     .orderBy(desc(auditLogsTable.createdAt))
-    .limit(Math.min(Number(limit), 500));
+    .limit(Math.min(limit, 500));
 
-  res.json(logs);
+  return c.json(logs);
 });
 
 export default router;

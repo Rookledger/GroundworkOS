@@ -1,5 +1,4 @@
-import type { Readable } from "stream";
-import { S3StorageBackend } from "./objectStorageS3";
+import { R2StorageBackend } from "./objectStorageR2";
 import {
   ObjectNotFoundError,
   type StorageBackend,
@@ -10,15 +9,16 @@ export { ObjectNotFoundError };
 export type { StorageBackend, UploadTarget };
 
 /**
- * Facade over the S3-compatible StorageBackend (AWS S3, Cloudflare R2,
- * Backblaze B2, Oracle Cloud Object Storage, MinIO, etc.). Route handlers use
- * this class and are agnostic to which S3-compatible provider is configured.
+ * Facade over the storage backend. Route handlers use this class and stay
+ * agnostic to what backs it; today that's always R2 (`c.env.DOCS_BUCKET`),
+ * but keeping the facade means a future second backend (or a test double)
+ * doesn't require touching every route.
  */
 export class ObjectStorageService implements StorageBackend {
   private readonly backend: StorageBackend;
 
-  constructor() {
-    this.backend = new S3StorageBackend();
+  constructor(bucket: R2Bucket) {
+    this.backend = new R2StorageBackend(bucket);
   }
 
   getUploadURL(opts: { relayBaseUrl: string }): Promise<UploadTarget> {
@@ -27,7 +27,7 @@ export class ObjectStorageService implements StorageBackend {
 
   putPrivateObject(
     objectId: string,
-    body: Readable,
+    body: ReadableStream<Uint8Array> | ArrayBuffer | null,
     contentType: string,
   ): Promise<void> {
     return this.backend.putPrivateObject(objectId, body, contentType);

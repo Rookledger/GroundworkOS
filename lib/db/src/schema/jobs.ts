@@ -1,16 +1,8 @@
-import {
-  pgTable,
-  text,
-  integer,
-  boolean,
-  date,
-  timestamp,
-  real,
-} from "drizzle-orm/pg-core";
+import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
-export const jobsTable = pgTable("jobs", {
+export const jobsTable = sqliteTable("jobs", {
   id: text("id").primaryKey(),
   jobNumber: text("job_number").notNull().unique(),
   title: text("title").notNull(),
@@ -18,18 +10,20 @@ export const jobsTable = pgTable("jobs", {
   type: text("type"),
   siteAddress: text("site_address"),
   value: real("value"),
-  startDate: date("start_date", { mode: "string" }),
-  endDate: date("end_date", { mode: "string" }),
+  startDate: text("start_date"),
+  endDate: text("end_date"),
   status: text("status").notNull().default("enquiry"),
   progressPercent: integer("progress_percent").notNull().default(0),
   description: text("description"),
   foreman: text("foreman"),
   crewCount: integer("crew_count"),
-  nrswaRequired: boolean("nrswa_required").notNull().default(false),
-  permitNumber: text("permit_number"),
-  createdAt: timestamp("created_at", { withTimezone: true })
+  nrswaRequired: integer("nrswa_required", { mode: "boolean" })
     .notNull()
-    .defaultNow(),
+    .default(false),
+  permitNumber: text("permit_number"),
+  createdAt: integer("created_at", { mode: "timestamp_ms" })
+    .notNull()
+    .$defaultFn(() => new Date()),
 });
 
 export const insertJobSchema = createInsertSchema(jobsTable).omit({

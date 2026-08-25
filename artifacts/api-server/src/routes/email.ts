@@ -1,18 +1,13 @@
-import { Router } from "express";
-import {
-  db,
-  quotesTable,
-  invoicesTable,
-  companySettingsTable,
-} from "@workspace/db";
+import { Hono } from "hono";
+import { quotesTable, invoicesTable, companySettingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireRole } from "../lib/auth.js";
 import { logAudit } from "./audit.js";
+import type { AppEnv } from "../types";
 
-const router = Router();
+const router = new Hono<AppEnv>();
 
-async function getResend() {
-  const apiKey = process.env.RESEND_API_KEY;
+async function getResend(apiKey: string | undefined) {
   if (!apiKey) return null;
   const { Resend } = await import("resend");
   return new Resend(apiKey);
@@ -142,32 +137,33 @@ function buildInvoiceHtml(invoice: any, company: any): string {
 </html>`;
 }
 
-router.post("/email/send-quote", requireRole("manager"), async (req, res) => {
-  const { quoteId, to, subject } = req.body as {
+router.post("/email/send-quote", requireRole("manager"), async (c) => {
+  const { quoteId, to, subject } = (await c.req.json()) as {
     quoteId: string;
     to: string;
     subject?: string;
   };
-  if (!quoteId || !to)
-    return res.status(400).json({ error: "quoteId and to are required" });
+  if (!quoteId || !to) {
+    return c.json({ error: "quoteId and to are required" }, 400);
+  }
 
-  const resend = await getResend();
-  if (!resend)
-    return res
-      .status(503)
-      .json({ error: "Email not configured — add RESEND_API_KEY to secrets" });
+  const resend = await getResend(c.env.RESEND_API_KEY);
+  if (!resend) {
+    return c.json(
+      { error: "Email not configured — add RESEND_API_KEY to secrets" },
+      503,
+    );
+  }
 
-  const [quote] = await db
-    .select()
-    .from(quotesTable)
-    .where(eq(quotesTable.id, quoteId));
-  if (!quote) return res.status(404).json({ error: "Quote not found" });
+  const db = c.get("db");
+  const [quote] = await db.select().from(quotesTable).where(eq(quotesTable.id, quoteId));
+  if (!quote) return c.json({ error: "Quote not found" }, 404);
 
   const [settings] = await db.select().from(companySettingsTable).limit(1);
-  const company = settings ?? {};
+  const company: any = settings ?? {};
 
-  const fromEmail = (company as any).email
-    ? `${(company as any).companyName ?? "GroundworkOS"} <onboarding@resend.dev>`
+  const fromEmail = company.email
+    ? `${company.companyName ?? "GroundworkOS"} <onboarding@resend.dev>`
     : "onboarding@resend.dev";
 
   const html = buildQuoteHtml(quote, company);
@@ -176,9 +172,7 @@ router.post("/email/send-quote", requireRole("manager"), async (req, res) => {
     await resend.emails.send({
       from: fromEmail,
       to,
-      subject:
-        subject ??
-        `Quote ${quote.quoteNumber} from ${(company as any).companyName ?? "GroundworkOS"}`,
+      subject: subject ?? `Quote ${quote.quoteNumber} from ${company.companyName ?? "GroundworkOS"}`,
       html,
     });
 
@@ -186,48 +180,47 @@ router.post("/email/send-quote", requireRole("manager"), async (req, res) => {
       .update(quotesTable)
       .set({ status: "sent", sentAt: new Date().toISOString() } as any)
       .where(eq(quotesTable.id, quoteId));
-    await logAudit(
-      "quote",
-      quoteId,
-      "update",
-      { action: "email_sent", to },
-      req,
-    );
+    await logAudit(c, "quote", quoteId, "update", { action: "email_sent", to });
 
-    return res.json({ ok: true });
-  } catch (err: any) {
-    return res
-      .status(500)
-      .json({ error: err?.message ?? "Failed to send email" });
+    return c.json({ ok: true });
+  } catch (err) {
+    return c.json(
+      { error: err instanceof Error ? err.message : "Failed to send email" },
+      500,
+    );
   }
 });
 
-router.post("/email/send-invoice", requireRole("manager"), async (req, res) => {
-  const { invoiceId, to, subject } = req.body as {
+router.post("/email/send-invoice", requireRole("manager"), async (c) => {
+  const { invoiceId, to, subject } = (await c.req.json()) as {
     invoiceId: string;
     to: string;
     subject?: string;
   };
-  if (!invoiceId || !to)
-    return res.status(400).json({ error: "invoiceId and to are required" });
+  if (!invoiceId || !to) {
+    return c.json({ error: "invoiceId and to are required" }, 400);
+  }
 
-  const resend = await getResend();
-  if (!resend)
-    return res
-      .status(503)
-      .json({ error: "Email not configured — add RESEND_API_KEY to secrets" });
+  const resend = await getResend(c.env.RESEND_API_KEY);
+  if (!resend) {
+    return c.json(
+      { error: "Email not configured — add RESEND_API_KEY to secrets" },
+      503,
+    );
+  }
 
+  const db = c.get("db");
   const [invoice] = await db
     .select()
     .from(invoicesTable)
     .where(eq(invoicesTable.id, invoiceId));
-  if (!invoice) return res.status(404).json({ error: "Invoice not found" });
+  if (!invoice) return c.json({ error: "Invoice not found" }, 404);
 
   const [settings] = await db.select().from(companySettingsTable).limit(1);
-  const company = settings ?? {};
+  const company: any = settings ?? {};
 
-  const fromEmail = (company as any).email
-    ? `${(company as any).companyName ?? "GroundworkOS"} <onboarding@resend.dev>`
+  const fromEmail = company.email
+    ? `${company.companyName ?? "GroundworkOS"} <onboarding@resend.dev>`
     : "onboarding@resend.dev";
 
   const html = buildInvoiceHtml(invoice, company);
@@ -237,8 +230,7 @@ router.post("/email/send-invoice", requireRole("manager"), async (req, res) => {
       from: fromEmail,
       to,
       subject:
-        subject ??
-        `Invoice ${invoice.invoiceNumber} from ${(company as any).companyName ?? "GroundworkOS"}`,
+        subject ?? `Invoice ${invoice.invoiceNumber} from ${company.companyName ?? "GroundworkOS"}`,
       html,
     });
 
@@ -246,19 +238,14 @@ router.post("/email/send-invoice", requireRole("manager"), async (req, res) => {
       .update(invoicesTable)
       .set({ status: "sent" } as any)
       .where(eq(invoicesTable.id, invoiceId));
-    await logAudit(
-      "invoice",
-      invoiceId,
-      "update",
-      { action: "email_sent", to },
-      req,
-    );
+    await logAudit(c, "invoice", invoiceId, "update", { action: "email_sent", to });
 
-    return res.json({ ok: true });
-  } catch (err: any) {
-    return res
-      .status(500)
-      .json({ error: err?.message ?? "Failed to send email" });
+    return c.json({ ok: true });
+  } catch (err) {
+    return c.json(
+      { error: err instanceof Error ? err.message : "Failed to send email" },
+      500,
+    );
   }
 });
 
