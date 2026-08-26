@@ -11,15 +11,7 @@
     "noEmit": true
   },
   "include": ["src", "worker-configuration.d.ts"],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "**/*.test.ts",
-    // Not yet ported to D1/Workers (still references a module-level `db`
-    // singleton and Node's `process.env`) - dev-only seed script, not part
-    // of the deployed Worker bundle. Tracked as follow-up work.
-    "src/seed.ts"
-  ],
+  "exclude": ["node_modules", "dist", "**/*.test.ts"],
   "references": [
     { "path": "../../lib/shared-role" },
     { "path": "../../lib/db" },

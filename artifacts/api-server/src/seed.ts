@@ -1,5 +1,9 @@
+import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import { sql } from "drizzle-orm";
+import { existsSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
 import {
-  db,
   clientsTable,
   jobsTable,
   quotesTable,
@@ -11,59 +15,91 @@ import {
   plantTable,
   rateBookTable,
   idCountersTable,
-} from "@workspace/db";
-import { sql } from "drizzle-orm";
+} from "@workspace/db/schema";
 
 /**
  * Hard safeguard: this script wipes-in fixed demo data and must never touch
- * a real database. NODE_ENV=production is refused outright with no
- * override. Any other environment must point DATABASE_URL at a recognized
- * local/dev host; anything else needs the SEED_CONFIRM_NON_LOCAL_DB=yes
- * escape hatch, so seeding a non-local database (a shared staging DB
- * someone forgot to set NODE_ENV=production on, for example) takes a
- * deliberate, explicit choice instead of happening by accident.
+ * a real database. There is no DATABASE_URL/hostname to police any more
+ * (see findLocalD1Database() below) - this script can only ever open a
+ * plain SQLite file that lives under .wrangler/state, wrangler's own local
+ * dev state directory, so there is structurally no way to point it at a
+ * shared or production database. NODE_ENV=production is still refused
+ * outright, purely as defense in depth.
  */
-const LOCAL_DB_HOSTS = new Set([
-  "localhost",
-  "127.0.0.1",
-  "::1",
-  "host.docker.internal",
-]);
-
 function assertSafeToSeed() {
   if (process.env.NODE_ENV === "production") {
     console.error(
       "Refusing to seed: NODE_ENV is 'production'. This script inserts fixed " +
-        "demo data and can never run against a production database.",
-    );
-    process.exit(1);
-  }
-
-  const databaseUrl = process.env.DATABASE_URL ?? "";
-  let hostname = "";
-  try {
-    hostname = new URL(databaseUrl).hostname;
-  } catch {
-    // Missing/malformed URL: falls through to the allowlist check below,
-    // which will reject the empty hostname.
-  }
-
-  if (
-    !LOCAL_DB_HOSTS.has(hostname) &&
-    process.env.SEED_CONFIRM_NON_LOCAL_DB !== "yes"
-  ) {
-    console.error(
-      `Refusing to seed: DATABASE_URL host "${hostname || "(unparseable)"}" ` +
-        "is not in the local/development allowlist " +
-        `(${Array.from(LOCAL_DB_HOSTS).join(", ")}).\n` +
-        "If you are certain this is not a production or shared database, " +
-        "re-run with SEED_CONFIRM_NON_LOCAL_DB=yes to proceed.",
+        "demo data and must never run in a production environment.",
     );
     process.exit(1);
   }
 }
 
+/**
+ * `wrangler dev` and `wrangler d1 migrations apply --local` don't talk to a
+ * hosted D1 database - for local dev they run against a local SQLite file
+ * managed by Miniflare, one per D1 binding, under
+ * .wrangler/state/v3/d1/miniflare-D1DatabaseObject/<id>.sqlite (relative to
+ * this package, artifacts/api-server; see the README's Install & Run
+ * section for the `wrangler d1 migrations apply groundworkos --local` step
+ * that creates it). Since that file is plain SQLite and the schema in
+ * @workspace/db/schema is declared with drizzle-orm's sqlite-core builder
+ * (not anything D1-specific), we can open it directly with better-sqlite3
+ * and reuse the exact same table definitions and query builder the Worker
+ * itself uses at runtime - no separate SQL-generation step needed.
+ */
+function findLocalD1Database(): string {
+  const stateDir = join(
+    import.meta.dirname,
+    "..",
+    ".wrangler",
+    "state",
+    "v3",
+    "d1",
+    "miniflare-D1DatabaseObject",
+  );
+
+  if (!existsSync(stateDir)) {
+    console.error(
+      `Refusing to seed: no local D1 state found at ${stateDir}.\n` +
+        "Run `pnpm exec wrangler d1 migrations apply groundworkos --local` " +
+        "from artifacts/api-server first to create it (see README's " +
+        "Install & Run section).",
+    );
+    process.exit(1);
+  }
+
+  const sqliteFiles = readdirSync(stateDir).filter((f) =>
+    f.endsWith(".sqlite"),
+  );
+
+  if (sqliteFiles.length === 0) {
+    console.error(
+      `Refusing to seed: ${stateDir} exists but contains no .sqlite file.\n` +
+        "Run `pnpm exec wrangler d1 migrations apply groundworkos --local` " +
+        "from artifacts/api-server first.",
+    );
+    process.exit(1);
+  }
+
+  // Normally there's exactly one file here (this Worker declares a single
+  // D1 binding). If wrangler ever leaves more than one behind - e.g. after
+  // a `database_id` change - seed the most recently written one rather
+  // than guessing which is current.
+  const [newest] = sqliteFiles
+    .map((f) => join(stateDir, f))
+    .sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs);
+
+  return newest;
+}
+
 assertSafeToSeed();
+
+const dbPath = findLocalD1Database();
+console.log(`Seeding local D1 database at ${dbPath}`);
+const sqlite = new Database(dbPath);
+const db = drizzle(sqlite);
 
 const todayDate = new Date().toISOString().split("T")[0];
 function futureDate(offsetDays: number) {
@@ -1227,7 +1263,11 @@ async function seed() {
         .values({ key, value })
         .onConflictDoUpdate({
           target: idCountersTable.key,
-          set: { value: sql`greatest(${idCountersTable.value}, ${value})` },
+          // SQLite's multi-argument max(a, b) is the scalar comparison
+          // function (distinct from the single-argument MAX(col)
+          // aggregate) - the direct equivalent of Postgres's greatest(),
+          // which isn't available in SQLite/D1.
+          set: { value: sql`max(${idCountersTable.value}, ${value})` },
         });
     }
   }
@@ -1258,10 +1298,14 @@ async function seed() {
   ]);
 
   console.log("Seed complete.");
-  process.exit(0);
 }
 
-seed().catch((err) => {
-  console.error("Seed failed:", err);
-  process.exit(1);
-});
+seed()
+  .catch((err) => {
+    console.error("Seed failed:", err);
+    process.exitCode = 1;
+  })
+  .finally(() => {
+    sqlite.close();
+    process.exit(process.exitCode ?? 0);
+  });
