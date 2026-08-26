@@ -1,5 +1,4 @@
 import {
-  db,
   sageConnectionTable,
   sageClientMapTable,
   sageInvoiceMapTable,
@@ -9,7 +8,9 @@ import {
   quotesTable,
   lineItemsTable,
 } from "@workspace/db";
+import type { Database } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import type { Bindings } from "../types";
 
 const SAGE_AUTH_URL = "https://www.sageone.com/oauth2/auth/central";
 const SAGE_TOKEN_URL = "https://oauth.accounting.sage.com/token";
@@ -17,9 +18,9 @@ const SAGE_API_BASE = "https://api.accounting.sage.com/v3.1";
 
 // ─── Credentials ────────────────────────────────────────────────────────────
 
-function creds() {
-  const id = process.env.SAGE_CLIENT_ID;
-  const secret = process.env.SAGE_CLIENT_SECRET;
+function creds(env: Bindings) {
+  const id = env.SAGE_CLIENT_ID;
+  const secret = env.SAGE_CLIENT_SECRET;
   if (!id || !secret)
     throw new Error("SAGE_CLIENT_ID / SAGE_CLIENT_SECRET not configured");
   return { id, secret };
@@ -27,30 +28,28 @@ function creds() {
 
 // ─── Connection helpers ──────────────────────────────────────────────────────
 
-export async function getConnection() {
+export async function getConnection(db: Database) {
   const [conn] = await db.select().from(sageConnectionTable).limit(1);
   return conn ?? null;
 }
 
-let refreshInFlight: Promise<typeof sageConnectionTable.$inferSelect> | null =
-  null;
-
-async function refreshIfNeeded(conn: typeof sageConnectionTable.$inferSelect) {
+async function refreshIfNeeded(
+  db: Database,
+  env: Bindings,
+  conn: typeof sageConnectionTable.$inferSelect,
+) {
   // Refresh 5 min before expiry
   if (Date.now() < new Date(conn.expiresAt).getTime() - 5 * 60 * 1000)
     return conn;
-
-  // Concurrent requests hitting an expired token share one refresh instead of
-  // racing each other and clobbering the stored refresh token.
-  if (refreshInFlight) return refreshInFlight;
-  refreshInFlight = doRefresh(conn).finally(() => {
-    refreshInFlight = null;
-  });
-  return refreshInFlight;
+  return doRefresh(db, env, conn);
 }
 
-async function doRefresh(conn: typeof sageConnectionTable.$inferSelect) {
-  const { id, secret } = creds();
+async function doRefresh(
+  db: Database,
+  env: Bindings,
+  conn: typeof sageConnectionTable.$inferSelect,
+) {
+  const { id, secret } = creds(env);
   const r = await fetch(SAGE_TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -85,10 +84,15 @@ async function doRefresh(conn: typeof sageConnectionTable.$inferSelect) {
   return updated;
 }
 
-async function sageFetch(path: string, opts: RequestInit = {}) {
-  const conn = await getConnection();
+async function sageFetch(
+  db: Database,
+  env: Bindings,
+  path: string,
+  opts: RequestInit = {},
+) {
+  const conn = await getConnection(db);
   if (!conn) throw new Error("Sage not connected");
-  const fresh = await refreshIfNeeded(conn);
+  const fresh = await refreshIfNeeded(db, env, conn);
 
   const url = `${SAGE_API_BASE}${path}`;
   const r = await fetch(url, {
@@ -106,9 +110,9 @@ async function sageFetch(path: string, opts: RequestInit = {}) {
 
 // ─── OAuth ───────────────────────────────────────────────────────────────────
 
-export function buildAuthUrl(state: string) {
-  const { id } = creds();
-  const redirectUri = process.env.SAGE_REDIRECT_URI;
+export function buildAuthUrl(env: Bindings, state: string) {
+  const { id } = creds(env);
+  const redirectUri = env.SAGE_REDIRECT_URI;
   if (!redirectUri) throw new Error("SAGE_REDIRECT_URI not configured");
   const params = new URLSearchParams({
     response_type: "code",
@@ -121,9 +125,9 @@ export function buildAuthUrl(state: string) {
   return `${SAGE_AUTH_URL}?${params}`;
 }
 
-export async function exchangeCode(code: string) {
-  const { id, secret } = creds();
-  const redirectUri = process.env.SAGE_REDIRECT_URI;
+export async function exchangeCode(env: Bindings, code: string) {
+  const { id, secret } = creds(env);
+  const redirectUri = env.SAGE_REDIRECT_URI;
   if (!redirectUri) throw new Error("SAGE_REDIRECT_URI not configured");
   const r = await fetch(SAGE_TOKEN_URL, {
     method: "POST",
@@ -164,6 +168,7 @@ export async function fetchBusiness(accessToken: string) {
 }
 
 export async function storeConnection(
+  db: Database,
   tokens: { access_token: string; refresh_token: string; expires_in: number },
   businessId: string,
   businessName: string | null,
@@ -183,7 +188,7 @@ export async function storeConnection(
   });
 }
 
-export async function disconnect() {
+export async function disconnect(db: Database) {
   await db.delete(sageConnectionTable);
   await db.delete(sageClientMapTable);
   await db.delete(sageInvoiceMapTable);
@@ -192,7 +197,11 @@ export async function disconnect() {
 
 // ─── Contact sync ─────────────────────────────────────────────────────────────
 
-export async function syncContact(clientId: string) {
+export async function syncContact(
+  db: Database,
+  env: Bindings,
+  clientId: string,
+) {
   const [client] = await db
     .select()
     .from(clientsTable)
@@ -213,7 +222,7 @@ export async function syncContact(clientId: string) {
   const method = existing ? "PUT" : "POST";
   const path = existing ? `/contacts/${existing.sageContactId}` : "/contacts";
 
-  const r = (await sageFetch(path, {
+  const r = (await sageFetch(db, env, path, {
     method,
     body: JSON.stringify({ contact }),
   })) as { id?: string; contact?: { id?: string } };
@@ -232,36 +241,47 @@ export async function syncContact(clientId: string) {
   return { clientId, sageContactId };
 }
 
-export async function syncAllContacts() {
+export async function syncAllContacts(db: Database, env: Bindings) {
   const clients = await db.select().from(clientsTable);
   return Promise.all(
-    clients.map((c) =>
-      syncContact(c.id).catch((e) => ({ error: String(e), clientId: c.id })),
+    clients.map((cl) =>
+      syncContact(db, env, cl.id).catch((e) => ({
+        error: String(e),
+        clientId: cl.id,
+      })),
     ),
   );
 }
 
 // ─── Invoice sync ─────────────────────────────────────────────────────────────
 
-async function ensureContact(clientId: string | null) {
+async function ensureContact(
+  db: Database,
+  env: Bindings,
+  clientId: string | null,
+) {
   if (!clientId) return undefined;
   const [map] = await db
     .select()
     .from(sageClientMapTable)
     .where(eq(sageClientMapTable.clientId, clientId));
   if (map) return map.sageContactId;
-  const r = await syncContact(clientId);
+  const r = await syncContact(db, env, clientId);
   return r.sageContactId;
 }
 
-export async function syncInvoice(invoiceId: string) {
+export async function syncInvoice(
+  db: Database,
+  env: Bindings,
+  invoiceId: string,
+) {
   const [invoice] = await db
     .select()
     .from(invoicesTable)
     .where(eq(invoicesTable.id, invoiceId));
   if (!invoice) throw new Error(`Invoice ${invoiceId} not found`);
 
-  const sageContactId = await ensureContact(invoice.clientId);
+  const sageContactId = await ensureContact(db, env, invoice.clientId);
   if (!sageContactId) throw new Error("Invoice has no client to bill in Sage");
 
   const [existingMap] = await db
@@ -290,7 +310,7 @@ export async function syncInvoice(invoiceId: string) {
     ? `/sales_invoices/${existingMap.sageInvoiceId}`
     : "/sales_invoices";
 
-  const r = (await sageFetch(path, {
+  const r = (await sageFetch(db, env, path, {
     method,
     body: JSON.stringify({ sales_invoice: salesInvoice }),
   })) as { id?: string; sales_invoice?: { id?: string } };
@@ -310,11 +330,11 @@ export async function syncInvoice(invoiceId: string) {
   return { invoiceId, sageInvoiceId };
 }
 
-export async function syncAllInvoices() {
+export async function syncAllInvoices(db: Database, env: Bindings) {
   const invoices = await db.select().from(invoicesTable);
   return Promise.all(
     invoices.map((inv) =>
-      syncInvoice(inv.id).catch((e) => ({
+      syncInvoice(db, env, inv.id).catch((e) => ({
         error: String(e),
         invoiceId: inv.id,
       })),
@@ -324,7 +344,11 @@ export async function syncAllInvoices() {
 
 // ─── Quote sync ───────────────────────────────────────────────────────────────
 
-export async function syncQuote(quoteId: string) {
+export async function syncQuote(
+  db: Database,
+  env: Bindings,
+  quoteId: string,
+) {
   const [quote] = await db
     .select()
     .from(quotesTable)
@@ -336,7 +360,7 @@ export async function syncQuote(quoteId: string) {
     .from(lineItemsTable)
     .where(eq(lineItemsTable.quoteId, quoteId));
 
-  const sageContactId = await ensureContact(quote.clientId);
+  const sageContactId = await ensureContact(db, env, quote.clientId);
   if (!sageContactId) throw new Error("Quote has no client to bill in Sage");
 
   const [existingMap] = await db
@@ -371,7 +395,7 @@ export async function syncQuote(quoteId: string) {
   const method = existingMap ? "PUT" : "POST";
   const path = existingMap ? `/quotes/${existingMap.sageQuoteId}` : "/quotes";
 
-  const r = (await sageFetch(path, {
+  const r = (await sageFetch(db, env, path, {
     method,
     body: JSON.stringify({ quote: sageQuote }),
   })) as { id?: string; quote?: { id?: string } };
@@ -390,23 +414,26 @@ export async function syncQuote(quoteId: string) {
   return { quoteId, sageQuoteId };
 }
 
-export async function syncAllQuotes() {
+export async function syncAllQuotes(db: Database, env: Bindings) {
   const quotes = await db.select().from(quotesTable);
   return Promise.all(
     quotes.map((q) =>
-      syncQuote(q.id).catch((e) => ({ error: String(e), quoteId: q.id })),
+      syncQuote(db, env, q.id).catch((e) => ({
+        error: String(e),
+        quoteId: q.id,
+      })),
     ),
   );
 }
 
 // ─── Pull payments from Sage ─────────────────────────────────────────────────
 
-export async function pullPayments() {
+export async function pullPayments(db: Database, env: Bindings) {
   const maps = await db.select().from(sageInvoiceMapTable);
   let updated = 0;
 
   for (const { invoiceId, sageInvoiceId } of maps) {
-    const r = (await sageFetch(`/sales_invoices/${sageInvoiceId}`)) as {
+    const r = (await sageFetch(db, env, `/sales_invoices/${sageInvoiceId}`)) as {
       sales_invoice?: { status?: { id?: string } };
     };
     const statusId = r.sales_invoice?.status?.id;

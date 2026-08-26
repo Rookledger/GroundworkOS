@@ -1,51 +1,34 @@
-import fs from "fs";
-import path from "path";
-import { logger } from "./logger";
+import type { Bindings } from "../types";
 import { parseAllowedDomains } from "./signupPolicy";
 
 /**
- * Every env var the server cannot run without. Checked together, up front,
- * so a misconfigured environment fails once with a full list instead of
- * dying on whichever var happens to be read first (mid-import, with a
- * stack trace pointing at an unrelated module).
+ * Every var the Worker cannot run without. Checked together, on each
+ * request's first pass through the `validateEnv` middleware (see app.ts),
+ * so a misconfigured environment fails loudly with a full list instead of
+ * a route deep in the app throwing on whichever var it happens to read
+ * first.
+ *
+ * This dropped a few checks the old Railway/Express version had that no
+ * longer apply on Workers:
+ *  - PORT / DATABASE_URL / S3_* - gone with Express's own listener and the
+ *    S3-compatible object storage backend (see objectStorage.ts / R2).
+ *  - BASE_PATH / STATIC_DIR - the frontend now deploys separately to
+ *    Cloudflare Pages instead of being served by this server as a SPA
+ *    fallback (see app.ts), so there is no local build output for this
+ *    Worker to know about.
+ *  - The CLERK_PUBLISHABLE_KEY / VITE_CLERK_PUBLISHABLE_KEY consistency
+ *    check that used to read a `clerk-manifest.json` the frontend build
+ *    wrote next to STATIC_DIR - there is no shared filesystem between this
+ *    Worker and the separately-deployed Pages project for that any more.
+ *    Keeping the two publishable keys in sync is now a deploy-process
+ *    concern (e.g. a CI check comparing the two secrets) rather than
+ *    something this Worker can verify for itself at request time.
  */
 const REQUIRED_ENV_VARS = [
-  "PORT",
-  "DATABASE_URL",
   "APP_URL",
-  "BASE_PATH",
-  "STATIC_DIR",
-  "S3_BUCKET",
-  "S3_REGION",
-  "S3_ENDPOINT",
-  "S3_ACCESS_KEY_ID",
-  "S3_SECRET_ACCESS_KEY",
   "CLERK_PUBLISHABLE_KEY",
   "CLERK_SECRET_KEY",
-] as const;
-
-/**
- * Messages for vars whose failure mode isn't self-explanatory from the name
- * alone — shown instead of the generic "Missing required environment
- * variable" message. S3_REGION and S3_ENDPOINT in particular used to be
- * optional and silently default to AWS us-east-1 (see objectStorageS3.ts),
- * which is wrong for Cloudflare R2, Backblaze B2, Oracle Cloud Object
- * Storage, MinIO, etc. and previously only failed confusingly at upload
- * time. Require them explicitly so a missing/wrong provider config fails at
- * boot instead.
- */
-const REQUIRED_ENV_VAR_MESSAGES: Partial<Record<string, string>> = {
-  APP_URL:
-    "Missing required environment variable: APP_URL (e.g. https://your-app.example.com — used for CORS, Clerk authorized parties, and OAuth redirect URIs)",
-  BASE_PATH:
-    'Missing required environment variable: BASE_PATH (required at build time by the frontend\'s Vite config; use "/" unless the app is served from a sub-path)',
-  STATIC_DIR:
-    "Missing required environment variable: STATIC_DIR (e.g. artifacts/groundworkos/dist/public — tells the API server where to serve the built frontend from)",
-  S3_REGION:
-    'Missing required environment variable: S3_REGION. This does NOT default to your provider\'s region — an unset S3_REGION silently falls back to AWS "us-east-1", which is wrong for Cloudflare R2, Backblaze B2, Oracle Cloud Object Storage, MinIO, etc., and fails confusingly at upload time rather than at boot. Set it to the region value your object storage provider expects.',
-  S3_ENDPOINT:
-    "Missing required environment variable: S3_ENDPOINT. This does NOT default to your provider's endpoint — an unset S3_ENDPOINT silently falls back to the AWS S3 default, which is wrong for Cloudflare R2, Backblaze B2, Oracle Cloud Object Storage, MinIO, etc., and fails confusingly at upload time rather than at boot. Set it to your provider's S3-compatible endpoint URL.",
-};
+] as const satisfies readonly (keyof Bindings)[];
 
 /**
  * A Clerk publishable key is `pk_(test|live)_` followed by the base64
@@ -55,7 +38,7 @@ const REQUIRED_ENV_VAR_MESSAGES: Partial<Record<string, string>> = {
  * copy-paste, a stray quote character — passes the old "is it set" check
  * but makes every Clerk SDK call fail silently, taking every route down
  * (including /healthz) with nothing logged to explain why. Validate the
- * shape here so a bad key fails loudly at boot instead.
+ * shape here so a bad key fails loudly instead.
  *
  * Clerk issues these keys unpadded (no trailing "="), so the padding in
  * the trailing group below is optional — a key copied straight from the
@@ -77,7 +60,12 @@ export function isValidPublishableKey(value: string): boolean {
   const body = match[2];
   if (!BASE64_RE.test(body)) return false;
 
-  const decoded = Buffer.from(body, "base64").toString("utf-8");
+  let decoded: string;
+  try {
+    decoded = atob(body);
+  } catch {
+    return false;
+  }
   if (!decoded.endsWith("$")) return false;
 
   return HOSTNAME_RE.test(decoded.slice(0, -1));
@@ -87,180 +75,64 @@ export function isValidSecretKey(value: string): boolean {
   return SECRET_KEY_RE.test(value);
 }
 
-const CLERK_MANIFEST_FILENAME = "clerk-manifest.json";
-
-export type ClerkManifestResult =
-  | { status: "absent" }
-  | { status: "invalid" }
-  | { status: "ok"; publishableKey: string };
-
-/**
- * Reads the manifest the frontend build writes next to its output
- * (artifacts/groundworkos/vite.config.ts), recording the
- * VITE_CLERK_PUBLISHABLE_KEY that build was actually given. "Absent" is
- * expected, not an error: local dev and API-only runs never build the
- * frontend, so STATIC_DIR may point at a directory with no manifest at all.
- */
-export function readClerkManifest(staticDir: string): ClerkManifestResult {
-  const manifestPath = path.join(
-    path.resolve(staticDir),
-    CLERK_MANIFEST_FILENAME,
-  );
-
-  let raw: string;
-  try {
-    raw = fs.readFileSync(manifestPath, "utf-8");
-  } catch {
-    return { status: "absent" };
-  }
-
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    const key = (parsed as { publishableKey?: unknown } | null)?.publishableKey;
-    if (typeof key === "string" && key.length > 0) {
-      return { status: "ok", publishableKey: key };
-    }
-    return { status: "invalid" };
-  } catch {
-    return { status: "invalid" };
-  }
-}
-
-function maskPublishableKey(key: string): string {
-  return key.length <= 12 ? key : `${key.slice(0, 12)}…`;
-}
-
-/**
- * The frontend (VITE_CLERK_PUBLISHABLE_KEY, inlined at build time) and this
- * server (CLERK_PUBLISHABLE_KEY, read at runtime) each get the Clerk
- * publishable key from a different env var, and nothing else compares them.
- * If an operator sets a pk_test in one and a pk_live in the other, this
- * server's CSP (see csp.ts) ends up allow-listing a different Clerk
- * Frontend API origin than the one the bundle actually loads its SDK from,
- * so the browser blocks that script and the app renders a blank page with
- * nothing logged here. Comparing the two at boot turns that into a loud,
- * immediate failure instead.
- *
- * Returns an error message when the keys disagree, or null when they match
- * or the check can't be performed (no STATIC_DIR, no manifest, no server
- * key to compare against) - those cases are logged as warnings by the
- * caller, not treated as failures.
- */
-export function checkClerkPublishableKeysMatch(
-  staticDir: string | undefined,
-  serverPublishableKey: string | undefined,
-): string | null {
-  if (!staticDir) return null;
-
-  const manifest = readClerkManifest(staticDir);
-
-  if (manifest.status === "absent") {
-    logger.warn(
-      `No ${CLERK_MANIFEST_FILENAME} found under STATIC_DIR ("${staticDir}") - skipping the ` +
-        "CLERK_PUBLISHABLE_KEY / VITE_CLERK_PUBLISHABLE_KEY consistency check. Expected if the " +
-        "frontend hasn't been built yet, or this is an API-only run.",
-    );
-    return null;
-  }
-
-  if (manifest.status === "invalid") {
-    logger.warn(
-      `Could not read ${CLERK_MANIFEST_FILENAME} under STATIC_DIR ("${staticDir}") - skipping the ` +
-        "CLERK_PUBLISHABLE_KEY / VITE_CLERK_PUBLISHABLE_KEY consistency check.",
-    );
-    return null;
-  }
-
-  if (
-    !serverPublishableKey ||
-    manifest.publishableKey === serverPublishableKey
-  ) {
-    return null;
-  }
-
-  return (
-    "CLERK_PUBLISHABLE_KEY does not match the VITE_CLERK_PUBLISHABLE_KEY the frontend was built " +
-    `with (server: "${maskPublishableKey(serverPublishableKey)}", frontend build: ` +
-    `"${maskPublishableKey(manifest.publishableKey)}"). These must be the exact same Clerk ` +
-    "publishable key - the server derives its Content-Security-Policy from CLERK_PUBLISHABLE_KEY, " +
-    "and a mismatch makes the browser block the Clerk script the frontend bundle actually loads, " +
-    "with nothing logged server-side to explain the resulting blank page. Set both variables to " +
-    "the identical value and rebuild the frontend."
-  );
-}
-
-const errors: string[] = [];
-
-for (const name of REQUIRED_ENV_VARS) {
-  if (!process.env[name]) {
-    errors.push(
-      REQUIRED_ENV_VAR_MESSAGES[name] ??
-        `Missing required environment variable: ${name}`,
-    );
-  }
-}
-
-const publishableKey = process.env.CLERK_PUBLISHABLE_KEY;
-if (publishableKey && !isValidPublishableKey(publishableKey)) {
-  errors.push(
-    'Invalid CLERK_PUBLISHABLE_KEY: expected "pk_test_" or "pk_live_" followed by base64 that decodes to a hostname ending in "$" (e.g. pk_test_<base64("your-app.clerk.accounts.dev$")>)',
-  );
-}
-
-const clerkKeyMismatch = checkClerkPublishableKeysMatch(
-  process.env.STATIC_DIR,
-  publishableKey,
-);
-if (clerkKeyMismatch) {
-  errors.push(clerkKeyMismatch);
-}
-
-const secretKey = process.env.CLERK_SECRET_KEY;
-if (secretKey && !isValidSecretKey(secretKey)) {
-  errors.push(
-    'Invalid CLERK_SECRET_KEY: expected "sk_test_" or "sk_live_" followed by the key value',
-  );
-}
-
-/**
- * Optional: only relevant if the Clerk webhook (routes/clerk_webhook.ts) is
- * in use for the SIGNUP_ALLOWED_EMAIL_DOMAINS backstop. Not in
- * REQUIRED_ENV_VARS since most deployments rely on Clerk Dashboard
- * Restrictions alone and never set it.
- */
 const WEBHOOK_SIGNING_SECRET_RE = /^whsec_.+$/;
-const webhookSigningSecret = process.env.CLERK_WEBHOOK_SIGNING_SECRET;
-if (
-  webhookSigningSecret &&
-  !WEBHOOK_SIGNING_SECRET_RE.test(webhookSigningSecret)
-) {
-  errors.push(
-    'Invalid CLERK_WEBHOOK_SIGNING_SECRET: expected "whsec_" followed by the signing secret value',
-  );
-}
 
 /**
- * If SIGNUP_ALLOWED_EMAIL_DOMAINS is set, the Clerk webhook
- * (routes/clerk_webhook.ts) can't enforce it without
- * CLERK_WEBHOOK_SIGNING_SECRET to verify incoming webhook signatures - the
- * allowlist would silently never apply. That combination used to only log a
- * warning at boot, which is easy to miss in a log stream; fail loudly
- * instead.
+ * Validates `env`, returning a list of human-readable problems (empty when
+ * everything checks out). Pure and side-effect free so it's cheap to call
+ * on every request from the `validateEnv` middleware in app.ts, which turns
+ * a non-empty result into a 500 with the full list logged.
  */
-const allowedDomains = parseAllowedDomains(
-  process.env.SIGNUP_ALLOWED_EMAIL_DOMAINS,
-);
-if (allowedDomains.length > 0 && !process.env.CLERK_WEBHOOK_SIGNING_SECRET) {
-  errors.push(
-    "SIGNUP_ALLOWED_EMAIL_DOMAINS is set but CLERK_WEBHOOK_SIGNING_SECRET is not - " +
-      "incoming webhooks can't be verified, so the domain allowlist would never be enforced. " +
-      "Set CLERK_WEBHOOK_SIGNING_SECRET or unset SIGNUP_ALLOWED_EMAIL_DOMAINS.",
-  );
-}
+export function validateEnv(env: Bindings): string[] {
+  const errors: string[] = [];
 
-if (errors.length > 0) {
-  for (const error of errors) {
-    logger.error(error);
+  for (const name of REQUIRED_ENV_VARS) {
+    if (!env[name]) {
+      errors.push(`Missing required environment variable: ${name}`);
+    }
   }
-  process.exit(1);
+
+  if (env.CLERK_PUBLISHABLE_KEY && !isValidPublishableKey(env.CLERK_PUBLISHABLE_KEY)) {
+    errors.push(
+      'Invalid CLERK_PUBLISHABLE_KEY: expected "pk_test_" or "pk_live_" followed by base64 that decodes to a hostname ending in "$" (e.g. pk_test_<base64("your-app.clerk.accounts.dev$")>)',
+    );
+  }
+
+  if (env.CLERK_SECRET_KEY && !isValidSecretKey(env.CLERK_SECRET_KEY)) {
+    errors.push(
+      'Invalid CLERK_SECRET_KEY: expected "sk_test_" or "sk_live_" followed by the key value',
+    );
+  }
+
+  /**
+   * Optional: only relevant if the Clerk webhook (routes/clerk_webhook.ts)
+   * is in use for the SIGNUP_ALLOWED_EMAIL_DOMAINS backstop. Not in
+   * REQUIRED_ENV_VARS since most deployments rely on Clerk Dashboard
+   * Restrictions alone and never set it.
+   */
+  if (
+    env.CLERK_WEBHOOK_SIGNING_SECRET &&
+    !WEBHOOK_SIGNING_SECRET_RE.test(env.CLERK_WEBHOOK_SIGNING_SECRET)
+  ) {
+    errors.push(
+      'Invalid CLERK_WEBHOOK_SIGNING_SECRET: expected "whsec_" followed by the signing secret value',
+    );
+  }
+
+  /**
+   * If SIGNUP_ALLOWED_EMAIL_DOMAINS is set, the Clerk webhook
+   * (routes/clerk_webhook.ts) can't enforce it without
+   * CLERK_WEBHOOK_SIGNING_SECRET to verify incoming webhook signatures -
+   * the allowlist would silently never apply.
+   */
+  const allowedDomains = parseAllowedDomains(env.SIGNUP_ALLOWED_EMAIL_DOMAINS);
+  if (allowedDomains.length > 0 && !env.CLERK_WEBHOOK_SIGNING_SECRET) {
+    errors.push(
+      "SIGNUP_ALLOWED_EMAIL_DOMAINS is set but CLERK_WEBHOOK_SIGNING_SECRET is not - " +
+        "incoming webhooks can't be verified, so the domain allowlist would never be enforced. " +
+        "Set CLERK_WEBHOOK_SIGNING_SECRET or unset SIGNUP_ALLOWED_EMAIL_DOMAINS.",
+    );
+  }
+
+  return errors;
 }

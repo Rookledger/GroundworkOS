@@ -1,41 +1,12 @@
-import { Router, type RequestHandler } from "express";
-import { clerkClient } from "@clerk/express";
+import { Hono } from "hono";
+
 import { verifyWebhook } from "@clerk/backend/webhooks";
 import { isRole } from "@workspace/shared-role";
-import { logger } from "../lib/logger";
-import { adminExists } from "./admin";
-import { emailDomainAllowed, parseAllowedDomains } from "../lib/signupPolicy";
+import { adminExists } from "./admin.js";
+import { emailDomainAllowed, parseAllowedDomains } from "../lib/signupPolicy.js";
+import type { AppEnv } from "../types";
 
-const router = Router();
-
-/**
- * validateEnv.ts fails boot if SIGNUP_ALLOWED_EMAIL_DOMAINS is set without
- * CLERK_WEBHOOK_SIGNING_SECRET, so by the time this module runs, either the
- * allowlist is unset or the signing secret is present.
- */
-const allowedDomains = parseAllowedDomains(
-  process.env.SIGNUP_ALLOWED_EMAIL_DOMAINS,
-);
-
-/** Rebuilds the Fetch API Request verifyWebhook expects from an Express
- * request whose body was captured raw (see app.ts, which routes this path
- * through express.raw() instead of the global JSON body parser - svix
- * signature verification needs the exact original bytes). */
-function toFetchRequest(req: Parameters<RequestHandler>[0]): Request {
-  const headers = new Headers();
-  for (const [key, value] of Object.entries(req.headers)) {
-    if (Array.isArray(value)) {
-      for (const v of value) headers.append(key, v);
-    } else if (value !== undefined) {
-      headers.set(key, value);
-    }
-  }
-  return new Request(`${req.protocol}://${req.get("host")}${req.originalUrl}`, {
-    method: "POST",
-    headers,
-    body: req.body,
-  });
-}
+const router = new Hono<AppEnv>();
 
 /**
  * Defense-in-depth for sign-up restriction. The primary control is Clerk
@@ -50,16 +21,28 @@ function toFetchRequest(req: Parameters<RequestHandler>[0]): Request {
  *
  * Skipped while the workspace has no admin yet, so it can never interfere
  * with the one-time bootstrap flow in routes/admin.ts.
+ *
+ * Unlike the Express version, no toFetchRequest() reconstruction is needed
+ * here - c.req.raw is already a native Fetch API Request, and svix
+ * signature verification needs the exact original bytes, which Hono never
+ * consumes unless a handler calls c.req.json()/text()/etc, so the raw body
+ * verifyWebhook reads is untouched.
  */
-const handleClerkWebhook: RequestHandler = async (req, res) => {
+router.post("/webhooks/clerk", async (c) => {
   let event;
   try {
-    event = await verifyWebhook(toFetchRequest(req));
+    event = await verifyWebhook(c.req.raw, {
+      signingSecret: c.env.CLERK_WEBHOOK_SIGNING_SECRET,
+    });
   } catch (err) {
-    logger.warn({ err }, "Clerk webhook signature verification failed");
-    res.status(400).json({ error: "Invalid webhook signature" });
-    return;
+    c.get("logger").warn({ err }, "Clerk webhook signature verification failed");
+    return c.json({ error: "Invalid webhook signature" }, 400);
   }
+
+  // validateEnv.ts fails boot if SIGNUP_ALLOWED_EMAIL_DOMAINS is set without
+  // CLERK_WEBHOOK_SIGNING_SECRET, so by the time this handler runs, either
+  // the allowlist is unset or the signing secret is present.
+  const allowedDomains = parseAllowedDomains(c.env.SIGNUP_ALLOWED_EMAIL_DOMAINS);
 
   if (event.type === "user.created" && allowedDomains.length > 0) {
     const user = event.data;
@@ -74,19 +57,17 @@ const handleClerkWebhook: RequestHandler = async (req, res) => {
       email &&
       !invitedWithRole &&
       !emailDomainAllowed(email, allowedDomains) &&
-      (await adminExists())
+      (await adminExists(c))
     ) {
-      logger.warn(
+      c.get("logger").warn(
         { userId: user.id, email },
         "Deleting unauthorized sign-up: email domain not on SIGNUP_ALLOWED_EMAIL_DOMAINS",
       );
-      await clerkClient.users.deleteUser(user.id);
+      await c.get("clerk").users.deleteUser(user.id);
     }
   }
 
-  res.status(200).json({ received: true });
-};
-
-router.post("/webhooks/clerk", handleClerkWebhook);
+  return c.json({ received: true }, 200);
+});
 
 export default router;

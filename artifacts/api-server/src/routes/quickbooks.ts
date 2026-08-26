@@ -10,86 +10,70 @@ const router = createAccountingOAuthRouter({
     clientSecret: "QUICKBOOKS_CLIENT_SECRET",
     redirectUri: "QUICKBOOKS_REDIRECT_URI",
   },
-  buildAuthUrl: quickbooks.buildAuthUrl,
-  getConnection: quickbooks.getConnection,
-  disconnect: quickbooks.disconnect,
+  buildAuthUrl: (c, state) => quickbooks.buildAuthUrl(c.env, state),
+  getConnection: (c) => quickbooks.getConnection(c.get("db")),
+  disconnect: (c) => quickbooks.disconnect(c.get("db")),
   statusFields: (conn) => ({ companyName: conn.companyName }),
-  completeConnection: async (code, query) => {
+  completeConnection: async (c, code, query) => {
     const { realmId } = query;
     if (!realmId) throw new Error("No QuickBooks company (realmId) returned.");
-    const tokens = await quickbooks.exchangeCode(code);
+    const tokens = await quickbooks.exchangeCode(c.env, code);
     const companyName = await quickbooks.fetchCompanyName(
       tokens.access_token,
       realmId,
     );
-    await quickbooks.storeConnection(tokens, realmId, companyName);
+    await quickbooks.storeConnection(c.get("db"), tokens, realmId, companyName);
   },
 });
 
 // ─── Sync endpoints ───────────────────────────────────────────────────────────
 
-router.post(
-  "/quickbooks/sync/contacts",
-  requireRole("admin"),
-  async (_req, res) => {
-    try {
-      const results = await quickbooks.syncAllContacts();
-      const synced = results.filter((r) => !("error" in r)).length;
-      const errors = results.filter(
-        (r): r is { error: string; clientId: string } => "error" in r,
-      );
-      res.json({ synced, failed: errors.length, errors });
-    } catch (err) {
-      res.status(500).json({ error: String(err) });
-    }
-  },
-);
+router.post("/quickbooks/sync/contacts", requireRole("admin"), async (c) => {
+  try {
+    const results = await quickbooks.syncAllContacts(c.get("db"), c.env);
+    const synced = results.filter((r) => !("error" in r)).length;
+    const errors = results.filter(
+      (r): r is { error: string; clientId: string } => "error" in r,
+    );
+    return c.json({ synced, failed: errors.length, errors });
+  } catch (err) {
+    return c.json({ error: String(err) }, 500);
+  }
+});
 
-router.post(
-  "/quickbooks/sync/invoices",
-  requireRole("admin"),
-  async (_req, res) => {
-    try {
-      const results = await quickbooks.syncAllInvoices();
-      const synced = results.filter((r) => !("error" in r)).length;
-      const errors = results.filter(
-        (r): r is { error: string; invoiceId: string } => "error" in r,
-      );
-      res.json({ synced, failed: errors.length, errors });
-    } catch (err) {
-      res.status(500).json({ error: String(err) });
-    }
-  },
-);
+router.post("/quickbooks/sync/invoices", requireRole("admin"), async (c) => {
+  try {
+    const results = await quickbooks.syncAllInvoices(c.get("db"), c.env);
+    const synced = results.filter((r) => !("error" in r)).length;
+    const errors = results.filter(
+      (r): r is { error: string; invoiceId: string } => "error" in r,
+    );
+    return c.json({ synced, failed: errors.length, errors });
+  } catch (err) {
+    return c.json({ error: String(err) }, 500);
+  }
+});
 
-router.post(
-  "/quickbooks/sync/quotes",
-  requireRole("admin"),
-  async (_req, res) => {
-    try {
-      const results = await quickbooks.syncAllQuotes();
-      const synced = results.filter((r) => !("error" in r)).length;
-      const errors = results.filter(
-        (r): r is { error: string; quoteId: string } => "error" in r,
-      );
-      res.json({ synced, failed: errors.length, errors });
-    } catch (err) {
-      res.status(500).json({ error: String(err) });
-    }
-  },
-);
+router.post("/quickbooks/sync/quotes", requireRole("admin"), async (c) => {
+  try {
+    const results = await quickbooks.syncAllQuotes(c.get("db"), c.env);
+    const synced = results.filter((r) => !("error" in r)).length;
+    const errors = results.filter(
+      (r): r is { error: string; quoteId: string } => "error" in r,
+    );
+    return c.json({ synced, failed: errors.length, errors });
+  } catch (err) {
+    return c.json({ error: String(err) }, 500);
+  }
+});
 
-router.post(
-  "/quickbooks/pull/payments",
-  requireRole("admin"),
-  async (_req, res) => {
-    try {
-      const result = await quickbooks.pullPayments();
-      res.json(result);
-    } catch (err) {
-      res.status(500).json({ error: String(err) });
-    }
-  },
-);
+router.post("/quickbooks/pull/payments", requireRole("admin"), async (c) => {
+  try {
+    const result = await quickbooks.pullPayments(c.get("db"), c.env);
+    return c.json(result);
+  } catch (err) {
+    return c.json({ error: String(err) }, 500);
+  }
+});
 
 export default router;

@@ -1,12 +1,15 @@
-import { Router } from "express";
-import { db, timesheetsTable, jobsTable } from "@workspace/db";
+import { Hono } from "hono";
+import { timesheetsTable, jobsTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { CreateTimesheetInput, UpdateTimesheetInput } from "@workspace/api-zod";
 import { logAudit } from "./audit.js";
+import { generateId } from "../lib/generateId.js";
+import type { AppEnv } from "../types";
 
-const router = Router();
+const router = new Hono<AppEnv>();
 
-router.get("/timesheets", async (req, res) => {
+router.get("/timesheets", async (c) => {
+  const db = c.get("db");
   const rows = await db
     .select()
     .from(timesheetsTable)
@@ -24,7 +27,7 @@ router.get("/timesheets", async (req, res) => {
         .from(jobsTable)
     : [];
   const jobMap = new Map(jobs.map((j) => [j.id, j]));
-  res.json(
+  return c.json(
     rows.map((r) => ({
       ...r,
       jobNumber: r.jobId ? (jobMap.get(r.jobId)?.jobNumber ?? null) : null,
@@ -33,73 +36,74 @@ router.get("/timesheets", async (req, res) => {
   );
 });
 
-router.post("/timesheets", async (req, res) => {
-  const parsed = CreateTimesheetInput.safeParse(req.body);
+router.post("/timesheets", async (c) => {
+  const parsed = CreateTimesheetInput.safeParse(await c.req.json());
   if (!parsed.success) {
-    return res
-      .status(400)
-      .json({ error: "Invalid request body", details: parsed.error.flatten() });
+    return c.json(
+      { error: "Invalid request body", details: parsed.error.flatten() },
+      400,
+    );
   }
+  const db = c.get("db");
   const data = parsed.data;
-  const { generateId } = await import("../lib/generateId.js");
   const id = generateId();
   const hoursWorked = Number(data.hoursWorked ?? 8);
   const dayRate = data.dayRate ? Number(data.dayRate) : null;
   const cost =
-    dayRate != null
-      ? Math.round((hoursWorked / 8) * dayRate * 100) / 100
-      : null;
+    dayRate != null ? Math.round((hoursWorked / 8) * dayRate * 100) / 100 : null;
   const [row] = await db
     .insert(timesheetsTable)
     .values({ id, ...data, hoursWorked, dayRate, cost })
     .returning();
-  await logAudit(
-    "timesheet",
-    id,
-    "create",
-    { jobId: data.jobId, workDate: data.workDate },
-    req,
-  );
-  return res.status(201).json({ ...row, jobNumber: null, jobTitle: null });
+  await logAudit(c, "timesheet", id, "create", {
+    jobId: data.jobId,
+    workDate: data.workDate,
+  });
+  return c.json({ ...row, jobNumber: null, jobTitle: null }, 201);
 });
 
-router.patch("/timesheets/:id", async (req, res) => {
-  const parsed = UpdateTimesheetInput.safeParse(req.body);
+router.patch("/timesheets/:id", async (c) => {
+  const parsed = UpdateTimesheetInput.safeParse(await c.req.json());
   if (!parsed.success) {
-    return res
-      .status(400)
-      .json({ error: "Invalid request body", details: parsed.error.flatten() });
+    return c.json(
+      { error: "Invalid request body", details: parsed.error.flatten() },
+      400,
+    );
   }
+  const db = c.get("db");
+  const id = c.req.param("id");
   const data = parsed.data;
   const hoursWorked =
     data.hoursWorked != null ? Number(data.hoursWorked) : undefined;
   const dayRate = data.dayRate != null ? Number(data.dayRate) : undefined;
-  const updates: any = { ...data };
+  const updates: Record<string, unknown> = { ...data };
   if (hoursWorked !== undefined) updates.hoursWorked = hoursWorked;
   if (dayRate !== undefined) updates.dayRate = dayRate;
   if (updates.hoursWorked !== undefined || updates.dayRate !== undefined) {
     const [existing] = await db
       .select()
       .from(timesheetsTable)
-      .where(eq(timesheetsTable.id, req.params.id));
-    const h = updates.hoursWorked ?? existing?.hoursWorked ?? 8;
-    const d = updates.dayRate ?? existing?.dayRate ?? null;
+      .where(eq(timesheetsTable.id, id));
+    const h = (updates.hoursWorked as number | undefined) ?? existing?.hoursWorked ?? 8;
+    const d = (updates.dayRate as number | null | undefined) ?? existing?.dayRate ?? null;
     updates.cost = d != null ? Math.round((h / 8) * d * 100) / 100 : null;
   }
   const [row] = await db
     .update(timesheetsTable)
     .set(updates)
-    .where(eq(timesheetsTable.id, req.params.id))
+    .where(eq(timesheetsTable.id, id))
     .returning();
-  if (!row) return res.status(404).json({ error: "Not found" });
-  await logAudit("timesheet", req.params.id, "update", updates, req);
-  return res.json({ ...row, jobNumber: null, jobTitle: null });
+  if (!row) return c.json({ error: "Not found" }, 404);
+  await logAudit(c, "timesheet", id, "update", updates);
+  return c.json({ ...row, jobNumber: null, jobTitle: null });
 });
 
-router.delete("/timesheets/:id", async (req, res) => {
-  await logAudit("timesheet", req.params.id, "delete", null, req);
-  await db.delete(timesheetsTable).where(eq(timesheetsTable.id, req.params.id));
-  res.status(204).send();
+router.delete("/timesheets/:id", async (c) => {
+  const db = c.get("db");
+  const id = c.req.param("id");
+  await logAudit(c, "timesheet", id, "delete", null);
+  await db.delete(timesheetsTable).where(eq(timesheetsTable.id, id));
+  return c.body(null, 204);
 });
 
 export default router;

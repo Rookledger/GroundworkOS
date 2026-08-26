@@ -1,19 +1,19 @@
-import { Router } from "express";
+import { Hono } from "hono";
 import {
-  db,
   quotesTable,
   lineItemsTable,
   clientsTable,
   companySettingsTable,
 } from "@workspace/db";
+import type { Database } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { randomUUID } from "crypto";
 import { requireRole } from "../lib/auth.js";
 import { logAudit } from "./audit.js";
+import type { AppEnv } from "../types";
 
-const router = Router();
+const router = new Hono<AppEnv>();
 
-async function getQuoteByToken(token: string) {
+async function getQuoteByToken(db: Database, token: string) {
   const [quote] = await db
     .select()
     .from(quotesTable)
@@ -37,16 +37,15 @@ async function getQuoteByToken(token: string) {
     .select()
     .from(companySettingsTable)
     .where(eq(companySettingsTable.id, 1));
-  const settings = (settingsRow?.data ?? {}) as Record<string, any>;
+  const settings = (settingsRow?.data ?? {}) as Record<string, unknown>;
   return { quote, lineItems, client, settings };
 }
 
-router.get("/portal/:token", async (req, res) => {
-  const data = await getQuoteByToken(req.params.token);
-  if (!data)
-    return res.status(404).json({ error: "Quote not found or link expired" });
+router.get("/portal/:token", async (c) => {
+  const data = await getQuoteByToken(c.get("db"), c.req.param("token"));
+  if (!data) return c.json({ error: "Quote not found or link expired" }, 404);
   const { quote, lineItems, client, settings } = data;
-  return res.json({
+  return c.json({
     id: quote.id,
     quoteNumber: quote.quoteNumber,
     title: quote.title,
@@ -70,15 +69,18 @@ router.get("/portal/:token", async (req, res) => {
   });
 });
 
-router.post("/portal/:token/approve", async (req, res) => {
-  const { name } = req.body;
-  if (!name?.trim())
-    return res.status(400).json({ error: "Name is required to approve" });
-  const data = await getQuoteByToken(req.params.token);
-  if (!data)
-    return res.status(404).json({ error: "Quote not found or link expired" });
-  if (data.quote.status === "accepted")
-    return res.status(409).json({ error: "Already accepted" });
+router.post("/portal/:token/approve", async (c) => {
+  const { name } = await c.req.json();
+  if (!name?.trim()) {
+    return c.json({ error: "Name is required to approve" }, 400);
+  }
+  const db = c.get("db");
+  const token = c.req.param("token");
+  const data = await getQuoteByToken(db, token);
+  if (!data) return c.json({ error: "Quote not found or link expired" }, 404);
+  if (data.quote.status === "accepted") {
+    return c.json({ error: "Already accepted" }, 409);
+  }
   await db
     .update(quotesTable)
     .set({
@@ -86,49 +88,46 @@ router.post("/portal/:token/approve", async (req, res) => {
       approvedByName: name.trim(),
       approvedAt: new Date(),
     })
-    .where(eq(quotesTable.shareToken, req.params.token));
-  await logAudit(
-    "quote",
-    data.quote.id,
-    "portal_accept",
-    { approvedByName: name.trim() },
-    req,
-  );
-  return res.json({ ok: true, message: "Quote accepted" });
+    .where(eq(quotesTable.shareToken, token));
+  await logAudit(c, "quote", data.quote.id, "portal_accept", {
+    approvedByName: name.trim(),
+  });
+  return c.json({ ok: true, message: "Quote accepted" });
 });
 
-router.post("/portal/:token/decline", async (req, res) => {
-  const data = await getQuoteByToken(req.params.token);
-  if (!data)
-    return res.status(404).json({ error: "Quote not found or link expired" });
-  if (data.quote.status === "accepted")
-    return res.status(409).json({ error: "Quote already accepted" });
+router.post("/portal/:token/decline", async (c) => {
+  const db = c.get("db");
+  const token = c.req.param("token");
+  const data = await getQuoteByToken(db, token);
+  if (!data) return c.json({ error: "Quote not found or link expired" }, 404);
+  if (data.quote.status === "accepted") {
+    return c.json({ error: "Quote already accepted" }, 409);
+  }
   await db
     .update(quotesTable)
     .set({ status: "declined" })
-    .where(eq(quotesTable.shareToken, req.params.token));
-  await logAudit("quote", data.quote.id, "portal_decline", null, req);
-  return res.json({ ok: true, message: "Quote declined" });
+    .where(eq(quotesTable.shareToken, token));
+  await logAudit(c, "quote", data.quote.id, "portal_decline", null);
+  return c.json({ ok: true, message: "Quote declined" });
 });
 
-router.post("/quotes/:id/share", requireRole("manager"), async (req, res) => {
-  const [quote] = await db
-    .select()
-    .from(quotesTable)
-    .where(eq(quotesTable.id, req.params.id));
-  if (!quote) return res.status(404).json({ error: "Not found" });
+router.post("/quotes/:id/share", requireRole("manager"), async (c) => {
+  const db = c.get("db");
+  const id = c.req.param("id");
+  const [quote] = await db.select().from(quotesTable).where(eq(quotesTable.id, id));
+  if (!quote) return c.json({ error: "Not found" }, 404);
   let token = quote.shareToken;
   if (!token) {
-    token = randomUUID();
+    token = crypto.randomUUID();
     await db
       .update(quotesTable)
       .set({ shareToken: token })
-      .where(eq(quotesTable.id, req.params.id));
+      .where(eq(quotesTable.id, id));
   }
   const baseUrl =
-    process.env.APP_URL ?? req.headers.origin ?? "https://example.com";
+    c.env.APP_URL || c.req.header("origin") || "https://example.com";
   const url = `${baseUrl}/portal/${token}`;
-  return res.json({ token, url });
+  return c.json({ token, url });
 });
 
 export default router;

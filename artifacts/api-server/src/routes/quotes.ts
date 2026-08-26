@@ -1,15 +1,18 @@
-import { Router } from "express";
-import { db, quotesTable, lineItemsTable, clientsTable } from "@workspace/db";
+import { Hono } from "hono";
+import type { Database } from "@workspace/db";
+import { quotesTable, lineItemsTable, clientsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { CreateQuoteInput, UpdateQuoteInput } from "@workspace/api-zod";
 import { logAudit } from "./audit.js";
 import { requireRole } from "../lib/auth.js";
+import { generateId, nextSeqNumber } from "../lib/generateId.js";
+import type { AppEnv } from "../types";
 
-const router = Router();
+const router = new Hono<AppEnv>();
 
 const VAT_RATE = 0.2;
 
-async function enrichQuote(quote: typeof quotesTable.$inferSelect) {
+async function enrichQuote(db: Database, quote: typeof quotesTable.$inferSelect) {
   const lineItems = await db
     .select()
     .from(lineItemsTable)
@@ -40,79 +43,84 @@ function computeTotalsFromLineItems(
   return { subtotal, vatAmount, totalAmount };
 }
 
-router.get("/quotes", requireRole("manager"), async (req, res) => {
-  const quotes = await db
-    .select()
-    .from(quotesTable)
-    .orderBy(quotesTable.createdAt);
-  const enriched = await Promise.all(quotes.map(enrichQuote));
-  res.json(enriched);
+router.get("/quotes", requireRole("manager"), async (c) => {
+  const db = c.get("db");
+  const quotes = await db.select().from(quotesTable).orderBy(quotesTable.createdAt);
+  const enriched = await Promise.all(quotes.map((q) => enrichQuote(db, q)));
+  return c.json(enriched);
 });
 
-router.post("/quotes", requireRole("manager"), async (req, res) => {
-  const parsed = CreateQuoteInput.safeParse(req.body);
+router.post("/quotes", requireRole("manager"), async (c) => {
+  const parsed = CreateQuoteInput.safeParse(await c.req.json());
   if (!parsed.success) {
-    return res
-      .status(400)
-      .json({ error: "Invalid request body", details: parsed.error.flatten() });
+    return c.json(
+      { error: "Invalid request body", details: parsed.error.flatten() },
+      400,
+    );
   }
+  const db = c.get("db");
   const { lineItems, ...data } = parsed.data;
   const totals = lineItems?.length
     ? computeTotalsFromLineItems(lineItems)
     : { subtotal: 0, vatAmount: 0, totalAmount: 0 };
-  const { generateId, nextSeqNumber } = await import("../lib/generateId.js");
   const id = generateId();
 
-  const quote = await db.transaction(async (tx) => {
-    const quoteNumber = await nextSeqNumber("quotes", "QT", tx);
-    const [inserted] = await tx
-      .insert(quotesTable)
-      .values({ id, quoteNumber, ...data, ...totals })
-      .returning();
-    if (lineItems?.length) {
-      await tx.insert(lineItemsTable).values(
-        lineItems.map((li) => ({
-          ...li,
-          id: generateId(),
-          quoteId: inserted.id,
-          total:
-            Math.round(
-              (Number(li.quantity) || 0) * (Number(li.unitPrice) || 0) * 100,
-            ) / 100,
-        })),
-      );
-    }
-    return inserted;
+  // D1's Drizzle driver doesn't support interactive transactions
+  // (db.transaction(async (tx) => ...)) the way the old node-postgres driver
+  // did - there's no way to hold a connection open across an await while
+  // running application logic in between. The sequence-number allocation is
+  // already atomic on its own (a single INSERT ... ON CONFLICT ... RETURNING
+  // statement - see nextSeqNumber), so it runs first as its own statement;
+  // the only thing that genuinely needs to happen atomically together is the
+  // quote row and its line items, which db.batch() runs as a single D1
+  // implicit transaction (all-or-nothing, no partial write visible to
+  // another request) since neither statement depends on a result from the
+  // other - the id is generated client-side up front.
+  const quoteNumber = await nextSeqNumber(db, "quotes", "QT");
+  const lineItemRows = (lineItems ?? []).map((li) => ({
+    ...li,
+    id: generateId(),
+    quoteId: id,
+    total:
+      Math.round((Number(li.quantity) || 0) * (Number(li.unitPrice) || 0) * 100) /
+      100,
+  }));
+
+  const insertQuote = db
+    .insert(quotesTable)
+    .values({ id, quoteNumber, ...data, ...totals })
+    .returning();
+
+  const [[quote]] = lineItemRows.length
+    ? await db.batch([insertQuote, db.insert(lineItemsTable).values(lineItemRows)])
+    : [await insertQuote];
+
+  await logAudit(c, "quote", id, "create", {
+    quoteNumber: quote.quoteNumber,
+    status: data.status,
   });
-
-  await logAudit(
-    "quote",
-    id,
-    "create",
-    { quoteNumber: quote.quoteNumber, status: data.status },
-    req,
-  );
-  return res.status(201).json(await enrichQuote(quote));
+  return c.json(await enrichQuote(db, quote), 201);
 });
 
-router.get("/quotes/:id", requireRole("manager"), async (req, res) => {
-  const [quote] = await db
-    .select()
-    .from(quotesTable)
-    .where(eq(quotesTable.id, req.params.id));
-  if (!quote) return res.status(404).json({ error: "Not found" });
-  return res.json(await enrichQuote(quote));
+router.get("/quotes/:id", requireRole("manager"), async (c) => {
+  const db = c.get("db");
+  const id = c.req.param("id");
+  const [quote] = await db.select().from(quotesTable).where(eq(quotesTable.id, id));
+  if (!quote) return c.json({ error: "Not found" }, 404);
+  return c.json(await enrichQuote(db, quote));
 });
 
-router.patch("/quotes/:id", requireRole("manager"), async (req, res) => {
-  const parsed = UpdateQuoteInput.safeParse(req.body);
+router.patch("/quotes/:id", requireRole("manager"), async (c) => {
+  const parsed = UpdateQuoteInput.safeParse(await c.req.json());
   if (!parsed.success) {
-    return res
-      .status(400)
-      .json({ error: "Invalid request body", details: parsed.error.flatten() });
+    return c.json(
+      { error: "Invalid request body", details: parsed.error.flatten() },
+      400,
+    );
   }
+  const db = c.get("db");
+  const id = c.req.param("id");
   const { lineItems, sentAt, ...data } = parsed.data;
-  const { generateId } = await import("../lib/generateId.js");
   const totals =
     lineItems !== undefined
       ? lineItems.length
@@ -120,50 +128,59 @@ router.patch("/quotes/:id", requireRole("manager"), async (req, res) => {
         : { subtotal: 0, vatAmount: 0, totalAmount: 0 }
       : {};
 
-  const quote = await db.transaction(async (tx) => {
-    const [updated] = await tx
-      .update(quotesTable)
-      .set({
-        ...data,
-        ...totals,
-        ...(sentAt !== undefined && { sentAt: new Date(sentAt) }),
-      })
-      .where(eq(quotesTable.id, req.params.id))
-      .returning();
-    if (!updated) return null;
-    if (lineItems !== undefined) {
-      await tx
-        .delete(lineItemsTable)
-        .where(eq(lineItemsTable.quoteId, updated.id));
-      if (lineItems.length) {
-        await tx.insert(lineItemsTable).values(
-          lineItems.map((li) => ({
-            ...li,
-            id: generateId(),
-            quoteId: updated.id,
-            total:
-              Math.round(
-                (Number(li.quantity) || 0) * (Number(li.unitPrice) || 0) * 100,
-              ) / 100,
-          })),
-        );
-      }
-    }
-    return updated;
-  });
-  if (!quote) return res.status(404).json({ error: "Not found" });
+  const updateQuote = db
+    .update(quotesTable)
+    .set({
+      ...data,
+      ...totals,
+      ...(sentAt !== undefined && { sentAt: new Date(sentAt) }),
+    })
+    .where(eq(quotesTable.id, id))
+    .returning();
 
-  await logAudit("quote", req.params.id, "update", data, req);
-  return res.json(await enrichQuote(quote));
+  let quote: typeof quotesTable.$inferSelect | undefined;
+  if (lineItems !== undefined) {
+    const lineItemRows = lineItems.map((li) => ({
+      ...li,
+      id: generateId(),
+      quoteId: id,
+      total:
+        Math.round(
+          (Number(li.quantity) || 0) * (Number(li.unitPrice) || 0) * 100,
+        ) / 100,
+    }));
+    // Same batching rationale as POST above: the update and the line-item
+    // replace (delete + optional re-insert) need to land together, and none
+    // of the statements depend on another statement's result, so they can
+    // all run in one atomic db.batch() call instead of an interactive
+    // transaction.
+    const statements = [
+      updateQuote,
+      db.delete(lineItemsTable).where(eq(lineItemsTable.quoteId, id)),
+      ...(lineItemRows.length
+        ? [db.insert(lineItemsTable).values(lineItemRows)]
+        : []),
+    ] as const;
+    const [updated] = await db.batch(statements as any);
+    quote = (updated as (typeof quotesTable.$inferSelect)[])[0];
+  } else {
+    [quote] = await updateQuote;
+  }
+  if (!quote) return c.json({ error: "Not found" }, 404);
+
+  await logAudit(c, "quote", id, "update", data);
+  return c.json(await enrichQuote(db, quote));
 });
 
-router.delete("/quotes/:id", requireRole("manager"), async (req, res) => {
-  await logAudit("quote", req.params.id, "delete", null, req);
-  await db
-    .delete(lineItemsTable)
-    .where(eq(lineItemsTable.quoteId, req.params.id));
-  await db.delete(quotesTable).where(eq(quotesTable.id, req.params.id));
-  res.status(204).send();
+router.delete("/quotes/:id", requireRole("manager"), async (c) => {
+  const db = c.get("db");
+  const id = c.req.param("id");
+  await logAudit(c, "quote", id, "delete", null);
+  await db.batch([
+    db.delete(lineItemsTable).where(eq(lineItemsTable.quoteId, id)),
+    db.delete(quotesTable).where(eq(quotesTable.id, id)),
+  ]);
+  return c.body(null, 204);
 });
 
 export default router;

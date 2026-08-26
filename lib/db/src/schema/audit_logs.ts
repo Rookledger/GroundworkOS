@@ -1,17 +1,20 @@
-import { pgTable, text, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 
-export const auditLogsTable = pgTable("audit_logs", {
+export const auditLogsTable = sqliteTable("audit_logs", {
   id: text("id").primaryKey(),
   entityType: text("entity_type").notNull(),
   entityId: text("entity_id").notNull(),
   action: text("action").notNull(),
-  changes: jsonb("changes"),
+  changes: text("changes", { mode: "json" }).$type<Record<
+    string,
+    unknown
+  > | null>(),
   userId: text("user_id"),
   userName: text("user_name"),
   userEmail: text("user_email"),
-  createdAt: timestamp("created_at", { withTimezone: true })
+  createdAt: integer("created_at", { mode: "timestamp_ms" })
     .notNull()
-    .defaultNow(),
+    .$defaultFn(() => new Date()),
 });
 
 export type AuditLog = typeof auditLogsTable.$inferSelect;

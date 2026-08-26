@@ -1,5 +1,6 @@
-import { Router } from "express";
-import { db, purchaseOrdersTable, jobsTable } from "@workspace/db";
+import { Hono } from "hono";
+import type { Database } from "@workspace/db";
+import { purchaseOrdersTable, jobsTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { requireRole } from "../lib/auth.js";
 import {
@@ -7,10 +8,15 @@ import {
   UpdatePurchaseOrderInput,
 } from "@workspace/api-zod";
 import { logAudit } from "./audit.js";
+import { generateId, nextSeqNumber } from "../lib/generateId.js";
+import type { AppEnv } from "../types";
 
-const router = Router();
+const router = new Hono<AppEnv>();
 
-async function withJob(row: typeof purchaseOrdersTable.$inferSelect) {
+async function withJob(
+  db: Database,
+  row: typeof purchaseOrdersTable.$inferSelect,
+) {
   if (!row.jobId) return { ...row, jobNumber: null, jobTitle: null };
   const [job] = await db
     .select({ jobNumber: jobsTable.jobNumber, title: jobsTable.title })
@@ -23,7 +29,8 @@ async function withJob(row: typeof purchaseOrdersTable.$inferSelect) {
   };
 }
 
-router.get("/purchase-orders", requireRole("manager"), async (req, res) => {
+router.get("/purchase-orders", requireRole("manager"), async (c) => {
+  const db = c.get("db");
   const rows = await db
     .select()
     .from(purchaseOrdersTable)
@@ -44,7 +51,7 @@ router.get("/purchase-orders", requireRole("manager"), async (req, res) => {
         .from(jobsTable)
     : [];
   const jobMap = new Map(jobs.map((j) => [j.id, j]));
-  res.json(
+  return c.json(
     rows.map((r) => ({
       ...r,
       jobNumber: r.jobId ? (jobMap.get(r.jobId)?.jobNumber ?? null) : null,
@@ -53,17 +60,18 @@ router.get("/purchase-orders", requireRole("manager"), async (req, res) => {
   );
 });
 
-router.post("/purchase-orders", requireRole("manager"), async (req, res) => {
-  const parsed = CreatePurchaseOrderInput.safeParse(req.body);
+router.post("/purchase-orders", requireRole("manager"), async (c) => {
+  const parsed = CreatePurchaseOrderInput.safeParse(await c.req.json());
   if (!parsed.success) {
-    return res
-      .status(400)
-      .json({ error: "Invalid request body", details: parsed.error.flatten() });
+    return c.json(
+      { error: "Invalid request body", details: parsed.error.flatten() },
+      400,
+    );
   }
+  const db = c.get("db");
   const data = parsed.data;
-  const { generateId, nextSeqNumber } = await import("../lib/generateId.js");
   const id = generateId();
-  const poNumber = await nextSeqNumber("purchase_orders", "PO");
+  const poNumber = await nextSeqNumber(db, "purchase_orders", "PO");
   const amount = Number(data.amount ?? 0);
   const vatAmount = Number(
     data.vatAmount ?? Math.round(amount * 0.2 * 100) / 100,
@@ -73,61 +81,52 @@ router.post("/purchase-orders", requireRole("manager"), async (req, res) => {
     .insert(purchaseOrdersTable)
     .values({ id, poNumber, ...data, amount, vatAmount, totalAmount })
     .returning();
-  await logAudit(
-    "purchase_order",
-    id,
-    "create",
-    { poNumber, supplier: data.supplier },
-    req,
-  );
-  return res.status(201).json(await withJob(row));
+  await logAudit(c, "purchase_order", id, "create", {
+    poNumber,
+    supplier: data.supplier,
+  });
+  return c.json(await withJob(db, row), 201);
 });
 
-router.patch(
-  "/purchase-orders/:id",
-  requireRole("manager"),
-  async (req, res) => {
-    const parsed = UpdatePurchaseOrderInput.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({
-        error: "Invalid request body",
-        details: parsed.error.flatten(),
-      });
-    }
-    const data: Record<string, unknown> = { ...parsed.data };
-    if (
-      parsed.data.amount !== undefined ||
-      parsed.data.vatAmount !== undefined
-    ) {
-      const amount = Number(parsed.data.amount ?? 0);
-      const vatAmount = Number(
-        parsed.data.vatAmount ?? Math.round(amount * 0.2 * 100) / 100,
-      );
-      data.amount = amount;
-      data.vatAmount = vatAmount;
-      data.totalAmount = amount + vatAmount;
-    }
-    const [row] = await db
-      .update(purchaseOrdersTable)
-      .set(data)
-      .where(eq(purchaseOrdersTable.id, req.params.id))
-      .returning();
-    if (!row) return res.status(404).json({ error: "Not found" });
-    await logAudit("purchase_order", req.params.id, "update", data, req);
-    return res.json(await withJob(row));
-  },
-);
+router.patch("/purchase-orders/:id", requireRole("manager"), async (c) => {
+  const parsed = UpdatePurchaseOrderInput.safeParse(await c.req.json());
+  if (!parsed.success) {
+    return c.json(
+      { error: "Invalid request body", details: parsed.error.flatten() },
+      400,
+    );
+  }
+  const db = c.get("db");
+  const id = c.req.param("id");
+  const data: Record<string, unknown> = { ...parsed.data };
+  if (
+    parsed.data.amount !== undefined ||
+    parsed.data.vatAmount !== undefined
+  ) {
+    const amount = Number(parsed.data.amount ?? 0);
+    const vatAmount = Number(
+      parsed.data.vatAmount ?? Math.round(amount * 0.2 * 100) / 100,
+    );
+    data.amount = amount;
+    data.vatAmount = vatAmount;
+    data.totalAmount = amount + vatAmount;
+  }
+  const [row] = await db
+    .update(purchaseOrdersTable)
+    .set(data)
+    .where(eq(purchaseOrdersTable.id, id))
+    .returning();
+  if (!row) return c.json({ error: "Not found" }, 404);
+  await logAudit(c, "purchase_order", id, "update", data);
+  return c.json(await withJob(db, row));
+});
 
-router.delete(
-  "/purchase-orders/:id",
-  requireRole("manager"),
-  async (req, res) => {
-    await logAudit("purchase_order", req.params.id, "delete", null, req);
-    await db
-      .delete(purchaseOrdersTable)
-      .where(eq(purchaseOrdersTable.id, req.params.id));
-    res.status(204).send();
-  },
-);
+router.delete("/purchase-orders/:id", requireRole("manager"), async (c) => {
+  const db = c.get("db");
+  const id = c.req.param("id");
+  await logAudit(c, "purchase_order", id, "delete", null);
+  await db.delete(purchaseOrdersTable).where(eq(purchaseOrdersTable.id, id));
+  return c.body(null, 204);
+});
 
 export default router;

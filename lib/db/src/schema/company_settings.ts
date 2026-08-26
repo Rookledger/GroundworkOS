@@ -1,9 +1,12 @@
-import { pgTable, integer, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { sqliteTable, integer, text } from "drizzle-orm/sqlite-core";
 
-export const companySettingsTable = pgTable("company_settings", {
+export const companySettingsTable = sqliteTable("company_settings", {
   id: integer("id").primaryKey(),
-  data: jsonb("data").notNull().default({}),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
+  data: text("data", { mode: "json" })
     .notNull()
-    .defaultNow(),
+    .$type<Record<string, unknown>>()
+    .$defaultFn(() => ({})),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+    .notNull()
+    .$defaultFn(() => new Date()),
 });

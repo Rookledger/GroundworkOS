@@ -1,8 +1,8 @@
-import { pgTable, text, integer } from "drizzle-orm/pg-core";
+import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
-export const idCountersTable = pgTable("id_counters", {
+export const idCountersTable = sqliteTable("id_counters", {
   key: text("key").primaryKey(),
   value: integer("value").notNull().default(0),
 });

@@ -1,26 +1,25 @@
-import { Router } from "express";
-import { db } from "@workspace/db";
+import { Hono } from "hono";
 import { sql } from "drizzle-orm";
 import { requireRole } from "../lib/auth.js";
 import { CompanySettingsInput } from "@workspace/api-zod";
 import { logAudit } from "./audit.js";
 import { adminExists } from "./admin.js";
+import type { AppEnv } from "../types";
 
-const router = Router();
+const router = new Hono<AppEnv>();
 
 // GET is intentionally open to any authenticated user (not manager-gated):
 // the onboarding-wizard check in App.tsx reads this for every role,
 // including foreman, before any role-gated UI has loaded.
-router.get("/settings/company", async (_req, res) => {
+router.get("/settings/company", async (c) => {
   try {
-    const result = await db.execute(sql`
-    SELECT data FROM company_settings WHERE id = 1
+    const row = await c.get("db").get<{ data: unknown }>(sql`
+      SELECT data FROM company_settings WHERE id = 1
     `);
-    const row = (result as any).rows?.[0] ?? (result as any)[0];
-    res.json((row as any)?.data ?? {});
+    return c.json(row?.data ?? {});
   } catch (err) {
-    console.error("Failed to load company settings:", err);
-    res.status(500).json({ error: "Failed to load company settings" });
+    c.get("logger").error({ err }, "Failed to load company settings");
+    return c.json({ error: "Failed to load company settings" }, 500);
   }
 });
 
@@ -28,34 +27,33 @@ router.get("/settings/company", async (_req, res) => {
 // yet, so — mirroring the admin bootstrap flow — we also allow it for a
 // foreman while no admin exists, so the very first user can complete the
 // onboarding wizard and set up the company.
-router.put(
-  "/settings/company",
-  async (req, res, next) => {
-    if (!(await adminExists())) return next();
-    return requireRole("manager")(req, res, next);
-  },
-  async (req, res) => {
-    const parsed = CompanySettingsInput.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({
-        error: "Invalid request body",
-        details: parsed.error.flatten(),
-      });
-    }
-    const data = parsed.data;
-    try {
-      await db.execute(sql`
-    INSERT INTO company_settings (id, data, updated_at)
-    VALUES (1, ${JSON.stringify(data)}::jsonb, now())
-    ON CONFLICT (id) DO UPDATE SET data = ${JSON.stringify(data)}::jsonb, updated_at = now()
+router.put("/settings/company", async (c, next) => {
+  if (!(await adminExists(c))) return next();
+  return requireRole("manager")(c, next);
+});
+
+router.put("/settings/company", async (c) => {
+  const parsed = CompanySettingsInput.safeParse(await c.req.json());
+  if (!parsed.success) {
+    return c.json(
+      { error: "Invalid request body", details: parsed.error.flatten() },
+      400,
+    );
+  }
+  const data = parsed.data;
+  try {
+    const json = JSON.stringify(data);
+    await c.get("db").run(sql`
+      INSERT INTO company_settings (id, data, updated_at)
+      VALUES (1, ${json}, unixepoch('now') * 1000)
+      ON CONFLICT (id) DO UPDATE SET data = ${json}, updated_at = unixepoch('now') * 1000
     `);
-      await logAudit("settings", "company", "update", data, req);
-      return res.json({ ok: true });
-    } catch (err) {
-      console.error("Failed to save company settings:", err);
-      return res.status(500).json({ error: "Failed to save company settings" });
-    }
-  },
-);
+    await logAudit(c, "settings", "company", "update", data);
+    return c.json({ ok: true });
+  } catch (err) {
+    c.get("logger").error({ err }, "Failed to save company settings");
+    return c.json({ error: "Failed to save company settings" }, 500);
+  }
+});
 
 export default router;

@@ -1,8 +1,8 @@
-import { pgTable, text, real, date, timestamp } from "drizzle-orm/pg-core";
+import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
-export const quotesTable = pgTable("quotes", {
+export const quotesTable = sqliteTable("quotes", {
   id: text("id").primaryKey(),
   quoteNumber: text("quote_number").notNull().unique(),
   clientId: text("client_id"),
@@ -12,18 +12,18 @@ export const quotesTable = pgTable("quotes", {
   subtotal: real("subtotal").notNull().default(0),
   vatAmount: real("vat_amount").notNull().default(0),
   totalAmount: real("total_amount").notNull().default(0),
-  validUntil: date("valid_until", { mode: "string" }),
+  validUntil: text("valid_until"),
   notes: text("notes"),
-  sentAt: timestamp("sent_at", { withTimezone: true }),
+  sentAt: integer("sent_at", { mode: "timestamp_ms" }),
   shareToken: text("share_token").unique(),
   approvedByName: text("approved_by_name"),
-  approvedAt: timestamp("approved_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true })
+  approvedAt: integer("approved_at", { mode: "timestamp_ms" }),
+  createdAt: integer("created_at", { mode: "timestamp_ms" })
     .notNull()
-    .defaultNow(),
+    .$defaultFn(() => new Date()),
 });
 
-export const lineItemsTable = pgTable("line_items", {
+export const lineItemsTable = sqliteTable("line_items", {
   id: text("id").primaryKey(),
   quoteId: text("quote_id").notNull(),
   description: text("description").notNull(),

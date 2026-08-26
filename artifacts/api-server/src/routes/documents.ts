@@ -1,11 +1,13 @@
-import { Router } from "express";
-import { db, documentsTable } from "@workspace/db";
+import { Hono } from "hono";
+import { documentsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireRole } from "../lib/auth.js";
 import { CreateDocumentInput, UpdateDocumentInput } from "@workspace/api-zod";
 import { logAudit } from "./audit.js";
+import { generateId } from "../lib/generateId.js";
+import type { AppEnv } from "../types";
 
-const router = Router();
+const router = new Hono<AppEnv>();
 
 function computeDocStatus(expiryDate?: string | null): string {
   if (!expiryDate) return "valid";
@@ -17,46 +19,48 @@ function computeDocStatus(expiryDate?: string | null): string {
   return "valid";
 }
 
-router.get("/documents", requireRole("manager"), async (req, res) => {
-  const docs = await db
+router.get("/documents", requireRole("manager"), async (c) => {
+  const docs = await c
+    .get("db")
     .select()
     .from(documentsTable)
     .orderBy(documentsTable.createdAt);
-  res.json(docs);
+  return c.json(docs);
 });
 
-router.post("/documents", requireRole("manager"), async (req, res) => {
-  const parsed = CreateDocumentInput.safeParse(req.body);
+router.post("/documents", requireRole("manager"), async (c) => {
+  const parsed = CreateDocumentInput.safeParse(await c.req.json());
   if (!parsed.success) {
-    return res
-      .status(400)
-      .json({ error: "Invalid request body", details: parsed.error.flatten() });
+    return c.json(
+      { error: "Invalid request body", details: parsed.error.flatten() },
+      400,
+    );
   }
+  const db = c.get("db");
   const data = parsed.data;
-  const { generateId } = await import("../lib/generateId.js");
   const id = generateId();
   const status = computeDocStatus(data.expiryDate);
   const [doc] = await db
     .insert(documentsTable)
     .values({ id, ...data, status })
     .returning();
-  await logAudit(
-    "document",
-    id,
-    "create",
-    { name: data.name, type: data.type },
-    req,
-  );
-  return res.status(201).json(doc);
+  await logAudit(c, "document", id, "create", {
+    name: data.name,
+    type: data.type,
+  });
+  return c.json(doc, 201);
 });
 
-router.patch("/documents/:id", requireRole("manager"), async (req, res) => {
-  const parsed = UpdateDocumentInput.safeParse(req.body);
+router.patch("/documents/:id", requireRole("manager"), async (c) => {
+  const parsed = UpdateDocumentInput.safeParse(await c.req.json());
   if (!parsed.success) {
-    return res
-      .status(400)
-      .json({ error: "Invalid request body", details: parsed.error.flatten() });
+    return c.json(
+      { error: "Invalid request body", details: parsed.error.flatten() },
+      400,
+    );
   }
+  const db = c.get("db");
+  const id = c.req.param("id");
   const updates: Record<string, unknown> = { ...parsed.data };
   if (parsed.data.expiryDate !== undefined) {
     updates.status = computeDocStatus(parsed.data.expiryDate);
@@ -64,17 +68,19 @@ router.patch("/documents/:id", requireRole("manager"), async (req, res) => {
   const [doc] = await db
     .update(documentsTable)
     .set(updates)
-    .where(eq(documentsTable.id, req.params.id))
+    .where(eq(documentsTable.id, id))
     .returning();
-  if (!doc) return res.status(404).json({ error: "Not found" });
-  await logAudit("document", req.params.id, "update", updates, req);
-  return res.json(doc);
+  if (!doc) return c.json({ error: "Not found" }, 404);
+  await logAudit(c, "document", id, "update", updates);
+  return c.json(doc);
 });
 
-router.delete("/documents/:id", requireRole("manager"), async (req, res) => {
-  await logAudit("document", req.params.id, "delete", null, req);
-  await db.delete(documentsTable).where(eq(documentsTable.id, req.params.id));
-  res.status(204).send();
+router.delete("/documents/:id", requireRole("manager"), async (c) => {
+  const db = c.get("db");
+  const id = c.req.param("id");
+  await logAudit(c, "document", id, "delete", null);
+  await db.delete(documentsTable).where(eq(documentsTable.id, id));
+  return c.body(null, 204);
 });
 
 export default router;

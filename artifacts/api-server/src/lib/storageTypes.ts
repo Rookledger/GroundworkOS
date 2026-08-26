@@ -1,5 +1,3 @@
-import type { Readable } from "stream";
-
 /** Thrown when a requested object does not exist in the backing store. */
 export class ObjectNotFoundError extends Error {
   constructor() {
@@ -11,9 +9,11 @@ export class ObjectNotFoundError extends Error {
 
 export interface UploadTarget {
   /**
-   * URL the browser PUTs the file to. This is a same-origin relay URL on this
-   * API server, since most S3-compatible providers (including Oracle Object
-   * Storage) don't support CORS for direct browser uploads.
+   * URL the browser PUTs the file to. This is a same-origin relay URL on
+   * this Worker: R2 bucket *bindings* (unlike a presigned S3 URL) can only
+   * be reached from inside the Worker that holds the binding, not directly
+   * from a browser, so the relay pattern carries over unchanged from the
+   * old S3-compatible backend.
    */
   uploadURL: string;
   /** App-internal path stored in the DB, e.g. "/objects/uploads/<uuid>". */
@@ -21,24 +21,24 @@ export interface UploadTarget {
 }
 
 /**
- * Object storage contract implemented by the S3-compatible backend (see
- * objectStorage.ts).
+ * Object storage contract implemented by the R2 backend (see
+ * objectStorage.ts). `body`/return types use the platform `ReadableStream`
+ * and `Response` (Fetch API) instead of Node's `stream.Readable` - there is
+ * no Node stream implementation on a V8 isolate, and R2's bucket binding
+ * already speaks web streams natively.
  */
 export interface StorageBackend {
   /**
    * Create an upload target for a new private object.
    * @param opts.relayBaseUrl Base URL for the same-origin upload relay
-   * ("/api/storage/uploads/direct"). Backends that presign upload URLs ignore it.
+   * ("/api/storage/uploads/direct").
    */
   getUploadURL(opts: { relayBaseUrl: string }): Promise<UploadTarget>;
 
-  /**
-   * Stream a raw request body into a private object. Used only by backends that
-   * rely on the same-origin upload relay (s3). Presigning backends throw.
-   */
+  /** Stream a raw request body into a private object via the upload relay. */
   putPrivateObject(
     objectId: string,
-    body: Readable,
+    body: ReadableStream<Uint8Array> | ArrayBuffer | null,
     contentType: string,
   ): Promise<void>;
 

@@ -1,11 +1,5 @@
-import {
-  Router,
-  type IRouter,
-  type Request,
-  type Response,
-  type NextFunction,
-} from "express";
-import { getAuth } from "@clerk/express";
+import { Hono } from "hono";
+import { getAuth } from "@hono/clerk-auth";
 import healthRouter from "./health";
 import storageRouter from "./storage";
 import clientsRouter from "./clients";
@@ -31,8 +25,9 @@ import purchaseOrdersRouter from "./purchase_orders";
 import emailRouter from "./email";
 import auditRouter from "./audit";
 import clerkWebhookRouter from "./clerk_webhook";
+import type { AppEnv } from "../types";
 
-const router: IRouter = Router();
+const router = new Hono<AppEnv>();
 
 const PUBLIC_PATHS = [
   "/healthz",
@@ -47,47 +42,51 @@ const PUBLIC_PATHS = [
   "/webhooks/clerk",
 ];
 
-function requireAuth(req: Request, res: Response, next: NextFunction) {
-  if (
-    PUBLIC_PATHS.some((p) => req.path === p || req.path.startsWith(p + "/"))
-  ) {
+/**
+ * `router` is mounted at "/api" in app.ts (`app.route("/api", router)`), so
+ * `c.req.path` here still includes that prefix - strip it before comparing
+ * against PUBLIC_PATHS, which (like the old Express version's `req.path`,
+ * already relative to where the router was mounted) are written relative to
+ * "/api".
+ */
+router.use(async (c, next) => {
+  const path = c.req.path.replace(/^\/api/, "") || "/";
+  if (PUBLIC_PATHS.some((p) => path === p || path.startsWith(p + "/"))) {
     return next();
   }
-  const auth = getAuth(req);
-  const userId = (auth as any)?.sessionClaims?.userId || (auth as any)?.userId;
+  const auth = getAuth(c);
+  const userId = auth?.sessionClaims?.userId ?? auth?.userId;
   if (!userId) {
-    return res.status(401).json({ error: "Unauthorized" });
+    return c.json({ error: "Unauthorized" }, 401);
   }
-  (req as any).userId = userId;
-  next();
-}
+  c.set("userId", userId as string);
+  await next();
+});
 
-router.use(requireAuth);
-
-router.use(storageRouter);
-router.use(healthRouter);
-router.use(clientsRouter);
-router.use(jobsRouter);
-router.use(quotesRouter);
-router.use(invoicesRouter);
-router.use(subcontractorsRouter);
-router.use(documentsRouter);
-router.use(scheduleRouter);
-router.use(plantRouter);
-router.use(rateBookRouter);
-router.use(dashboardRouter);
-router.use(xeroRouter);
-router.use(quickbooksRouter);
-router.use(sageRouter);
-router.use(freeagentRouter);
-router.use(settingsRouter);
-router.use(cisRouter);
-router.use(portalRouter);
-router.use(adminRouter);
-router.use(timesheetsRouter);
-router.use(purchaseOrdersRouter);
-router.use(emailRouter);
-router.use(auditRouter);
-router.use(clerkWebhookRouter);
+router.route("/", storageRouter);
+router.route("/", healthRouter);
+router.route("/", clientsRouter);
+router.route("/", jobsRouter);
+router.route("/", quotesRouter);
+router.route("/", invoicesRouter);
+router.route("/", subcontractorsRouter);
+router.route("/", documentsRouter);
+router.route("/", scheduleRouter);
+router.route("/", plantRouter);
+router.route("/", rateBookRouter);
+router.route("/", dashboardRouter);
+router.route("/", xeroRouter);
+router.route("/", quickbooksRouter);
+router.route("/", sageRouter);
+router.route("/", freeagentRouter);
+router.route("/", settingsRouter);
+router.route("/", cisRouter);
+router.route("/", portalRouter);
+router.route("/", adminRouter);
+router.route("/", timesheetsRouter);
+router.route("/", purchaseOrdersRouter);
+router.route("/", emailRouter);
+router.route("/", auditRouter);
+router.route("/", clerkWebhookRouter);
 
 export default router;

@@ -5,6 +5,11 @@
  * it's embedded in CLERK_PUBLISHABLE_KEY, which has the shape
  * `pk_(test|live)_<base64>`, where the base64 segment decodes to
  * `<frontend-api-host>$` (note the trailing `$`).
+ *
+ * Decoded with the Web `atob` global instead of Node's `Buffer` - both work
+ * fine under `nodejs_compat`, but `atob`/`btoa` are the platform-native
+ * choice on a V8 isolate and avoid pulling in the Buffer polyfill just for
+ * this one call.
  */
 export function decodeClerkFrontendApiHost(
   publishableKey: string | undefined,
@@ -16,7 +21,7 @@ export function decodeClerkFrontendApiHost(
 
   let decoded: string;
   try {
-    decoded = Buffer.from(match[2], "base64").toString("utf-8");
+    decoded = atob(match[2]);
   } catch {
     return null;
   }
@@ -34,14 +39,15 @@ export function clerkFrontendApiOrigin(
 }
 
 /**
- * Builds the helmet Content-Security-Policy `directives` object. When
- * CLERK_PUBLISHABLE_KEY is set, the Clerk Frontend API origin it encodes is
- * added everywhere Clerk's SDK needs it at runtime: script-src (loading
- * clerk.browser.js), connect-src (the SDK's XHR/fetch calls), img-src (user
- * avatars), worker-src (Clerk's background token-refresh worker), and
- * frame-src (Clerk's bot-protection challenge and account-portal iframes).
- * blob: and data: are allowed on worker-src/img-src because Clerk creates
- * its worker from a blob: URL and can render avatar/data: images.
+ * Builds the Content-Security-Policy directives object consumed by Hono's
+ * `secureHeaders` middleware (see app.ts). When CLERK_PUBLISHABLE_KEY is
+ * set, the Clerk Frontend API origin it encodes is added everywhere
+ * Clerk's SDK needs it at runtime: script-src (loading clerk.browser.js),
+ * connect-src (the SDK's XHR/fetch calls), img-src (user avatars),
+ * worker-src (Clerk's background token-refresh worker), and frame-src
+ * (Clerk's bot-protection challenge and account-portal iframes). blob: and
+ * data: are allowed on worker-src/img-src because Clerk creates its worker
+ * from a blob: URL and can render avatar/data: images.
  */
 export function buildCspDirectives(
   publishableKey: string | undefined,

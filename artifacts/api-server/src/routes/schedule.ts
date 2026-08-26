@@ -1,18 +1,19 @@
-import { Router } from "express";
-import {
-  db,
-  scheduleEntriesTable,
-  jobsTable,
-  clientsTable,
-} from "@workspace/db";
+import { Hono } from "hono";
+import type { Database } from "@workspace/db";
+import { scheduleEntriesTable, jobsTable, clientsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireRole } from "../lib/auth.js";
 import { CreateScheduleInput, UpdateScheduleInput } from "@workspace/api-zod";
 import { logAudit } from "./audit.js";
+import { generateId } from "../lib/generateId.js";
+import type { AppEnv } from "../types";
 
-const router = Router();
+const router = new Hono<AppEnv>();
 
-async function enrichEntry(entry: typeof scheduleEntriesTable.$inferSelect) {
+async function enrichEntry(
+  db: Database,
+  entry: typeof scheduleEntriesTable.$inferSelect,
+) {
   const [job] = entry.jobId
     ? await db
         .select({
@@ -45,24 +46,28 @@ async function enrichEntry(entry: typeof scheduleEntriesTable.$inferSelect) {
   };
 }
 
-router.get("/schedule", requireRole("foreman"), async (req, res) => {
+router.get("/schedule", requireRole("foreman"), async (c) => {
+  const db = c.get("db");
   const entries = await db
     .select()
     .from(scheduleEntriesTable)
     .orderBy(scheduleEntriesTable.startDatetime);
-  const enriched = await Promise.all(entries.map(enrichEntry));
-  res.json(enriched);
+  const enriched = await Promise.all(
+    entries.map((entry) => enrichEntry(db, entry)),
+  );
+  return c.json(enriched);
 });
 
-router.post("/schedule", requireRole("foreman"), async (req, res) => {
-  const parsed = CreateScheduleInput.safeParse(req.body);
+router.post("/schedule", requireRole("foreman"), async (c) => {
+  const parsed = CreateScheduleInput.safeParse(await c.req.json());
   if (!parsed.success) {
-    return res
-      .status(400)
-      .json({ error: "Invalid request body", details: parsed.error.flatten() });
+    return c.json(
+      { error: "Invalid request body", details: parsed.error.flatten() },
+      400,
+    );
   }
+  const db = c.get("db");
   const data = parsed.data;
-  const { generateId } = await import("../lib/generateId.js");
   const id = generateId();
   const [entry] = await db
     .insert(scheduleEntriesTable)
@@ -73,23 +78,23 @@ router.post("/schedule", requireRole("foreman"), async (req, res) => {
       endDatetime: new Date(data.endDatetime),
     })
     .returning();
-  await logAudit(
-    "schedule_entry",
-    id,
-    "create",
-    { jobId: data.jobId, title: data.title },
-    req,
-  );
-  return res.status(201).json(await enrichEntry(entry));
+  await logAudit(c, "schedule_entry", id, "create", {
+    jobId: data.jobId,
+    title: data.title,
+  });
+  return c.json(await enrichEntry(db, entry), 201);
 });
 
-router.patch("/schedule/:id", requireRole("foreman"), async (req, res) => {
-  const parsed = UpdateScheduleInput.safeParse(req.body);
+router.patch("/schedule/:id", requireRole("foreman"), async (c) => {
+  const parsed = UpdateScheduleInput.safeParse(await c.req.json());
   if (!parsed.success) {
-    return res
-      .status(400)
-      .json({ error: "Invalid request body", details: parsed.error.flatten() });
+    return c.json(
+      { error: "Invalid request body", details: parsed.error.flatten() },
+      400,
+    );
   }
+  const db = c.get("db");
+  const id = c.req.param("id");
   const { startDatetime, endDatetime, ...data } = parsed.data;
   const [entry] = await db
     .update(scheduleEntriesTable)
@@ -100,19 +105,19 @@ router.patch("/schedule/:id", requireRole("foreman"), async (req, res) => {
       }),
       ...(endDatetime !== undefined && { endDatetime: new Date(endDatetime) }),
     })
-    .where(eq(scheduleEntriesTable.id, req.params.id))
+    .where(eq(scheduleEntriesTable.id, id))
     .returning();
-  if (!entry) return res.status(404).json({ error: "Not found" });
-  await logAudit("schedule_entry", req.params.id, "update", parsed.data, req);
-  return res.json(await enrichEntry(entry));
+  if (!entry) return c.json({ error: "Not found" }, 404);
+  await logAudit(c, "schedule_entry", id, "update", parsed.data);
+  return c.json(await enrichEntry(db, entry));
 });
 
-router.delete("/schedule/:id", requireRole("manager"), async (req, res) => {
-  await logAudit("schedule_entry", req.params.id, "delete", null, req);
-  await db
-    .delete(scheduleEntriesTable)
-    .where(eq(scheduleEntriesTable.id, req.params.id));
-  res.status(204).send();
+router.delete("/schedule/:id", requireRole("manager"), async (c) => {
+  const db = c.get("db");
+  const id = c.req.param("id");
+  await logAudit(c, "schedule_entry", id, "delete", null);
+  await db.delete(scheduleEntriesTable).where(eq(scheduleEntriesTable.id, id));
+  return c.body(null, 204);
 });
 
 export default router;

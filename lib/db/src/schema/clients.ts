@@ -1,8 +1,8 @@
-import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
-export const clientsTable = pgTable("clients", {
+export const clientsTable = sqliteTable("clients", {
   id: text("id").primaryKey(),
   companyName: text("company_name").notNull(),
   contactName: text("contact_name"),
@@ -11,9 +11,9 @@ export const clientsTable = pgTable("clients", {
   address: text("address"),
   vatNumber: text("vat_number"),
   notes: text("notes"),
-  createdAt: timestamp("created_at", { withTimezone: true })
+  createdAt: integer("created_at", { mode: "timestamp_ms" })
     .notNull()
-    .defaultNow(),
+    .$defaultFn(() => new Date()),
 });
 
 export const insertClientSchema = createInsertSchema(clientsTable).omit({

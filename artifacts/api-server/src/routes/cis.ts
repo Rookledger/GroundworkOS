@@ -1,15 +1,20 @@
-import { Router } from "express";
-import { db } from "@workspace/db";
+import { Hono } from "hono";
 import { sql } from "drizzle-orm";
 import { requireRole } from "../lib/auth.js";
+import type { AppEnv } from "../types";
 
-const router = Router();
+const router = new Hono<AppEnv>();
 
-router.get("/cis/returns", requireRole("manager"), async (_req, res) => {
+// SQLite has no native date type or date_trunc(); strftime('%Y-%m', ...)
+// truncates an ISO date/text column to a "YYYY-MM" period string, which is
+// the SQLite-native equivalent of Postgres's date_trunc('month', ...). The
+// `s.active = true` / boolean comparison from the original Postgres query
+// becomes `s.active = 1`, since SQLite stores booleans as 0/1 integers.
+router.get("/cis/returns", requireRole("manager"), async (c) => {
   try {
-    const rows = await db.execute(sql`
+    const rows = await c.get("db").all(sql`
       SELECT
-        date_trunc('month', i.issued_date::date) AS period,
+        strftime('%Y-%m', i.issued_date) AS period,
         s.company_name,
         s.utr_number,
         s.cis_status,
@@ -20,14 +25,14 @@ router.get("/cis/returns", requireRole("manager"), async (_req, res) => {
         count(i.id) AS invoice_count
       FROM subcontractors s
       LEFT JOIN invoices i ON i.subcontractor_id = s.id AND i.status = 'paid'
-      WHERE s.active = true
-      GROUP BY date_trunc('month', i.issued_date::date), s.id, s.company_name, s.utr_number, s.cis_status, s.cis_deduction_rate
+      WHERE s.active = 1
+      GROUP BY strftime('%Y-%m', i.issued_date), s.id, s.company_name, s.utr_number, s.cis_status, s.cis_deduction_rate
       ORDER BY period DESC, s.company_name
     `);
-    res.json((rows as any).rows ?? rows);
+    return c.json(rows);
   } catch (err) {
-    console.error("CIS returns query failed:", err);
-    res.status(500).json({ error: "Failed to load CIS returns" });
+    c.get("logger").error({ err }, "CIS returns query failed");
+    return c.json({ error: "Failed to load CIS returns" }, 500);
   }
 });
 
