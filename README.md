@@ -8,14 +8,18 @@ Manage jobs, CIS compliance, quotes, invoices, plant, subcontractors, timesheets
 
 ## Stack
 
-| Layer    | Technology                             |
-| -------- | -------------------------------------- |
-| Frontend | React 19 + Vite + Tailwind v4 + wouter |
-| Backend  | Express v5 + TypeScript                |
-| Database | PostgreSQL + Drizzle ORM               |
-| Auth     | Clerk                                  |
-| Monorepo | pnpm workspaces                        |
-| Email    | Resend                                 |
+| Layer          | Technology                                          |
+| -------------- | ---------------------------------------------------- |
+| Frontend       | React 19 + Vite + Tailwind v4 + wouter               |
+| Backend        | Hono + TypeScript, on Cloudflare Workers             |
+| Database       | Cloudflare D1 (SQLite) + Drizzle ORM                 |
+| Object storage | Cloudflare R2 (RAMS PDFs, insurance certs, photos)   |
+| Rate limiting  | Cloudflare KV (also OAuth CSRF state)                |
+| Auth           | Clerk                                                |
+| Monorepo       | pnpm workspaces                                      |
+| Email          | Resend                                               |
+
+The frontend deploys to Cloudflare Pages and the backend deploys as a separate Cloudflare Worker — there is no single combined process serving both, unlike the project's earlier Express/Railway architecture (see `RAILWAY.md`'s git history if you need the old setup for reference).
 
 ---
 
@@ -45,80 +49,72 @@ Manage jobs, CIS compliance, quotes, invoices, plant, subcontractors, timesheets
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 22+
 - pnpm 9+
-- PostgreSQL database
+- A Cloudflare account (Workers, Pages, D1, R2 and KV are all used — see [Deployment](#deployment))
+- The Wrangler CLI, `wrangler`, bundled as a devDependency of `artifacts/api-server` — run it via `pnpm exec wrangler ...` from that directory, no separate global install needed
 
 ### Environment Variables
 
-Create a `.env` file in the project root (or set these as secrets in your host):
+Cloudflare Workers have no single `.env` file: **non-secret** values live as `vars` in `artifacts/api-server/wrangler.jsonc`, and **secrets** are set with `wrangler secret put <NAME>` (or, for local dev, a `.dev.vars` file in `artifacts/api-server` — see Wrangler's docs; that file is already gitignored). The frontend build is a separate concern again — Vite inlines its `VITE_*` variables into the built bundle, so those are set wherever you run `pnpm --filter @workspace/groundworkos run build` (a Cloudflare Pages project's build environment variables, in production).
+
+Required (the Worker returns a 500 "Server misconfigured" on every request if any of these are missing or malformed — see `artifacts/api-server/src/lib/validateEnv.ts`):
 
 ```env
-# Core (required)
-PORT=3001
-NODE_ENV=production
-
-# Database
-DATABASE_URL=postgresql://user:password@host:5432/groundworkos
+# App settings
+APP_URL=https://your-app.example.com   # the frontend's origin — used for CORS and the CSP
 
 # Clerk Auth (get from dashboard.clerk.com) — email-only sign-in;
 # no Google or other social/OAuth sign-in is configured.
 CLERK_PUBLISHABLE_KEY=pk_live_...
 CLERK_SECRET_KEY=sk_live_...
-VITE_CLERK_PUBLISHABLE_KEY=pk_live_...
+```
 
-# App settings (required)
-APP_URL=https://your-app.example.com
+The frontend build additionally requires, as **build-time** variables (not read by the Worker at all):
+
+```env
+VITE_CLERK_PUBLISHABLE_KEY=pk_live_...   # MUST be the exact same value as CLERK_PUBLISHABLE_KEY above
 BASE_PATH=/
-STATIC_DIR=artifacts/groundworkos/dist/public
+```
 
-# Object storage — S3-compatible (required). S3_BUCKET, S3_ACCESS_KEY_ID
-# and S3_SECRET_ACCESS_KEY throw at boot if unset; S3_REGION and
-# S3_ENDPOINT silently default to AWS us-east-1 if unset, which is wrong
-# for most providers, so set all five explicitly. Use AWS S3, Cloudflare
-# R2, Backblaze B2, Oracle Cloud Object Storage, MinIO, etc. — Railway
-# has no built-in object storage.
-S3_BUCKET=groundworkos-files
-S3_REGION=us-east-1
-S3_ENDPOINT=https://s3.us-east-1.amazonaws.com
-S3_ACCESS_KEY_ID=your-s3-access-key
-S3_SECRET_ACCESS_KEY=your-s3-secret-key
-# S3_FORCE_PATH_STYLE=true    # optional, defaults to true (path-style addressing)
-# S3_PUBLIC_PREFIX=public/    # optional, defaults to public/
+`VITE_CLERK_PUBLISHABLE_KEY` and `CLERK_PUBLISHABLE_KEY` must be identical — one is inlined into the frontend bundle by Vite, the other read by the Worker at runtime, and **nothing automatically keeps them in sync** (the Worker no longer checks this for you at boot; that check was dropped when the frontend and backend became separate deployments with no shared filesystem — double-check both values yourself before deploying).
 
-# Logging (optional)
-# LOG_LEVEL=info
+Everything else is optional:
 
+```env
 # Sign-up restriction backstop (optional — on top of Clerk Dashboard →
 # Configure → Restrictions, which is the primary control)
-# CLERK_WEBHOOK_SIGNING_SECRET=whsec_...
-# SIGNUP_ALLOWED_EMAIL_DOMAINS=yourcompany.co.uk
+CLERK_WEBHOOK_SIGNING_SECRET=whsec_...
+SIGNUP_ALLOWED_EMAIL_DOMAINS=yourcompany.co.uk
 
-# Email (optional — get from resend.com)
+# Locks the first-admin bootstrap flow to one email address (see User Roles below)
+BOOTSTRAP_ADMIN_EMAIL=owner@yourcompany.co.uk
+
+# Email (get from resend.com)
 RESEND_API_KEY=re_...
 
-# Xero (optional)
+# Xero
 XERO_CLIENT_ID=...
 XERO_CLIENT_SECRET=...
 XERO_REDIRECT_URI=...
 
-# QuickBooks Online (optional)
+# QuickBooks Online
 QUICKBOOKS_CLIENT_ID=...
 QUICKBOOKS_CLIENT_SECRET=...
 QUICKBOOKS_REDIRECT_URI=...
 
-# Sage Accounting (optional)
+# Sage Accounting
 SAGE_CLIENT_ID=...
 SAGE_CLIENT_SECRET=...
 SAGE_REDIRECT_URI=...
 
-# FreeAgent (optional)
+# FreeAgent
 FREEAGENT_CLIENT_ID=...
 FREEAGENT_CLIENT_SECRET=...
 FREEAGENT_REDIRECT_URI=...
 ```
 
-`PORT`, `DATABASE_URL`, the Clerk keys, `APP_URL`, `BASE_PATH`, `STATIC_DIR` and the five `S3_*` object storage variables are all required — the app will not build or boot correctly without them (`PORT` has no built-in fallback; Railway supplies it automatically, but self-hosted setups must set it). Everything below the object storage block (S3 addressing tweaks, logging, sign-up restriction, email, Xero, QuickBooks, Sage, FreeAgent) is optional. `NODE_ENV` isn't enforced at boot but should be set to `production` when self-hosting — it controls log formatting and is a hard safety check in the local demo-data seed script (`pnpm --filter @workspace/api-server run seed`, which also requires `SEED_CONFIRM_NON_LOCAL_DB=yes` to run against any non-localhost `DATABASE_URL`). On Railway, leave `NODE_ENV` unset: Railway supplies `NODE_ENV=production` automatically at runtime, and setting it as a build-time variable makes pnpm skip devDependencies — where `typescript`, `vite`, `esbuild` and `drizzle-kit` live — so the build fails. See **[RAILWAY.md](./RAILWAY.md)** for how these map to Railway service variables, and each accounting integration is optional and independent — set only the credentials for the providers this client actually uses. Every provider uses self-service OAuth: the client logs in with their own accounting software account and authorises access, so you never need to obtain or hold their accounting API keys.
+Each accounting integration is optional and independent — set only the credentials for the providers this client actually uses. Every provider uses self-service OAuth: the client logs in with their own accounting software account and authorises access, so you never need to obtain or hold their accounting API keys. See **[DEPLOYMENT.md](./DEPLOYMENT.md)** for exactly which of the above go in `wrangler.jsonc`'s `vars`, which go via `wrangler secret put`, and which are Cloudflare Pages build variables.
 
 ### Install & Run
 
@@ -126,14 +122,18 @@ FREEAGENT_REDIRECT_URI=...
 # Install all dependencies
 pnpm install
 
-# Push the database schema (Drizzle)
-pnpm --filter @workspace/db run push
+# Apply the D1 schema to a local (SQLite-backed) database for `wrangler dev`
+cd artifacts/api-server
+pnpm exec wrangler d1 migrations apply groundworkos --local
+cd ../..
 
 # Start development (frontend + API, in parallel)
 pnpm -r --parallel run dev
 ```
 
-Both the frontend dev server and the API server require `PORT` to be set (there's no built-in default) — e.g. `PORT=5173` for the frontend and `PORT=3001` for the API server when running them side by side locally.
+This starts two independent dev servers: `wrangler dev` for the API (`artifacts/api-server`, defaults to `http://localhost:8787`) and Vite for the frontend (`artifacts/groundworkos`, requires a `PORT` env var — e.g. `PORT=5173`). The frontend's API calls are relative paths (`/api/...`), so the two aren't wired together out of the box the way a single combined process would be — either add a Vite dev proxy forwarding `/api` to the wrangler dev server, or exercise the two independently (e.g. hit the API directly with `curl`/an HTTP client while iterating on it).
+
+Local dev also needs `artifacts/api-server/.dev.vars` set with at least `APP_URL`, `CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` (see Environment Variables above) — `wrangler dev` reads that file automatically and it's already gitignored.
 
 ---
 
@@ -142,11 +142,11 @@ Both the frontend dev server and the API server require `PORT` to be set (there'
 ```
 /
 ├── artifacts/
-│   ├── groundworkos/        # React + Vite frontend
-│   ├── api-server/          # Express API server
+│   ├── groundworkos/        # React + Vite frontend (deploys to Cloudflare Pages)
+│   ├── api-server/          # Hono API server (deploys as a Cloudflare Worker; wrangler.jsonc, D1/R2/KV bindings)
 │   └── mockup-sandbox/      # UI mockup/design preview sandbox (not part of the deployed app)
 ├── lib/
-│   ├── db/                  # Drizzle schema + migrations
+│   ├── db/                  # Drizzle schema + D1 migrations (SQL, generated by drizzle-kit)
 │   ├── api-client-react/    # Typed API client (shared)
 │   ├── api-spec/            # OpenAPI spec + codegen (orval)
 │   ├── api-zod/             # Shared Zod schemas/types
@@ -158,6 +158,15 @@ Both the frontend dev server and the API server require `PORT` to be set (there'
 
 ---
 
+## Testing
+
+- `pnpm run test` — unit tests (plain Node/vitest). Each router is mounted stand-alone with a fake D1/Clerk/logger injected via `c.set(...)`, so these never touch a real database.
+- `pnpm run test:integration` — `@workspace/api-server`'s integration suite, which runs each router against a **real local D1 database inside an actual Workers runtime** (Miniflare/workerd, via `@cloudflare/vitest-pool-workers` — see `artifacts/api-server/vitest.integration.config.ts`). Migrations from `lib/db/migrations` are applied automatically before the suite runs; no external database or seed step is required. This replaces the project's earlier Postgres-backed integration suite.
+
+Both run in CI (`.github/workflows/ci.yml`) on every push and PR, alongside `pnpm run typecheck` and `pnpm run lint`.
+
+---
+
 ## User Roles
 
 Sign-in is email-only (Clerk's email code / password flows) — no Google or other social/OAuth sign-in provider is enabled. GroundworkOS is invite-only by default; see `CLERK_WEBHOOK_SIGNING_SECRET` / `SIGNUP_ALLOWED_EMAIL_DOMAINS` above and the Clerk Dashboard's Restrictions setting.
@@ -165,12 +174,12 @@ Sign-in is email-only (Clerk's email code / password flows) — no Google or oth
 Roles are stored in Clerk `publicMetadata.role`. Set via the **Settings → Users** page (admin only) or directly in the Clerk dashboard.
 
 | Role      | Access                                                              |
-| --------- | ------------------------------------------------------------------- |
+| --------- | --------------------------------------------------------------------- |
 | `admin`   | Full access including Users, Audit Log, Deploy Guide                |
 | `manager` | All operational features: jobs, quotes, invoices, reports, settings |
 | `foreman` | Dashboard, jobs, schedule, timesheets                               |
 
-**First-time setup (bootstrap):** A user with no role set defaults to `foreman`. The very first admin is created automatically: while the workspace has zero admins, the first non-admin who opens **Settings → Users** is promoted to `admin` the moment that page checks `GET /api/admin/bootstrap-status` — no button click required, the page just reloads itself once the promotion lands. `POST /api/admin/bootstrap` still exists and does the same promotion on demand, so a manual "Make me admin" button remains as a fallback for the rare case the automatic path doesn't apply to you (e.g. `BOOTSTRAP_ADMIN_EMAIL` is set to someone else). Either path only succeeds while no admin exists yet; once any account has `role: "admin"`, bootstrap permanently stops working and all further role changes must go through that admin's **Settings → Users** page. Because this now happens automatically instead of behind an explicit click, `BOOTSTRAP_ADMIN_EMAIL` (see below) matters more on any workspace that might be reachable before you've had a chance to sign up — without it, whoever opens Settings → Users first claims admin. If you're locked out entirely (e.g. restoring from a backup with no admins left), you can also set `{ "role": "admin" }` on an account's Public metadata directly in the Clerk dashboard.
+**First-time setup (bootstrap):** A user with no role set defaults to `foreman`. The very first admin is created automatically: while the workspace has zero admins, the first non-admin who opens **Settings → Users** is promoted to `admin` the moment that page checks `GET /api/admin/bootstrap-status` — no button click required, the page just reloads itself once the promotion lands. `POST /api/admin/bootstrap` still exists and does the same promotion on demand, so a manual "Make me admin" button remains as a fallback for the rare case the automatic path doesn't apply to you (e.g. `BOOTSTRAP_ADMIN_EMAIL` is set to someone else). Either path only succeeds while no admin exists yet; once any account has `role: "admin"`, bootstrap permanently stops working and all further role changes must go through that admin's **Settings → Users** page. Because this now happens automatically instead of behind an explicit click, `BOOTSTRAP_ADMIN_EMAIL` (see above) matters more on any workspace that might be reachable before you've had a chance to sign up — without it, whoever opens Settings → Users first claims admin. If you're locked out entirely (e.g. restoring from a backup with no admins left), you can also set `{ "role": "admin" }` on an account's Public metadata directly in the Clerk dashboard.
 
 ---
 
@@ -182,17 +191,17 @@ Roles are stored in Clerk `publicMetadata.role`. Set via the **Settings → User
 4. Go to **Settings** and complete your company details (name, address, VAT number, bank details)
 5. Invite any additional users and set their roles from **Settings → Users**
 6. (Optional) Connect an accounting provider from **Settings → [Provider] Integration** (Xero, QuickBooks, Sage, or FreeAgent)
-7. (Optional) Add `RESEND_API_KEY` secret to enable email sending for quotes and invoices
+7. (Optional) Set the `RESEND_API_KEY` secret to enable email sending for quotes and invoices
 
 ---
 
 ## Deployment
 
-GroundworkOS is deployed on [Railway](https://railway.app) as a single service — the Express API server serves the built frontend directly (via `STATIC_DIR`), so no separate static host or reverse proxy is required.
+GroundworkOS deploys as two separate Cloudflare projects: the frontend as a **Cloudflare Pages** static site, and the API as a **Cloudflare Worker** (Hono) backed by **D1** (database), **R2** (file storage) and **KV** (rate limiting / OAuth state) bindings. The two are wired together in production by binding a Worker Route for `/api/*` on the same domain the Pages project serves — the frontend calls relative `/api/...` paths, so this keeps everything same-origin.
 
-See **[RAILWAY.md](./RAILWAY.md)** for the full step-by-step guide, covering the Railway project and PostgreSQL plugin setup, required environment variables (Clerk, database, object storage, app URL), the build and start commands already configured via `railway.json`, running database migrations with the Railway CLI, first login and setting the admin role, and custom domains and troubleshooting.
+See **[DEPLOYMENT.md](./DEPLOYMENT.md)** for the full step-by-step guide: provisioning D1/R2/KV, applying migrations, setting `wrangler.jsonc` vars vs. `wrangler secret put` secrets vs. Pages build variables, deploying both projects, binding the `/api/*` route, first login and the admin bootstrap flow, and troubleshooting.
 
-For self-hosting outside Railway (e.g. a VPS), see the in-app Deploy Guide (`/deploy`, admin only), which covers an Oracle Cloud + Nginx + PM2 setup instead.
+The in-app Deploy Guide (`/deploy`, admin only) predates this Cloudflare migration and still describes the old Postgres/VPS setup — use DEPLOYMENT.md instead until that page is rewritten.
 
 ---
 
@@ -215,11 +224,13 @@ A few non-obvious design decisions and gotchas worth knowing before making chang
 
 **API data shape** — The database and API layer use camelCase (Drizzle convention), while the frontend's `types.ts` uses snake_case throughout. The bridge between them lives in `artifacts/groundworkos/src/lib/apiTransforms.ts`, called from `artifacts/groundworkos/src/store/DataLoader.tsx`. Any new field added to the schema needs a matching entry in the transform layer or it won't reach the frontend.
 
-**Data integrity rule** — Never persist a client-supplied id as a database primary key on create/edit endpoints; generate ids server-side instead. A shared default-form object that baked in a single client-generated id at module load time once caused every _second_ record of a given type to silently fail to save (a primary-key collision on the second insert). Client-side temporary ids should only ever be used as React keys, never sent to the database as the row's identity.
+**Data integrity rule** — Never persist a client-supplied id as a database primary key on create/edit endpoints; generate ids server-side instead (`generateId()` in `lib/generateId.ts`, `crypto.randomUUID()`). A shared default-form object that baked in a single client-generated id at module load time once caused every _second_ record of a given type to silently fail to save (a primary-key collision on the second insert). Client-side temporary ids should only ever be used as React keys, never sent to the database as the row's identity.
 
 **UI loading state** — Pages read from a shared app-wide store that starts empty; a single loading gate in the main layout (driven by the core list queries: clients/jobs/quotes/invoices) blocks rendering until the first load completes, so no page can flash a false "no results" state. If a new top-level dataset becomes something a page depends on for its first paint, add it to that gate's condition.
 
-**TypeScript route typing** — Any Express middleware factory meant to sit in front of a typed route handler (e.g. a role-check middleware) should be generic over the route's param/body/query types (`RequestHandler<P, ResBody, ReqBody, ReqQuery>`), not hardcoded to the base `Request`/`Response` types — otherwise TypeScript silently widens `req.params` for every handler in that route's chain.
+**No module-level singletons on the backend** — Workers have no long-lived process: `c.env` (D1/R2/KV bindings, vars, secrets) only exists for the lifetime of one request. There is no module-level `db`, `logger`-with-baked-in-config, or in-memory `Map` that survives across requests the way the old Express server had — every route reads `c.get("db")` / `c.get("logger")` (set per-request by middleware in `app.ts`) instead, and state that needs to persist across requests (rate-limit counters, OAuth CSRF tokens) lives in KV, not a module-level Map.
+
+**Hono middleware typing** — Any middleware factory meant to sit in front of a typed route handler (e.g. `requireRole` in `lib/auth.ts`) should be typed `MiddlewareHandler<AppEnv>` (see `types.ts` for `AppEnv`'s `Bindings`/`Variables`), not a bare untyped handler — otherwise `c.env`/`c.get(...)` lose their types for every handler in that route's chain.
 
 **Design tokens** — The UI's "Technical Survey" theme (warm concrete background, Survey Blue `#1b5e78` accent, Space Grotesk/Inter/JetBrains Mono type) is defined as CSS variables in `index.css`. Reuse those tokens for new UI work rather than hardcoding new colors.
 

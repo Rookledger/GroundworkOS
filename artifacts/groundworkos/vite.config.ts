@@ -41,8 +41,8 @@ export default defineConfig(({ command, isPreview }) => {
     throw new Error(
       "VITE_CLERK_PUBLISHABLE_KEY is required to build the frontend but was not provided. " +
         "Vite inlines this value at build time, so a build without it produces a bundle that " +
-        "throws at startup and renders a blank page. Set VITE_CLERK_PUBLISHABLE_KEY in Railway's " +
-        "service variables before deploying.",
+        "throws at startup and renders a blank page. Set VITE_CLERK_PUBLISHABLE_KEY as a build " +
+        "environment variable before deploying (see DEPLOYMENT.md).",
     );
   }
 

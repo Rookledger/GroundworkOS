@@ -42,7 +42,7 @@ function getUserId(c: Context<AppEnv>): string | null {
  * whoever signs up first can also bootstrap first and permanently own the
  * instance. Setting BOOTSTRAP_ADMIN_EMAIL restricts that first grab to a
  * single known email address, matched case-insensitively against the
- * caller's primary Clerk email address. See RAILWAY.md Step 5 for the
+ * caller's primary Clerk email address. See DEPLOYMENT.md Step 7 for the
  * recommended primary control: setting Clerk Dashboard -> Restrictions to
  * "Restricted" BEFORE the service is publicly reachable at all.
  *
@@ -331,7 +331,7 @@ router.delete("/admin/invitations/:id", async (c) => {
 //   bootstrap is restricted to that one email address; if unset, this
 //   route logs a warning (see below) and the primary defense is Clerk
 //   Dashboard -> Restrictions, set to "Restricted" before the service is
-//   ever publicly reachable (RAILWAY.md Step 5). Auto-running this from
+//   ever publicly reachable (DEPLOYMENT.md Step 7). Auto-running this from
 //   bootstrap-status (rather than requiring a manual click) makes that
 //   defense more important than before: on an admin-less, publicly
 //   reachable workspace with no BOOTSTRAP_ADMIN_EMAIL set, simply opening
