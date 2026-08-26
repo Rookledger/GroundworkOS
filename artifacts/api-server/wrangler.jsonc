@@ -22,10 +22,9 @@
       "binding": "DB",
       "database_name": "groundworkos",
       // Placeholder - replace with the real database_id after running
-      // `wrangler d1 create groundworkos` (see lib/db/README or RAILWAY.md's
-      // Cloudflare successor doc for the full cutover steps). Wrangler
-      // refuses to deploy with a placeholder id, so this is intentionally
-      // obvious rather than silently wrong.
+      // `wrangler d1 create groundworkos` (see DEPLOYMENT.md Step 1 for the
+      // full cutover steps). Wrangler refuses to deploy with a placeholder
+      // id, so this is intentionally obvious rather than silently wrong.
       "database_id": "REPLACE_WITH_D1_DATABASE_ID",
       "migrations_dir": "../../lib/db/migrations",
     },
