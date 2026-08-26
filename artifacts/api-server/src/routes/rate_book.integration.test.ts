@@ -1,55 +1,52 @@
-import type { Server } from "http";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { env } from "cloudflare:test";
+import { Hono } from "hono";
+import { describe, expect, it, vi } from "vitest";
+import { createDb, rateBookTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
+import rateBookRouter from "./rate_book";
+import type { AppEnv } from "../types";
 
 /**
- * Integration test: boots the real Express app against a real Postgres
- * database (DATABASE_URL must already point at a migrated + seeded
- * database — see .github/workflows/ci.yml). Clerk is stubbed out here
- * rather than in routes/index.ts or lib/auth.ts, so production auth code
- * is completely untouched; only this test's view of "@clerk/express"
- * differs.
+ * Integration test: runs the real router against a real (local, migrated)
+ * D1 database - see vitest.integration.config.ts and
+ * test/apply-migrations.ts. Clerk is stubbed here rather than in
+ * routes/index.ts or lib/auth.ts, so production auth code is completely
+ * untouched; only this test's identity/role for `c.get("clerk")` and
+ * `c.get("userId")` differs. rateBookRouter is mounted directly (rather
+ * than the full app.ts) so no real Clerk network calls or CORS/rate-limit
+ * middleware are involved.
  */
-vi.mock("@clerk/express", () => ({
-  clerkMiddleware: () => (_req: any, _res: any, next: any) => next(),
-  getAuth: () => ({ userId: "integration-test-user" }),
-  clerkClient: {
+function buildApp() {
+  const clerk = {
     users: {
-      getUser: vi.fn().mockResolvedValue({ publicMetadata: { role: "admin" } }),
+      getUser: vi
+        .fn()
+        .mockResolvedValue({ publicMetadata: { role: "admin" } }),
     },
-  },
-}));
-
-// The object storage route constructs an S3 client at import time; it's
-// never exercised by this test, but the module graph still needs these set.
-process.env.S3_BUCKET ??= "test-bucket";
-process.env.S3_ACCESS_KEY_ID ??= "test-access-key";
-process.env.S3_SECRET_ACCESS_KEY ??= "test-secret-key";
-
-const { default: app } = await import("../app");
-const { db, rateBookTable } = await import("@workspace/db");
-const { eq } = await import("drizzle-orm");
-
-let server: Server;
-let baseUrl: string;
-
-beforeAll(async () => {
-  await new Promise<void>((resolve) => {
-    server = app.listen(0, () => {
-      const address = server.address();
-      const port = typeof address === "object" && address ? address.port : 0;
-      baseUrl = `http://127.0.0.1:${port}`;
-      resolve();
-    });
+  };
+  const app = new Hono<AppEnv>();
+  app.use(async (c, next) => {
+    c.set("db", createDb(env.DB));
+    c.set("clerk", clerk as never);
+    c.set("userId", "integration-test-user");
+    c.set(
+      "logger",
+      { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() } as never,
+    );
+    c.set("clerkAuth", (() => undefined) as never);
+    await next();
   });
-});
+  app.route("/", rateBookRouter);
+  return app;
+}
 
-afterAll(async () => {
-  await new Promise<void>((resolve) => server.close(() => resolve()));
-});
+const db = createDb(env.DB);
 
-describe("full write cycle for /api/rate-book/:id", () => {
+describe("full write cycle for /rate-book/:id", () => {
   it("creates, lists, updates and deletes a rate book entry against the real database", async () => {
-    const createRes = await fetch(`${baseUrl}/api/rate-book`, {
+    const app = buildApp();
+
+    const createRes = await app.request("/rate-book", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -68,14 +65,14 @@ describe("full write cycle for /api/rate-book/:id", () => {
 
     // Rate book has no GET /:id route; confirm the created row via the list
     // endpoint instead.
-    const listRes = await fetch(`${baseUrl}/api/rate-book`);
+    const listRes = await app.request("/rate-book");
     expect(listRes.status).toBe(200);
     const list = await listRes.json();
     const fetched = list.find((e: any) => e.id === created.id);
     expect(fetched).toBeTruthy();
     expect(fetched.description).toBe("Integration test rate");
 
-    const patchRes = await fetch(`${baseUrl}/api/rate-book/${created.id}`, {
+    const patchRes = await app.request(`/rate-book/${created.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ labourRate: 20, totalRate: 27 }),
@@ -92,7 +89,7 @@ describe("full write cycle for /api/rate-book/:id", () => {
     expect(persisted?.labourRate).toBe(20);
     expect(persisted?.totalRate).toBe(27);
 
-    const deleteRes = await fetch(`${baseUrl}/api/rate-book/${created.id}`, {
+    const deleteRes = await app.request(`/rate-book/${created.id}`, {
       method: "DELETE",
     });
     expect(deleteRes.status).toBe(204);

@@ -1,32 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import fs from "fs";
-import os from "os";
-import path from "path";
-
-const { errorMock, warnMock } = vi.hoisted(() => ({
-  errorMock: vi.fn(),
-  warnMock: vi.fn(),
-}));
-
-// validateEnv.ts imports the real pino logger, which spins up a
-// pino-pretty transport worker outside NODE_ENV=production. Mock it out so
-// tests just observe which error messages would have been logged.
-vi.mock("./logger", () => ({
-  logger: { error: errorMock, warn: warnMock },
-}));
-
-const BASE_ENV = {
-  PORT: "3000",
-  DATABASE_URL: "postgres://localhost/test",
-  APP_URL: "https://example.com",
-  BASE_PATH: "/",
-  STATIC_DIR: "artifacts/groundworkos/dist/public",
-  S3_BUCKET: "bucket",
-  S3_REGION: "us-east-1",
-  S3_ENDPOINT: "https://s3.us-east-1.amazonaws.com",
-  S3_ACCESS_KEY_ID: "id",
-  S3_SECRET_ACCESS_KEY: "secret",
-};
+import { describe, expect, it } from "vitest";
+import { validateEnv, isValidPublishableKey, isValidSecretKey } from "./validateEnv";
+import type { Bindings } from "../types";
 
 // pk_test_<base64("valid-app.clerk.accounts.dev$")>
 const VALID_PUBLISHABLE_KEY =
@@ -34,505 +8,212 @@ const VALID_PUBLISHABLE_KEY =
 // pk_live_<base64("valid-app.clerk.accounts.dev$")>
 const VALID_LIVE_PUBLISHABLE_KEY =
   "pk_live_dmFsaWQtYXBwLmNsZXJrLmFjY291bnRzLmRldiQ=";
-// pk_test_<base64("valid-app.clerk.accounts.dev$")>, unpadded - this is the
-// shape Clerk's own Dashboard actually issues (see BASE64_RE in
-// validateEnv.ts). Same decoded value as VALID_PUBLISHABLE_KEY above, just
-// without the trailing "=".
+// pk_test_<base64("valid-app.clerk.accounts.dev$")>, unpadded - the shape
+// Clerk's own Dashboard actually issues (see BASE64_RE in validateEnv.ts).
+// Same decoded value as VALID_PUBLISHABLE_KEY above, just without the
+// trailing "=".
 const VALID_UNPADDED_PUBLISHABLE_KEY =
   "pk_test_dmFsaWQtYXBwLmNsZXJrLmFjY291bnRzLmRldiQ";
 const VALID_SECRET_KEY = "sk_test_abc123XYZ";
 
-const originalEnv = { ...process.env };
-let exitSpy: ReturnType<typeof vi.spyOn>;
+const BASE_ENV: Bindings = {
+  DB: {} as D1Database,
+  DOCS_BUCKET: {} as R2Bucket,
+  KV: {} as KVNamespace,
+  APP_URL: "https://example.com",
+  CLERK_PUBLISHABLE_KEY: VALID_PUBLISHABLE_KEY,
+  CLERK_SECRET_KEY: VALID_SECRET_KEY,
+};
 
-beforeEach(() => {
-  vi.resetModules();
-  errorMock.mockClear();
-  warnMock.mockClear();
-  exitSpy = vi
-    .spyOn(process, "exit")
-    .mockImplementation(() => undefined as never);
-});
-
-afterEach(() => {
-  process.env = { ...originalEnv };
-  exitSpy.mockRestore();
-});
-
-async function loadValidateEnv(overrides: Record<string, string | undefined>) {
-  process.env = { ...originalEnv, ...BASE_ENV, ...overrides };
-  return import("./validateEnv");
+function env(overrides: Partial<Bindings>): Bindings {
+  return { ...BASE_ENV, ...overrides };
 }
 
-describe("validateEnv - CLERK_PUBLISHABLE_KEY", () => {
-  it("accepts a valid pk_test_ key that decodes to a hostname ending in $", async () => {
-    await loadValidateEnv({
-      CLERK_PUBLISHABLE_KEY: VALID_PUBLISHABLE_KEY,
-      CLERK_SECRET_KEY: VALID_SECRET_KEY,
-    });
-
-    expect(errorMock).not.toHaveBeenCalled();
-    expect(exitSpy).not.toHaveBeenCalled();
+describe("isValidPublishableKey / isValidSecretKey", () => {
+  it("accepts a valid pk_test_ key that decodes to a hostname ending in $", () => {
+    expect(isValidPublishableKey(VALID_PUBLISHABLE_KEY)).toBe(true);
   });
 
-  it("accepts a valid pk_live_ key", async () => {
-    await loadValidateEnv({
-      CLERK_PUBLISHABLE_KEY: VALID_LIVE_PUBLISHABLE_KEY,
-      CLERK_SECRET_KEY: VALID_SECRET_KEY,
-    });
-
-    expect(errorMock).not.toHaveBeenCalled();
-    expect(exitSpy).not.toHaveBeenCalled();
+  it("accepts a valid pk_live_ key", () => {
+    expect(isValidPublishableKey(VALID_LIVE_PUBLISHABLE_KEY)).toBe(true);
   });
 
-  it("accepts a valid unpadded key, matching the shape Clerk's Dashboard actually issues", async () => {
-    await loadValidateEnv({
-      CLERK_PUBLISHABLE_KEY: VALID_UNPADDED_PUBLISHABLE_KEY,
-      CLERK_SECRET_KEY: VALID_SECRET_KEY,
-    });
-
-    expect(errorMock).not.toHaveBeenCalled();
-    expect(exitSpy).not.toHaveBeenCalled();
+  it("accepts a valid unpadded key, matching the shape Clerk's Dashboard actually issues", () => {
+    expect(isValidPublishableKey(VALID_UNPADDED_PUBLISHABLE_KEY)).toBe(true);
   });
 
-  it("rejects a key with the wrong prefix (e.g. a secret key pasted in by mistake)", async () => {
-    await loadValidateEnv({
-      CLERK_PUBLISHABLE_KEY: "pk_x_dmFsaWQtYXBwLmNsZXJrLmFjY291bnRzLmRldiQ=",
-      CLERK_SECRET_KEY: VALID_SECRET_KEY,
-    });
-
-    expect(exitSpy).toHaveBeenCalledWith(1);
-    expect(errorMock).toHaveBeenCalledWith(
-      expect.stringContaining("CLERK_PUBLISHABLE_KEY"),
-    );
+  it("rejects a key with the wrong prefix (e.g. a secret key pasted in by mistake)", () => {
+    expect(
+      isValidPublishableKey("pk_x_dmFsaWQtYXBwLmNsZXJrLmFjY291bnRzLmRldiQ="),
+    ).toBe(false);
   });
 
-  it("rejects a body that isn't valid base64", async () => {
-    await loadValidateEnv({
-      CLERK_PUBLISHABLE_KEY: "pk_test_not-valid-base64!!!",
-      CLERK_SECRET_KEY: VALID_SECRET_KEY,
-    });
-
-    expect(exitSpy).toHaveBeenCalledWith(1);
-    expect(errorMock).toHaveBeenCalledWith(
-      expect.stringContaining("CLERK_PUBLISHABLE_KEY"),
-    );
+  it("rejects a body that isn't valid base64", () => {
+    expect(isValidPublishableKey("pk_test_not-valid-base64!!!")).toBe(false);
   });
 
-  it("rejects a body whose length is impossible for base64 (remainder of 1)", async () => {
+  it("rejects a body whose length is impossible for base64 (remainder of 1)", () => {
     // 13 full groups of 4 plus a single leftover character - no valid
     // padded or unpadded base64 encoding has a body shaped like this.
-    await loadValidateEnv({
-      CLERK_PUBLISHABLE_KEY: `pk_test_${"A".repeat(52)}B`,
-      CLERK_SECRET_KEY: VALID_SECRET_KEY,
-    });
-
-    expect(exitSpy).toHaveBeenCalledWith(1);
-    expect(errorMock).toHaveBeenCalledWith(
-      expect.stringContaining("CLERK_PUBLISHABLE_KEY"),
-    );
+    expect(isValidPublishableKey(`pk_test_${"A".repeat(52)}B`)).toBe(false);
   });
 
-  it("rejects a decoded body missing the trailing $", async () => {
+  it("rejects a decoded body missing the trailing $", () => {
     // pk_test_<base64("valid-app.clerk.accounts.dev")>, no trailing $
-    await loadValidateEnv({
-      CLERK_PUBLISHABLE_KEY: "pk_test_dmFsaWQtYXBwLmNsZXJrLmFjY291bnRzLmRldg==",
-      CLERK_SECRET_KEY: VALID_SECRET_KEY,
-    });
-
-    expect(exitSpy).toHaveBeenCalledWith(1);
-    expect(errorMock).toHaveBeenCalledWith(
-      expect.stringContaining("CLERK_PUBLISHABLE_KEY"),
-    );
+    expect(
+      isValidPublishableKey("pk_test_dmFsaWQtYXBwLmNsZXJrLmFjY291bnRzLmRldg=="),
+    ).toBe(false);
   });
 
-  it("rejects a decoded body that isn't a plausible hostname", async () => {
+  it("rejects a decoded body that isn't a plausible hostname", () => {
     // pk_test_<base64("not a hostname$")>
-    await loadValidateEnv({
-      CLERK_PUBLISHABLE_KEY: "pk_test_bm90IGEgaG9zdG5hbWUk",
-      CLERK_SECRET_KEY: VALID_SECRET_KEY,
-    });
+    expect(isValidPublishableKey("pk_test_bm90IGEgaG9zdG5hbWUk")).toBe(false);
+  });
 
-    expect(exitSpy).toHaveBeenCalledWith(1);
-    expect(errorMock).toHaveBeenCalledWith(
-      expect.stringContaining("CLERK_PUBLISHABLE_KEY"),
-    );
+  it("accepts a valid sk_test_ key", () => {
+    expect(isValidSecretKey("sk_test_abc123XYZ")).toBe(true);
+  });
+
+  it("accepts a valid sk_live_ key", () => {
+    expect(isValidSecretKey("sk_live_abc123XYZ")).toBe(true);
+  });
+
+  it("rejects a key with the wrong prefix", () => {
+    expect(isValidSecretKey("pk_test_abc123XYZ")).toBe(false);
   });
 });
 
-describe("validateEnv - CLERK_SECRET_KEY", () => {
-  it("accepts a valid sk_test_ key", async () => {
-    await loadValidateEnv({
-      CLERK_PUBLISHABLE_KEY: VALID_PUBLISHABLE_KEY,
-      CLERK_SECRET_KEY: "sk_test_abc123XYZ",
-    });
-
-    expect(errorMock).not.toHaveBeenCalled();
-    expect(exitSpy).not.toHaveBeenCalled();
+describe("validateEnv - required variables", () => {
+  it("passes with no errors when all required vars are present and valid", () => {
+    expect(validateEnv(env({}))).toEqual([]);
   });
 
-  it("accepts a valid sk_live_ key", async () => {
-    await loadValidateEnv({
-      CLERK_PUBLISHABLE_KEY: VALID_PUBLISHABLE_KEY,
-      CLERK_SECRET_KEY: "sk_live_abc123XYZ",
-    });
-
-    expect(errorMock).not.toHaveBeenCalled();
-    expect(exitSpy).not.toHaveBeenCalled();
-  });
-
-  it("rejects a key with the wrong prefix", async () => {
-    await loadValidateEnv({
-      CLERK_PUBLISHABLE_KEY: VALID_PUBLISHABLE_KEY,
-      CLERK_SECRET_KEY: "pk_test_abc123XYZ",
-    });
-
-    expect(exitSpy).toHaveBeenCalledWith(1);
-    expect(errorMock).toHaveBeenCalledWith(
-      expect.stringContaining("CLERK_SECRET_KEY"),
-    );
-  });
-});
-
-describe("validateEnv - missing variables", () => {
-  it("still fails when a required variable is absent", async () => {
-    await loadValidateEnv({
-      CLERK_PUBLISHABLE_KEY: VALID_PUBLISHABLE_KEY,
-      CLERK_SECRET_KEY: VALID_SECRET_KEY,
-      DATABASE_URL: undefined,
-    });
-
-    expect(exitSpy).toHaveBeenCalledWith(1);
-    expect(errorMock).toHaveBeenCalledWith(
-      expect.stringContaining("DATABASE_URL"),
-    );
-  });
-
-  it("fails once with the full list when several required variables are absent", async () => {
-    await loadValidateEnv({
-      CLERK_PUBLISHABLE_KEY: VALID_PUBLISHABLE_KEY,
-      CLERK_SECRET_KEY: VALID_SECRET_KEY,
-      APP_URL: undefined,
-      S3_REGION: undefined,
-      S3_ENDPOINT: undefined,
-    });
-
-    expect(exitSpy).toHaveBeenCalledTimes(1);
-    expect(errorMock).toHaveBeenCalledWith(expect.stringContaining("APP_URL"));
-    expect(errorMock).toHaveBeenCalledWith(
-      expect.stringContaining("S3_REGION"),
-    );
-    expect(errorMock).toHaveBeenCalledWith(
-      expect.stringContaining("S3_ENDPOINT"),
-    );
-  });
-
-  it.each(["APP_URL", "BASE_PATH", "STATIC_DIR"])(
+  it.each(["APP_URL", "CLERK_PUBLISHABLE_KEY", "CLERK_SECRET_KEY"] as const)(
     "fails when %s is absent",
-    async (name) => {
-      await loadValidateEnv({
-        CLERK_PUBLISHABLE_KEY: VALID_PUBLISHABLE_KEY,
-        CLERK_SECRET_KEY: VALID_SECRET_KEY,
-        [name]: undefined,
-      });
-
-      expect(exitSpy).toHaveBeenCalledWith(1);
-      expect(errorMock).toHaveBeenCalledWith(expect.stringContaining(name));
+    (name) => {
+      const errors = validateEnv(env({ [name]: undefined }));
+      expect(errors).toEqual(
+        expect.arrayContaining([expect.stringContaining(name)]),
+      );
     },
   );
 
-  it("explains that S3_REGION does not default to the provider's region when absent", async () => {
-    await loadValidateEnv({
-      CLERK_PUBLISHABLE_KEY: VALID_PUBLISHABLE_KEY,
-      CLERK_SECRET_KEY: VALID_SECRET_KEY,
-      S3_REGION: undefined,
-    });
+  it("reports every missing required variable in a single call", () => {
+    const errors = validateEnv(
+      env({ APP_URL: undefined, CLERK_SECRET_KEY: undefined }),
+    );
+    expect(errors).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("APP_URL"),
+        expect.stringContaining("CLERK_SECRET_KEY"),
+      ]),
+    );
+  });
+});
 
-    expect(exitSpy).toHaveBeenCalledWith(1);
-    expect(errorMock).toHaveBeenCalledWith(
-      expect.stringContaining("does NOT default to your provider's region"),
+describe("validateEnv - CLERK_PUBLISHABLE_KEY shape", () => {
+  it("fails when CLERK_PUBLISHABLE_KEY is set but malformed", () => {
+    const errors = validateEnv(
+      env({ CLERK_PUBLISHABLE_KEY: "not-a-real-key" }),
+    );
+    expect(errors).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("Invalid CLERK_PUBLISHABLE_KEY"),
+      ]),
     );
   });
 
-  it("explains that S3_ENDPOINT does not default to the provider's endpoint when absent", async () => {
-    await loadValidateEnv({
-      CLERK_PUBLISHABLE_KEY: VALID_PUBLISHABLE_KEY,
-      CLERK_SECRET_KEY: VALID_SECRET_KEY,
-      S3_ENDPOINT: undefined,
-    });
+  it("does not duplicate the missing-var error with the shape error when absent", () => {
+    const errors = validateEnv(env({ CLERK_PUBLISHABLE_KEY: undefined }));
+    expect(
+      errors.filter((e) => e.includes("CLERK_PUBLISHABLE_KEY")),
+    ).toHaveLength(1);
+  });
+});
 
-    expect(exitSpy).toHaveBeenCalledWith(1);
-    expect(errorMock).toHaveBeenCalledWith(
-      expect.stringContaining("does NOT default to your provider's endpoint"),
+describe("validateEnv - CLERK_SECRET_KEY shape", () => {
+  it("fails when CLERK_SECRET_KEY is set but malformed", () => {
+    const errors = validateEnv(
+      env({ CLERK_SECRET_KEY: "pk_test_abc123XYZ" }),
+    );
+    expect(errors).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("Invalid CLERK_SECRET_KEY"),
+      ]),
+    );
+  });
+});
+
+describe("validateEnv - CLERK_WEBHOOK_SIGNING_SECRET", () => {
+  it("passes when unset", () => {
+    expect(validateEnv(env({ CLERK_WEBHOOK_SIGNING_SECRET: undefined }))).toEqual(
+      [],
+    );
+  });
+
+  it("passes when it has the whsec_ prefix", () => {
+    expect(
+      validateEnv(env({ CLERK_WEBHOOK_SIGNING_SECRET: "whsec_abc123" })),
+    ).toEqual([]);
+  });
+
+  it("fails when set without the whsec_ prefix", () => {
+    const errors = validateEnv(
+      env({ CLERK_WEBHOOK_SIGNING_SECRET: "abc123" }),
+    );
+    expect(errors).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("Invalid CLERK_WEBHOOK_SIGNING_SECRET"),
+      ]),
     );
   });
 });
 
 describe("validateEnv - SIGNUP_ALLOWED_EMAIL_DOMAINS / CLERK_WEBHOOK_SIGNING_SECRET", () => {
-  it("fails when the allowlist is set without a webhook signing secret", async () => {
-    await loadValidateEnv({
-      CLERK_PUBLISHABLE_KEY: VALID_PUBLISHABLE_KEY,
-      CLERK_SECRET_KEY: VALID_SECRET_KEY,
-      SIGNUP_ALLOWED_EMAIL_DOMAINS: "example.com",
-      CLERK_WEBHOOK_SIGNING_SECRET: undefined,
-    });
-
-    expect(exitSpy).toHaveBeenCalledWith(1);
-    expect(errorMock).toHaveBeenCalledWith(
-      expect.stringContaining("SIGNUP_ALLOWED_EMAIL_DOMAINS"),
+  it("fails when the allowlist is set without a webhook signing secret", () => {
+    const errors = validateEnv(
+      env({
+        SIGNUP_ALLOWED_EMAIL_DOMAINS: "example.com",
+        CLERK_WEBHOOK_SIGNING_SECRET: undefined,
+      }),
+    );
+    expect(errors).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("SIGNUP_ALLOWED_EMAIL_DOMAINS"),
+      ]),
     );
   });
 
-  it("passes when the allowlist is set alongside a webhook signing secret", async () => {
-    await loadValidateEnv({
-      CLERK_PUBLISHABLE_KEY: VALID_PUBLISHABLE_KEY,
-      CLERK_SECRET_KEY: VALID_SECRET_KEY,
-      SIGNUP_ALLOWED_EMAIL_DOMAINS: "example.com",
-      CLERK_WEBHOOK_SIGNING_SECRET: "whsec_abc123",
-    });
-
-    expect(errorMock).not.toHaveBeenCalled();
-    expect(exitSpy).not.toHaveBeenCalled();
-  });
-
-  it("passes when neither the allowlist nor the signing secret is set", async () => {
-    await loadValidateEnv({
-      CLERK_PUBLISHABLE_KEY: VALID_PUBLISHABLE_KEY,
-      CLERK_SECRET_KEY: VALID_SECRET_KEY,
-      SIGNUP_ALLOWED_EMAIL_DOMAINS: undefined,
-      CLERK_WEBHOOK_SIGNING_SECRET: undefined,
-    });
-
-    expect(errorMock).not.toHaveBeenCalled();
-    expect(exitSpy).not.toHaveBeenCalled();
-  });
-
-  it("passes when the allowlist is set to an empty/blank value without a signing secret", async () => {
-    await loadValidateEnv({
-      CLERK_PUBLISHABLE_KEY: VALID_PUBLISHABLE_KEY,
-      CLERK_SECRET_KEY: VALID_SECRET_KEY,
-      SIGNUP_ALLOWED_EMAIL_DOMAINS: " , ",
-      CLERK_WEBHOOK_SIGNING_SECRET: undefined,
-    });
-
-    expect(errorMock).not.toHaveBeenCalled();
-    expect(exitSpy).not.toHaveBeenCalled();
-  });
-});
-
-describe("validateEnv - CLERK_PUBLISHABLE_KEY / VITE_CLERK_PUBLISHABLE_KEY manifest consistency", () => {
-  let tmpDir: string;
-
-  beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clerk-manifest-test-"));
-  });
-
-  afterEach(() => {
-    fs.rmSync(tmpDir, { recursive: true, force: true });
-  });
-
-  function writeManifest(content: unknown) {
-    fs.writeFileSync(
-      path.join(tmpDir, "clerk-manifest.json"),
-      typeof content === "string" ? content : JSON.stringify(content),
-    );
-  }
-
-  it("passes and warns when no manifest file exists (e.g. local dev, API-only run)", async () => {
-    await loadValidateEnv({
-      CLERK_PUBLISHABLE_KEY: VALID_PUBLISHABLE_KEY,
-      CLERK_SECRET_KEY: VALID_SECRET_KEY,
-      STATIC_DIR: tmpDir,
-    });
-
-    expect(errorMock).not.toHaveBeenCalled();
-    expect(exitSpy).not.toHaveBeenCalled();
-    expect(warnMock).toHaveBeenCalledWith(
-      expect.stringContaining("clerk-manifest.json"),
-    );
-  });
-
-  it("passes silently when the manifest's publishable key matches CLERK_PUBLISHABLE_KEY", async () => {
-    writeManifest({ publishableKey: VALID_PUBLISHABLE_KEY });
-
-    await loadValidateEnv({
-      CLERK_PUBLISHABLE_KEY: VALID_PUBLISHABLE_KEY,
-      CLERK_SECRET_KEY: VALID_SECRET_KEY,
-      STATIC_DIR: tmpDir,
-    });
-
-    expect(errorMock).not.toHaveBeenCalled();
-    expect(exitSpy).not.toHaveBeenCalled();
-    expect(warnMock).not.toHaveBeenCalled();
-  });
-
-  it("fails loudly when the manifest's publishable key differs from CLERK_PUBLISHABLE_KEY (test vs live)", async () => {
-    writeManifest({ publishableKey: VALID_LIVE_PUBLISHABLE_KEY });
-
-    await loadValidateEnv({
-      CLERK_PUBLISHABLE_KEY: VALID_PUBLISHABLE_KEY,
-      CLERK_SECRET_KEY: VALID_SECRET_KEY,
-      STATIC_DIR: tmpDir,
-    });
-
-    expect(exitSpy).toHaveBeenCalledWith(1);
-    expect(errorMock).toHaveBeenCalledWith(
-      expect.stringContaining(
-        "CLERK_PUBLISHABLE_KEY does not match the VITE_CLERK_PUBLISHABLE_KEY",
-      ),
-    );
-  });
-
-  it("fails loudly when the manifest's publishable key differs from CLERK_PUBLISHABLE_KEY (different hosts)", async () => {
-    // pk_test_<base64("other-app.clerk.accounts.dev$")>
-    const DIFFERENT_HOST_KEY =
-      "pk_test_b3RoZXItYXBwLmNsZXJrLmFjY291bnRzLmRldiQ=";
-    writeManifest({ publishableKey: DIFFERENT_HOST_KEY });
-
-    await loadValidateEnv({
-      CLERK_PUBLISHABLE_KEY: VALID_PUBLISHABLE_KEY,
-      CLERK_SECRET_KEY: VALID_SECRET_KEY,
-      STATIC_DIR: tmpDir,
-    });
-
-    expect(exitSpy).toHaveBeenCalledWith(1);
-    expect(errorMock).toHaveBeenCalledWith(
-      expect.stringContaining(
-        "CLERK_PUBLISHABLE_KEY does not match the VITE_CLERK_PUBLISHABLE_KEY",
-      ),
-    );
-  });
-
-  it("warns but does not fail when the manifest file is malformed JSON", async () => {
-    writeManifest("not json{{{");
-
-    await loadValidateEnv({
-      CLERK_PUBLISHABLE_KEY: VALID_PUBLISHABLE_KEY,
-      CLERK_SECRET_KEY: VALID_SECRET_KEY,
-      STATIC_DIR: tmpDir,
-    });
-
-    expect(errorMock).not.toHaveBeenCalled();
-    expect(exitSpy).not.toHaveBeenCalled();
-    expect(warnMock).toHaveBeenCalled();
-  });
-
-  it("warns but does not fail when the manifest is missing the publishableKey field", async () => {
-    writeManifest({ somethingElse: true });
-
-    await loadValidateEnv({
-      CLERK_PUBLISHABLE_KEY: VALID_PUBLISHABLE_KEY,
-      CLERK_SECRET_KEY: VALID_SECRET_KEY,
-      STATIC_DIR: tmpDir,
-    });
-
-    expect(errorMock).not.toHaveBeenCalled();
-    expect(exitSpy).not.toHaveBeenCalled();
-    expect(warnMock).toHaveBeenCalled();
-  });
-
-  it("skips the check entirely when STATIC_DIR itself is absent", async () => {
-    await loadValidateEnv({
-      CLERK_PUBLISHABLE_KEY: VALID_PUBLISHABLE_KEY,
-      CLERK_SECRET_KEY: VALID_SECRET_KEY,
-      STATIC_DIR: undefined,
-    });
-
-    // STATIC_DIR missing is still its own required-var failure, but the
-    // manifest check itself must not also throw or add a second error.
-    expect(exitSpy).toHaveBeenCalledWith(1);
-    expect(errorMock).not.toHaveBeenCalledWith(
-      expect.stringContaining("VITE_CLERK_PUBLISHABLE_KEY"),
-    );
-  });
-});
-
-describe("readClerkManifest / checkClerkPublishableKeysMatch (unit)", () => {
-  let tmpDir: string;
-
-  beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clerk-manifest-unit-"));
-  });
-
-  afterEach(() => {
-    fs.rmSync(tmpDir, { recursive: true, force: true });
-  });
-
-  it("readClerkManifest reports absent for a missing file", async () => {
-    const mod = await loadValidateEnv({
-      CLERK_PUBLISHABLE_KEY: VALID_PUBLISHABLE_KEY,
-      CLERK_SECRET_KEY: VALID_SECRET_KEY,
-    });
-
-    expect(mod.readClerkManifest(tmpDir)).toEqual({ status: "absent" });
-  });
-
-  it("readClerkManifest reports ok with the key for a well-formed manifest", async () => {
-    fs.writeFileSync(
-      path.join(tmpDir, "clerk-manifest.json"),
-      JSON.stringify({ publishableKey: VALID_PUBLISHABLE_KEY }),
-    );
-
-    const mod = await loadValidateEnv({
-      CLERK_PUBLISHABLE_KEY: VALID_PUBLISHABLE_KEY,
-      CLERK_SECRET_KEY: VALID_SECRET_KEY,
-    });
-
-    expect(mod.readClerkManifest(tmpDir)).toEqual({
-      status: "ok",
-      publishableKey: VALID_PUBLISHABLE_KEY,
-    });
-  });
-
-  it("readClerkManifest reports invalid for malformed JSON", async () => {
-    fs.writeFileSync(path.join(tmpDir, "clerk-manifest.json"), "{not json");
-
-    const mod = await loadValidateEnv({
-      CLERK_PUBLISHABLE_KEY: VALID_PUBLISHABLE_KEY,
-      CLERK_SECRET_KEY: VALID_SECRET_KEY,
-    });
-
-    expect(mod.readClerkManifest(tmpDir)).toEqual({ status: "invalid" });
-  });
-
-  it("readClerkManifest reports invalid when publishableKey is missing or not a string", async () => {
-    fs.writeFileSync(
-      path.join(tmpDir, "clerk-manifest.json"),
-      JSON.stringify({ publishableKey: 123 }),
-    );
-
-    const mod = await loadValidateEnv({
-      CLERK_PUBLISHABLE_KEY: VALID_PUBLISHABLE_KEY,
-      CLERK_SECRET_KEY: VALID_SECRET_KEY,
-    });
-
-    expect(mod.readClerkManifest(tmpDir)).toEqual({ status: "invalid" });
-  });
-
-  it("checkClerkPublishableKeysMatch returns null when staticDir is undefined", async () => {
-    const mod = await loadValidateEnv({
-      CLERK_PUBLISHABLE_KEY: VALID_PUBLISHABLE_KEY,
-      CLERK_SECRET_KEY: VALID_SECRET_KEY,
-    });
-
+  it("passes when the allowlist is set alongside a webhook signing secret", () => {
     expect(
-      mod.checkClerkPublishableKeysMatch(undefined, VALID_PUBLISHABLE_KEY),
-    ).toBeNull();
+      validateEnv(
+        env({
+          SIGNUP_ALLOWED_EMAIL_DOMAINS: "example.com",
+          CLERK_WEBHOOK_SIGNING_SECRET: "whsec_abc123",
+        }),
+      ),
+    ).toEqual([]);
   });
 
-  it("checkClerkPublishableKeysMatch returns an error string on mismatch", async () => {
-    fs.writeFileSync(
-      path.join(tmpDir, "clerk-manifest.json"),
-      JSON.stringify({ publishableKey: VALID_LIVE_PUBLISHABLE_KEY }),
-    );
-
-    const mod = await loadValidateEnv({
-      CLERK_PUBLISHABLE_KEY: VALID_PUBLISHABLE_KEY,
-      CLERK_SECRET_KEY: VALID_SECRET_KEY,
-    });
-
+  it("passes when neither the allowlist nor the signing secret is set", () => {
     expect(
-      mod.checkClerkPublishableKeysMatch(tmpDir, VALID_PUBLISHABLE_KEY),
-    ).toEqual(expect.stringContaining("does not match"));
+      validateEnv(
+        env({
+          SIGNUP_ALLOWED_EMAIL_DOMAINS: undefined,
+          CLERK_WEBHOOK_SIGNING_SECRET: undefined,
+        }),
+      ),
+    ).toEqual([]);
+  });
+
+  it("passes when the allowlist is set to an empty/blank value without a signing secret", () => {
+    expect(
+      validateEnv(
+        env({
+          SIGNUP_ALLOWED_EMAIL_DOMAINS: " , ",
+          CLERK_WEBHOOK_SIGNING_SECRET: undefined,
+        }),
+      ),
+    ).toEqual([]);
   });
 });

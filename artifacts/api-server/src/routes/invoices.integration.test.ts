@@ -1,69 +1,67 @@
-import type { Server } from "http";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { env } from "cloudflare:test";
+import { Hono } from "hono";
+import { beforeAll, describe, expect, it, vi } from "vitest";
+import { createDb, invoicesTable, subcontractorsTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
+import invoicesRouter from "./invoices";
+import type { AppEnv } from "../types";
 
 /**
- * Integration test: boots the real Express app against a real Postgres
- * database (DATABASE_URL must already point at a migrated + seeded
- * database — see .github/workflows/ci.yml). Clerk is stubbed out here
- * rather than in routes/index.ts or lib/auth.ts, so production auth code
- * is completely untouched; only this test's view of "@clerk/express"
- * differs.
+ * Integration test: runs the real router against a real (local, migrated)
+ * D1 database - see vitest.integration.config.ts and
+ * test/apply-migrations.ts. Clerk is stubbed here rather than in
+ * routes/index.ts or lib/auth.ts, so production auth code is completely
+ * untouched; only this test's identity/role for `c.get("clerk")` and
+ * `c.get("userId")` differs. invoicesRouter is mounted directly (rather
+ * than the full app.ts) so no real Clerk network calls or CORS/rate-limit
+ * middleware are involved.
  */
-vi.mock("@clerk/express", () => ({
-  clerkMiddleware: () => (_req: any, _res: any, next: any) => next(),
-  getAuth: () => ({ userId: "integration-test-user" }),
-  clerkClient: {
+function buildApp() {
+  const clerk = {
     users: {
-      getUser: vi.fn().mockResolvedValue({ publicMetadata: { role: "admin" } }),
+      getUser: vi
+        .fn()
+        .mockResolvedValue({ publicMetadata: { role: "admin" } }),
     },
-  },
-}));
-
-// The object storage route constructs an S3 client at import time; it's
-// never exercised by this test, but the module graph still needs these set.
-process.env.S3_BUCKET ??= "test-bucket";
-process.env.S3_ACCESS_KEY_ID ??= "test-access-key";
-process.env.S3_SECRET_ACCESS_KEY ??= "test-secret-key";
-
-const { default: app } = await import("../app");
-const { db, invoicesTable } = await import("@workspace/db");
-const { eq } = await import("drizzle-orm");
-
-let server: Server;
-let baseUrl: string;
-
-beforeAll(async () => {
-  await new Promise<void>((resolve) => {
-    server = app.listen(0, () => {
-      const address = server.address();
-      const port = typeof address === "object" && address ? address.port : 0;
-      baseUrl = `http://127.0.0.1:${port}`;
-      resolve();
-    });
+  };
+  const app = new Hono<AppEnv>();
+  app.use(async (c, next) => {
+    c.set("db", createDb(env.DB));
+    c.set("clerk", clerk as never);
+    c.set("userId", "integration-test-user");
+    c.set(
+      "logger",
+      { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() } as never,
+    );
+    c.set("clerkAuth", (() => undefined) as never);
+    await next();
   });
+  app.route("/", invoicesRouter);
+  return app;
+}
+
+const db = createDb(env.DB);
+
+// The old Postgres suite relied on a subcontractor seeded by seed.ts
+// (id "s2", 20% CIS deduction rate); the local D1 test database only has
+// migrations applied, so create the same fixture directly here instead.
+beforeAll(async () => {
+  await db
+    .insert(subcontractorsTable)
+    .values({
+      id: "s2",
+      companyName: "J&T Plant Hire",
+      cisDeductionRate: 20,
+    })
+    .onConflictDoNothing();
 });
 
-afterAll(async () => {
-  await new Promise<void>((resolve) => server.close(() => resolve()));
-});
-
-describe("POST /api/invoices", () => {
-  it("generates an invoice number that does not collide with any seeded invoice number", async () => {
-    // Same year derivation as lib/generateId.ts's nextSeqNumber() and
-    // seed.ts, so this assertion holds regardless of which calendar year
-    // the suite happens to run in.
+describe("POST /invoices", () => {
+  it("generates an invoice number for the current year", async () => {
+    const app = buildApp();
     const year = new Date().getFullYear();
 
-    const seededInvoices = await db
-      .select({ invoiceNumber: invoicesTable.invoiceNumber })
-      .from(invoicesTable);
-    expect(seededInvoices.length).toBeGreaterThan(0);
-    expect(
-      seededInvoices.some((i) => i.invoiceNumber.startsWith(`INV-${year}-`)),
-    ).toBe(true);
-    const seededNumbers = new Set(seededInvoices.map((i) => i.invoiceNumber));
-
-    const res = await fetch(`${baseUrl}/api/invoices`, {
+    const res = await app.request("/invoices", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ issuedDate: "2026-06-01", subtotal: 500 }),
@@ -73,7 +71,6 @@ describe("POST /api/invoices", () => {
     const invoice = await res.json();
 
     expect(invoice.invoiceNumber).toMatch(new RegExp(`^INV-${year}-\\d+$`));
-    expect(seededNumbers.has(invoice.invoiceNumber)).toBe(false);
 
     const rows = await db
       .select()
@@ -83,7 +80,8 @@ describe("POST /api/invoices", () => {
   });
 
   it("recomputes VAT/total server-side and leaves cisDeduction null with no subcontractor", async () => {
-    const res = await fetch(`${baseUrl}/api/invoices`, {
+    const app = buildApp();
+    const res = await app.request("/invoices", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ issuedDate: "2026-06-01", subtotal: 1000 }),
@@ -97,8 +95,9 @@ describe("POST /api/invoices", () => {
   });
 
   it("derives cisDeduction from the linked subcontractor's on-file deduction rate, never a client-supplied value", async () => {
-    // Seeded subcontractor s2 (J&T Plant Hire) has cisDeductionRate 20.
-    const res = await fetch(`${baseUrl}/api/invoices`, {
+    const app = buildApp();
+    // Subcontractor s2 (J&T Plant Hire, seeded above) has cisDeductionRate 20.
+    const res = await app.request("/invoices", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -113,9 +112,11 @@ describe("POST /api/invoices", () => {
   });
 });
 
-describe("full write cycle for /api/invoices/:id", () => {
+describe("full write cycle for /invoices/:id", () => {
   it("creates, reads, updates and deletes an invoice against the real database", async () => {
-    const createRes = await fetch(`${baseUrl}/api/invoices`, {
+    const app = buildApp();
+
+    const createRes = await app.request("/invoices", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -130,21 +131,18 @@ describe("full write cycle for /api/invoices/:id", () => {
     expect(created.vatAmount).toBe(200);
     expect(created.cisDeduction).toBe(200);
 
-    const getRes = await fetch(`${baseUrl}/api/invoices/${created.id}`);
+    const getRes = await app.request(`/invoices/${created.id}`);
     expect(getRes.status).toBe(200);
     const fetched = await getRes.json();
     expect(fetched.subtotal).toBe(1000);
 
     // A partial update that touches neither subtotal nor subcontractorId must
     // leave the previously-computed financial fields untouched.
-    const statusOnlyPatch = await fetch(
-      `${baseUrl}/api/invoices/${created.id}`,
-      {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "sent" }),
-      },
-    );
+    const statusOnlyPatch = await app.request(`/invoices/${created.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "sent" }),
+    });
     expect(statusOnlyPatch.status).toBe(200);
     const statusPatched = await statusOnlyPatch.json();
     expect(statusPatched.status).toBe("sent");
@@ -154,7 +152,7 @@ describe("full write cycle for /api/invoices/:id", () => {
 
     // Updating subtotal alone must re-derive vat/total/cisDeduction using the
     // invoice's existing (unsent) subcontractorId, not drop the CIS deduction.
-    const subtotalPatch = await fetch(`${baseUrl}/api/invoices/${created.id}`, {
+    const subtotalPatch = await app.request(`/invoices/${created.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ subtotal: 2000 }),
@@ -174,12 +172,12 @@ describe("full write cycle for /api/invoices/:id", () => {
     expect(persisted?.cisDeduction).toBe(400);
     expect(persisted?.status).toBe("sent");
 
-    const deleteRes = await fetch(`${baseUrl}/api/invoices/${created.id}`, {
+    const deleteRes = await app.request(`/invoices/${created.id}`, {
       method: "DELETE",
     });
     expect(deleteRes.status).toBe(204);
 
-    const getAfterDelete = await fetch(`${baseUrl}/api/invoices/${created.id}`);
+    const getAfterDelete = await app.request(`/invoices/${created.id}`);
     expect(getAfterDelete.status).toBe(404);
 
     const rowsAfterDelete = await db

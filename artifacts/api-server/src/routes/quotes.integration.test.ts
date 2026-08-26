@@ -1,69 +1,53 @@
-import type { Server } from "http";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { env } from "cloudflare:test";
+import { Hono } from "hono";
+import { describe, expect, it, vi } from "vitest";
+import { createDb, lineItemsTable, quotesTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
+import quotesRouter from "./quotes";
+import type { AppEnv } from "../types";
 
 /**
- * Integration test: boots the real Express app against a real Postgres
- * database (DATABASE_URL must already point at a migrated + seeded
- * database — see .github/workflows/ci.yml). Clerk is stubbed out here
- * rather than in routes/index.ts or lib/auth.ts, so production auth code
- * is completely untouched; only this test's view of "@clerk/express"
- * differs.
+ * Integration test: runs the real router against a real (local, migrated)
+ * D1 database - see vitest.integration.config.ts and
+ * test/apply-migrations.ts. Clerk is stubbed here rather than in
+ * routes/index.ts or lib/auth.ts, so production auth code is completely
+ * untouched; only this test's identity/role for `c.get("clerk")` and
+ * `c.get("userId")` differs. quotesRouter is mounted directly (rather than
+ * the full app.ts) so no real Clerk network calls or CORS/rate-limit
+ * middleware are involved.
  */
-vi.mock("@clerk/express", () => ({
-  clerkMiddleware: () => (_req: any, _res: any, next: any) => next(),
-  getAuth: () => ({ userId: "integration-test-user" }),
-  clerkClient: {
+function buildApp() {
+  const clerk = {
     users: {
-      getUser: vi.fn().mockResolvedValue({ publicMetadata: { role: "admin" } }),
+      getUser: vi
+        .fn()
+        .mockResolvedValue({ publicMetadata: { role: "admin" } }),
     },
-  },
-}));
-
-// The object storage route constructs an S3 client at import time; it's
-// never exercised by this test, but the module graph still needs these set.
-process.env.S3_BUCKET ??= "test-bucket";
-process.env.S3_ACCESS_KEY_ID ??= "test-access-key";
-process.env.S3_SECRET_ACCESS_KEY ??= "test-secret-key";
-
-const { default: app } = await import("../app");
-const { db, quotesTable, lineItemsTable } = await import("@workspace/db");
-const { eq } = await import("drizzle-orm");
-
-let server: Server;
-let baseUrl: string;
-
-beforeAll(async () => {
-  await new Promise<void>((resolve) => {
-    server = app.listen(0, () => {
-      const address = server.address();
-      const port = typeof address === "object" && address ? address.port : 0;
-      baseUrl = `http://127.0.0.1:${port}`;
-      resolve();
-    });
+  };
+  const app = new Hono<AppEnv>();
+  app.use(async (c, next) => {
+    c.set("db", createDb(env.DB));
+    c.set("clerk", clerk as never);
+    c.set("userId", "integration-test-user");
+    c.set(
+      "logger",
+      { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() } as never,
+    );
+    c.set("clerkAuth", (() => undefined) as never);
+    await next();
   });
-});
+  app.route("/", quotesRouter);
+  return app;
+}
 
-afterAll(async () => {
-  await new Promise<void>((resolve) => server.close(() => resolve()));
-});
+const db = createDb(env.DB);
 
-describe("POST /api/quotes", () => {
-  it("generates a quote number that does not collide with any seeded quote number", async () => {
-    // Same year derivation as lib/generateId.ts's nextSeqNumber() and
-    // seed.ts, so this assertion holds regardless of which calendar year
-    // the suite happens to run in.
+describe("POST /quotes", () => {
+  it("generates a quote number for the current year", async () => {
+    const app = buildApp();
     const year = new Date().getFullYear();
 
-    const seededQuotes = await db
-      .select({ quoteNumber: quotesTable.quoteNumber })
-      .from(quotesTable);
-    expect(seededQuotes.length).toBeGreaterThan(0);
-    expect(
-      seededQuotes.some((q) => q.quoteNumber.startsWith(`QT-${year}-`)),
-    ).toBe(true);
-    const seededNumbers = new Set(seededQuotes.map((q) => q.quoteNumber));
-
-    const res = await fetch(`${baseUrl}/api/quotes`, {
+    const res = await app.request("/quotes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title: "Integration test quote" }),
@@ -73,7 +57,6 @@ describe("POST /api/quotes", () => {
     const quote = await res.json();
 
     expect(quote.quoteNumber).toMatch(new RegExp(`^QT-${year}-\\d+$`));
-    expect(seededNumbers.has(quote.quoteNumber)).toBe(false);
 
     const rows = await db
       .select()
@@ -83,7 +66,8 @@ describe("POST /api/quotes", () => {
   });
 
   it("recomputes subtotal/vat/total from line items server-side rather than trusting client totals", async () => {
-    const res = await fetch(`${baseUrl}/api/quotes`, {
+    const app = buildApp();
+    const res = await app.request("/quotes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -125,7 +109,8 @@ describe("POST /api/quotes", () => {
   });
 
   it("defaults totals to zero when no line items are supplied", async () => {
-    const res = await fetch(`${baseUrl}/api/quotes`, {
+    const app = buildApp();
+    const res = await app.request("/quotes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title: "Empty quote" }),
@@ -139,9 +124,11 @@ describe("POST /api/quotes", () => {
   });
 });
 
-describe("full write cycle for /api/quotes/:id", () => {
+describe("full write cycle for /quotes/:id", () => {
   it("creates, reads, updates (replacing line items) and deletes a quote, cascading its line items", async () => {
-    const createRes = await fetch(`${baseUrl}/api/quotes`, {
+    const app = buildApp();
+
+    const createRes = await app.request("/quotes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -161,14 +148,14 @@ describe("full write cycle for /api/quotes/:id", () => {
     const created = await createRes.json();
     expect(created.subtotal).toBe(20);
 
-    const getRes = await fetch(`${baseUrl}/api/quotes/${created.id}`);
+    const getRes = await app.request(`/quotes/${created.id}`);
     expect(getRes.status).toBe(200);
     const fetched = await getRes.json();
     expect(fetched.lineItems).toHaveLength(1);
 
     // Replacing line items on PATCH must delete the old rows and re-price
     // from the new set, not append to the existing ones.
-    const patchRes = await fetch(`${baseUrl}/api/quotes/${created.id}`, {
+    const patchRes = await app.request(`/quotes/${created.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -206,12 +193,12 @@ describe("full write cycle for /api/quotes/:id", () => {
     expect(persistedQuote?.status).toBe("sent");
     expect(persistedQuote?.subtotal).toBe(400);
 
-    const deleteRes = await fetch(`${baseUrl}/api/quotes/${created.id}`, {
+    const deleteRes = await app.request(`/quotes/${created.id}`, {
       method: "DELETE",
     });
     expect(deleteRes.status).toBe(204);
 
-    const getAfterDelete = await fetch(`${baseUrl}/api/quotes/${created.id}`);
+    const getAfterDelete = await app.request(`/quotes/${created.id}`);
     expect(getAfterDelete.status).toBe(404);
 
     const rowsAfterDelete = await db
