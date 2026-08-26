@@ -65,11 +65,17 @@ This is idempotent — Wrangler tracks which migrations have already run, so
 re-running it against an already-migrated database is a no-op. Run it again
 any time you pull new migrations.
 
-There's currently no D1-native seed script (the old demo-data seeder,
-`artifacts/api-server/src/seed.ts`, is still Postgres/Node-only and excluded
-from the Worker build — tracked as follow-up work), so a freshly-migrated
-production database starts genuinely empty. That's fine: the first admin is
-created through the bootstrap flow in Step 6, not from seed data.
+`artifacts/api-server/src/seed.ts` inserts fixed demo data (clients, jobs,
+quotes, invoices, subcontractors, plant, etc.) for local development — run
+`pnpm run seed` from `artifacts/api-server` after applying migrations
+locally (`wrangler d1 migrations apply groundworkos --local`, see the
+README's Install & Run section). It only ever opens the local SQLite file
+Wrangler keeps under `.wrangler/state` for `wrangler dev` — there is no
+connection string or flag that points it at a hosted database, so it
+cannot reach `--remote`/production D1 by construction. A freshly-migrated
+production database therefore starts genuinely empty, same as before. That's
+fine: the first admin is created through the bootstrap flow in Step 6, not
+from seed data.
 
 ## Step 3 — Set Worker vars and secrets
 
