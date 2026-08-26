@@ -1,5 +1,6 @@
 import { Hono } from "hono";
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
+import { companySettingsTable } from "@workspace/db";
 import { requireRole } from "../lib/auth.js";
 import { CompanySettingsInput } from "@workspace/api-zod";
 import { logAudit } from "./audit.js";
@@ -11,11 +12,18 @@ const router = new Hono<AppEnv>();
 // GET is intentionally open to any authenticated user (not manager-gated):
 // the onboarding-wizard check in App.tsx reads this for every role,
 // including foreman, before any role-gated UI has loaded.
+//
+// Goes through the typed `data` column (mode: "json", see @workspace/db's
+// schema) rather than a raw `sql` SELECT, so the stored JSON string is
+// actually parsed back into an object instead of being handed to the
+// client as a JSON-encoded string.
 router.get("/settings/company", async (c) => {
   try {
-    const row = await c.get("db").get<{ data: unknown }>(sql`
-      SELECT data FROM company_settings WHERE id = 1
-    `);
+    const [row] = await c
+      .get("db")
+      .select({ data: companySettingsTable.data })
+      .from(companySettingsTable)
+      .where(eq(companySettingsTable.id, 1));
     return c.json(row?.data ?? {});
   } catch (err) {
     c.get("logger").error({ err }, "Failed to load company settings");

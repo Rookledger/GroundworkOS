@@ -8,21 +8,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: groundworkos
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -50,20 +35,15 @@ jobs:
       - name: Test
         run: pnpm run test
 
-      - name: Push database schema
-        run: pnpm --filter @workspace/db run push-force
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/groundworkos
-
-      - name: Seed database
-        run: pnpm --filter @workspace/api-server run seed
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/groundworkos
-
+      # Runs @workspace/api-server's integration suite inside a real Workers
+      # runtime (Miniflare/workerd) against a real local D1 database - see
+      # artifacts/api-server/vitest.integration.config.ts. Replaces the old
+      # Railway/Express version's Postgres service container + schema
+      # push/seed steps, which no longer apply now that the backend runs on
+      # D1/Workers (see @workspace/db's package.json, which dropped the
+      # push-force script this used to call).
       - name: Integration test
         run: pnpm run test:integration
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/groundworkos
 
       - name: Build
         run: pnpm run build
