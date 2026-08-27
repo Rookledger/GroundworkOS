@@ -261,18 +261,34 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           className="h-13 flex items-center justify-between px-4 py-3"
           style={{ borderBottom: "1px solid #d9d4ce" }}
         >
-          <Link href="/" className="flex items-center gap-2.5 no-underline">
-            <span
-              style={{
-                fontFamily: "'Space Grotesk', sans-serif",
-                fontWeight: 700,
-                fontSize: "13px",
-                color: "#181410",
-                letterSpacing: "0.04em",
-              }}
-            >
-              GROUNDWORK<span style={{ color: "#1b5e78" }}>OS</span>
-            </span>
+          <Link href="/" className="flex items-center gap-2.5 no-underline min-w-0">
+            {state.settings.companyLogo ? (
+              <img
+                src={state.settings.companyLogo}
+                alt={state.settings.companyName || "Company logo"}
+                className="h-7 max-w-[9rem] object-contain flex-shrink-0"
+              />
+            ) : (
+              <span
+                className="truncate"
+                style={{
+                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontWeight: 700,
+                  fontSize: "13px",
+                  color: "#181410",
+                  letterSpacing: "0.04em",
+                }}
+              >
+                {state.settings.companyName &&
+                state.settings.companyName !== "GroundworkOS Ltd" ? (
+                  state.settings.companyName
+                ) : (
+                  <>
+                    GROUNDWORK<span style={{ color: "#1b5e78" }}>OS</span>
+                  </>
+                )}
+              </span>
+            )}
           </Link>
           <button
             className="lg:hidden p-1 rounded"

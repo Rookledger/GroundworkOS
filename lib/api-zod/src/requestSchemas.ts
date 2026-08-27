@@ -377,6 +377,7 @@ export const UpdateScheduleInput = z
 export const CompanySettingsInput = z
   .object({
     companyName: z.string().optional(),
+    companyLogo: z.string().optional(),
     companyNumber: z.string().optional(),
     vatNumber: z.string().optional(),
     utrNumber: z.string().optional(),
