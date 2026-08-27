@@ -9,6 +9,8 @@ import {
   Unlink,
   Download,
   Save,
+  Upload,
+  X,
 } from "lucide-react";
 import { Panel } from "../components/ui/Panel";
 import { Btn } from "../components/ui/Btn";
@@ -102,6 +104,69 @@ function SaveBar({ onSave, saving }: { onSave: () => void; saving: boolean }) {
         )}
         {saving ? "Saving…" : "Save"}
       </Btn>
+    </div>
+  );
+}
+
+const MAX_LOGO_BYTES = 1024 * 1024; // 1MB, well under the sqlite text column's practical limit
+
+function LogoUpload({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function handleFile(file: File | undefined) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file");
+      return;
+    }
+    if (file.size > MAX_LOGO_BYTES) {
+      toast.error("Logo must be smaller than 1MB");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => onChange(String(reader.result ?? ""));
+    reader.readAsDataURL(file);
+  }
+
+  return (
+    <div className="flex items-center gap-3">
+      <div
+        className="w-14 h-14 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden"
+        style={{ backgroundColor: "#f0ede8", border: "1px solid #d9d4ce" }}
+      >
+        {value ? (
+          <img
+            src={value}
+            alt="Company logo"
+            className="w-full h-full object-contain"
+          />
+        ) : (
+          <Upload className="w-5 h-5" style={{ color: "#a8a099" }} />
+        )}
+      </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => handleFile(e.target.files?.[0])}
+      />
+      <Btn size="sm" variant="outline" onClick={() => fileInputRef.current?.click()}>
+        <Upload className="w-3.5 h-3.5" />
+        {value ? "Replace" : "Upload"}
+      </Btn>
+      {value && (
+        <Btn size="sm" variant="outline" onClick={() => onChange("")}>
+          <X className="w-3.5 h-3.5" />
+          Remove
+        </Btn>
+      )}
     </div>
   );
 }
@@ -483,6 +548,7 @@ export function SettingsPage() {
 
   const [company, setCompany] = useState({
     companyName: s.companyName,
+    companyLogo: s.companyLogo,
     companyNumber: s.companyNumber,
     vatNumber: s.vatNumber,
     utrNumber: s.utrNumber,
@@ -521,6 +587,7 @@ export function SettingsPage() {
     prevSettings.current = s;
     setCompany({
       companyName: s.companyName,
+      companyLogo: s.companyLogo,
       companyNumber: s.companyNumber,
       vatNumber: s.vatNumber,
       utrNumber: s.utrNumber,
@@ -581,6 +648,15 @@ export function SettingsPage() {
       </div>
 
       <Panel title="Company Details" noPad>
+        <SettingsRow
+          label="Company Logo"
+          description="Shown in the sidebar and on quotes, invoices, and purchase orders. PNG or SVG, up to 1MB."
+        >
+          <LogoUpload
+            value={company.companyLogo}
+            onChange={(v) => setCompany((c) => ({ ...c, companyLogo: v }))}
+          />
+        </SettingsRow>
         <SettingsRow label="Company Name">
           <Inp
             value={company.companyName}

@@ -1,4 +1,11 @@
-import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import {
+  Document,
+  Page,
+  Text,
+  View,
+  Image,
+  StyleSheet,
+} from "@react-pdf/renderer";
 import type { Invoice } from "../../types";
 
 const S = StyleSheet.create({
@@ -23,6 +30,7 @@ const S = StyleSheet.create({
     letterSpacing: 1,
   },
   logoSub: { fontSize: 8, color: "#7a7469", marginTop: 3, letterSpacing: 0.5 },
+  logoImage: { maxWidth: 140, maxHeight: 48, marginBottom: 6 },
   invoiceLabel: {
     fontSize: 28,
     fontFamily: "Helvetica-Bold",
@@ -166,6 +174,7 @@ interface Props {
 
 export function InvoicePDF({ invoice, company }: Props) {
   const companyName = company?.companyName ?? "GroundworkOS Ltd";
+  const companyLogo = company?.companyLogo ?? "";
   const companyAddress = company?.address ?? "";
   const vatNumber = company?.vatNumber ?? "";
   const cisRef = company?.cisReference ?? "";
@@ -181,7 +190,11 @@ export function InvoicePDF({ invoice, company }: Props) {
       <Page size="A4" style={S.page}>
         <View style={S.header}>
           <View>
-            <Text style={S.logo}>{companyName.toUpperCase()}</Text>
+            {companyLogo ? (
+              <Image style={S.logoImage} src={companyLogo} />
+            ) : (
+              <Text style={S.logo}>{companyName.toUpperCase()}</Text>
+            )}
             {companyAddress ? (
               <Text style={S.logoSub}>{companyAddress}</Text>
             ) : null}

@@ -15,6 +15,7 @@ import type {
 
 export interface CompanySettings {
   companyName: string;
+  companyLogo: string;
   companyNumber: string;
   vatNumber: string;
   utrNumber: string;
@@ -35,6 +36,7 @@ export interface CompanySettings {
 
 export const DEFAULT_SETTINGS: CompanySettings = {
   companyName: "GroundworkOS Ltd",
+  companyLogo: "",
   companyNumber: "",
   vatNumber: "",
   utrNumber: "",
