@@ -37,6 +37,9 @@ const PUBLIC_PATHS = [
   "/sage/callback",
   "/freeagent/callback",
   "/portal",
+  // Rendered by the sign-in/sign-up screens before any session exists - see
+  // the handler in routes/settings.ts for what it does (and doesn't) expose.
+  "/settings/branding",
   // Server-to-server from Clerk, not a signed-in user - authenticated by
   // svix signature verification inside the handler instead of a session.
   "/webhooks/clerk",

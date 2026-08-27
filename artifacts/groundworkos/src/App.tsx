@@ -133,6 +133,73 @@ const clerkAppearance = {
   },
 };
 
+// Sign-in/sign-up render before AppProvider/DataLoader mount (no session yet
+// to load settings through), so branding there is fetched independently from
+// the public GET /api/settings/branding endpoint - see routes/settings.ts.
+function useBranding() {
+  const [branding, setBranding] = useState({ companyName: "", companyLogo: "" });
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch(`${basePath}/api/settings/branding`);
+        if (!r.ok) return;
+        const data = await r.json();
+        if (cancelled) return;
+        setBranding({
+          companyName:
+            typeof data.companyName === "string" ? data.companyName : "",
+          companyLogo:
+            typeof data.companyLogo === "string" ? data.companyLogo : "",
+        });
+      } catch {
+        // Falls back to the default GroundworkOS branding below.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return branding;
+}
+
+function BrandMark({
+  companyName,
+  companyLogo,
+}: {
+  companyName: string;
+  companyLogo: string;
+}) {
+  if (companyLogo) {
+    return (
+      <img
+        src={companyLogo}
+        alt={companyName || "Company logo"}
+        className="h-9 max-w-[220px] object-contain"
+      />
+    );
+  }
+  return (
+    <span
+      style={{
+        fontFamily: "'Space Grotesk', sans-serif",
+        fontWeight: 700,
+        fontSize: "17px",
+        color: "#181410",
+        letterSpacing: "0.04em",
+      }}
+    >
+      {companyName && companyName !== "GroundworkOS Ltd" ? (
+        companyName
+      ) : (
+        <>
+          GROUNDWORK<span style={{ color: "#1b5e78" }}>OS</span>
+        </>
+      )}
+    </span>
+  );
+}
+
 function ClerkQueryClientCacheInvalidator() {
   const { addListener } = useClerk();
   const qc = useQueryClient();
@@ -188,11 +255,16 @@ function AutoAdminBootstrap() {
 }
 
 function SignInPage() {
+  const branding = useBranding();
   return (
     <div
-      className="flex min-h-dvh items-center justify-center px-4"
+      className="flex min-h-dvh flex-col items-center justify-center gap-6 px-4"
       style={{ backgroundColor: "#f0ede8" }}
     >
+      <BrandMark
+        companyName={branding.companyName}
+        companyLogo={branding.companyLogo}
+      />
       <SignIn
         routing="path"
         path={`${basePath}/sign-in`}
@@ -203,11 +275,20 @@ function SignInPage() {
 }
 
 function SignUpPage() {
+  const branding = useBranding();
+  const displayName =
+    branding.companyName && branding.companyName !== "GroundworkOS Ltd"
+      ? branding.companyName
+      : "GroundworkOS";
   return (
     <div
       className="flex min-h-dvh flex-col items-center justify-center gap-4 px-4"
       style={{ backgroundColor: "#f0ede8" }}
     >
+      <BrandMark
+        companyName={branding.companyName}
+        companyLogo={branding.companyLogo}
+      />
       <p
         style={{
           maxWidth: 440,
@@ -218,8 +299,8 @@ function SignUpPage() {
           lineHeight: 1.6,
         }}
       >
-        GroundworkOS is invite-only. If you've received an invitation email, use
-        the same email address below to finish setting up your account.
+        {displayName} is invite-only. If you've received an invitation email,
+        use the same email address below to finish setting up your account.
         Otherwise, ask your admin to invite you from Settings &rarr; Users.
       </p>
       <SignUp
@@ -359,6 +440,11 @@ function RouteGuard() {
 
 function ClerkProviderWithRoutes() {
   const [, setLocation] = useLocation();
+  const branding = useBranding();
+  const displayName =
+    branding.companyName && branding.companyName !== "GroundworkOS Ltd"
+      ? branding.companyName
+      : "GroundworkOS";
   return (
     <ClerkProvider
       publishableKey={clerkPubKey}
@@ -367,12 +453,15 @@ function ClerkProviderWithRoutes() {
       signUpUrl={`${basePath}/sign-up`}
       localization={{
         signIn: {
-          start: { title: "Welcome back", subtitle: "Sign in to GroundworkOS" },
+          start: {
+            title: "Welcome back",
+            subtitle: `Sign in to ${displayName}`,
+          },
         },
         signUp: {
           start: {
             title: "Create account",
-            subtitle: "Join GroundworkOS today",
+            subtitle: `Join ${displayName} today`,
           },
         },
       }}

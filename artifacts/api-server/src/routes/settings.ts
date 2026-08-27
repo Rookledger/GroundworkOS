@@ -31,6 +31,32 @@ router.get("/settings/company", async (c) => {
   }
 });
 
+// Public, unauthenticated: the sign-in/sign-up screens render this before
+// any session exists, so they can show the deployment's own name/logo
+// instead of a hardcoded "GroundworkOS". Deliberately returns only the two
+// display fields - never the full settings blob (bank details, VAT/UTR
+// numbers, etc.) - to an anonymous caller. See PUBLIC_PATHS in
+// routes/index.ts for the auth-gate exemption.
+router.get("/settings/branding", async (c) => {
+  try {
+    const [row] = await c
+      .get("db")
+      .select({ data: companySettingsTable.data })
+      .from(companySettingsTable)
+      .where(eq(companySettingsTable.id, 1));
+    const data = (row?.data ?? {}) as Record<string, unknown>;
+    return c.json({
+      companyName:
+        typeof data.companyName === "string" ? data.companyName : "",
+      companyLogo:
+        typeof data.companyLogo === "string" ? data.companyLogo : "",
+    });
+  } catch (err) {
+    c.get("logger").error({ err }, "Failed to load company branding");
+    return c.json({ companyName: "", companyLogo: "" });
+  }
+});
+
 // PUT is normally manager+, but a brand-new deployment has no manager/admin
 // yet, so — mirroring the admin bootstrap flow — we also allow it for a
 // foreman while no admin exists, so the very first user can complete the
