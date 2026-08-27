@@ -26,12 +26,14 @@ import {
   AlertTriangle,
   Wrench,
   Server,
+  KeyRound,
 } from "lucide-react";
 import { useAlerts } from "../../hooks/useAlerts";
 import { GlobalSearch } from "../ui/GlobalSearch";
 import { useUser, useClerk } from "@clerk/react";
 import { useRole, isAtLeast, type Role } from "../../hooks/useRole";
 import { useApp } from "../../store/AppContext";
+import { clerkAppearance } from "../../lib/clerkAppearance";
 
 const ALL_NAV = [
   {
@@ -169,7 +171,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const bellRef = useRef<HTMLDivElement>(null);
   const [location] = useLocation();
   const { user } = useUser();
-  const { signOut } = useClerk();
+  const { signOut, openUserProfile } = useClerk();
   const role = useRole();
   const alerts = useAlerts();
 
@@ -394,6 +396,16 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                   </p>
                 )}
               </div>
+              <button
+                onClick={() =>
+                  openUserProfile({ appearance: clerkAppearance })
+                }
+                title="Change password / account security"
+                className="flex-shrink-0 p-1 rounded transition-colors hover:bg-[#e8e4dd]"
+                style={{ color: "#a8a099" }}
+              >
+                <KeyRound className="w-3.5 h-3.5" />
+              </button>
               <button
                 onClick={() => signOut()}
                 title="Sign out"
