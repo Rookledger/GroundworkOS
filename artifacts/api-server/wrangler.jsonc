@@ -16,77 +16,64 @@
     "enabled": true,
   },
 
-  // ── D1 (replaces the Railway Postgres database) ──────────────────────────
+  // ── Multi-client deployment ────────────────────────────────────────────
+  // GroundworkOS is single-tenant per deployment: each client gets their own
+  // Worker, D1 database, KV namespace and R2 bucket, and those can live on
+  // entirely different Cloudflare accounts. Rather than forking the repo per
+  // client, each client is a named Wrangler environment below (`env.<slug>`),
+  // deployed with `wrangler deploy --env <slug>`. Wrangler resolves
+  // `account_id` from either the `account_id` field in that env block or
+  // (if omitted) the `CLOUDFLARE_ACCOUNT_ID` env var / whichever account the
+  // `CLOUDFLARE_API_TOKEN` in use belongs to - see .github/workflows/deploy.yml,
+  // which supplies both per-client as GitHub Environment secrets.
+  //
+  // The top-level fields below (`vars`, `d1_databases`, `kv_namespaces`,
+  // `r2_buckets`) are ONLY used by `wrangler dev` when no `--env` is passed
+  // (local development) - they intentionally mirror the first onboarded
+  // client ("ktr") so local dev works out of the box. Every real deploy goes
+  // through an `env.<slug>` block instead; do not deploy without `--env`.
+  //
+  // To onboard a new client:
+  //   1. On the client's own Cloudflare account, run:
+  //        wrangler d1 create <slug>
+  //        wrangler kv namespace create KV
+  //        wrangler r2 bucket create <slug>-docs
+  //   2. Add an `env.<slug>` block below (copy "ktr" and update the ids,
+  //      account_id, and APP_URL).
+  //   3. Add matching env/kv/r2/service blocks to
+  //      ../groundworkos/wrangler.jsonc's `env.<slug>`.
+  //   4. Create a GitHub Environment named `<slug>` (Settings → Environments)
+  //      holding that client's `CLOUDFLARE_API_TOKEN` (and `CLOUDFLARE_ACCOUNT_ID`
+  //      if you didn't set `account_id` below) as environment secrets.
+  //   5. Run `wrangler secret put BETTER_AUTH_SECRET --env <slug>` (and any
+  //      other secrets from Step 3 of DEPLOYMENT.md) once, authenticated
+  //      against the client's account.
+  //   6. Trigger the "Deploy" workflow with `client: <slug>`.
+  // See DEPLOYMENT.md's "Multiple clients, multiple Cloudflare accounts"
+  // section for the full walkthrough.
+
   "d1_databases": [
     {
       "binding": "DB",
-      // Confirmed directly in the Cloudflare dashboard (Storage & databases
-      // -> D1 SQLite Database) on 2026-08-28: this is the only D1 database
-      // that exists in the Ktrgcrms@outlook... account. A prior commit
-      // pointed this at a "ktr-groundworks" database/id that do not exist
-      // in that account - see DEPLOYMENT.md Step 1.
       "database_name": "groundworkos",
       "database_id": "7a982d10-b66d-4500-af43-380b9b6ad23c",
       "migrations_dir": "../../lib/db/migrations",
     },
   ],
-
-  // ── R2 (replaces the S3-compatible object storage backend) ───────────────
-  // Holds RAMS, insurance certs, certifications, permits, plant compliance
-  // docs, and site photos - the same content the old S3StorageBackend wrote
-  // under uploads/. See src/lib/objectStorage.ts.
   "r2_buckets": [
     {
       "binding": "DOCS_BUCKET",
-      // Reused the existing "ktr-groundworks-docs" bucket rather than
-      // creating a duplicate. R2 isn't enabled for API access on this
-      // account yet (dashboard-only), so this name is unverified via API -
-      // confirm it exists in the dashboard before deploying.
       "bucket_name": "ktr-groundworks-docs",
     },
   ],
-
-  // ── KV (replaces express-rate-limit's in-memory store, and the in-memory
-  // OAuth CSRF state Map in accountingOAuthFactory.ts) ──────────────────────
-  // A Worker has no long-lived, single-instance process the way the old
-  // Railway container did - state kept in a module-level Map is not safe to
-  // rely on across requests/isolates. Both rate-limit counters and OAuth
-  // state tokens are short-lived, so KV (rather than D1) is the right store:
-  // see src/lib/rateLimits.ts and src/routes/accountingOAuthFactory.ts.
   "kv_namespaces": [
     {
       "binding": "KV",
-      // Confirmed directly in the Cloudflare dashboard (Storage & databases
-      // -> Workers KV) on 2026-08-28: this is the only KV namespace that
-      // exists in the Ktrgcrms@outlook... account. A prior commit pointed
-      // this at a "ktr-groundworks-kv" namespace/id that do not exist in
-      // that account.
       "id": "8f3ba7f136024cc0a699f2da0853d367",
     },
   ],
-
-  // ── Secrets (set with `wrangler secret put <NAME>`, never committed) ─────
-  // BETTER_AUTH_SECRET, RESEND_API_KEY, XERO_CLIENT_SECRET,
-  // QUICKBOOKS_CLIENT_SECRET, SAGE_CLIENT_SECRET, FREEAGENT_CLIENT_SECRET.
-
-  // ── Plain vars (non-secret configuration) ─────────────────────────────────
   "vars": {
-    // Frontend origin - the "groundworkos" Worker's own workers.dev domain,
-    // since there's no custom domain/zone on this account yet (see the
-    // frontend's wrangler.jsonc: it proxies /api/* to this Worker via a
-    // service binding rather than a Workers Route, which requires a zone).
-    // Used for CORS, Better Auth's baseURL/trustedOrigins, and OAuth
-    // redirect building. The Cloudflare Git-connected Build for this Worker
-    // deploys with no `--env` flag, so it reads these top-level `vars`, not
-    // the unused `env.production` block below - update this value (and
-    // that block, for consistency) together if the frontend ever moves to
-    // a custom domain.
     "APP_URL": "https://groundworkos.ktrgcrms.workers.dev",
-    // Restricts the first-admin bootstrap flow (DEPLOYMENT.md Step 7) to
-    // this address so it can't be claimed by whoever accepts an invite
-    // first. Double-check this is the right inbox before inviting yourself
-    // as the first admin - change it in the Cloudflare dashboard (Settings
-    // -> Variables) or here if not.
     "BOOTSTRAP_ADMIN_EMAIL": "lauhonyanhk1@gmail.com",
     "SIGNUP_ALLOWED_EMAIL_DOMAINS": "",
     "XERO_CLIENT_ID": "",
@@ -99,11 +86,82 @@
     "FREEAGENT_REDIRECT_URI": "",
   },
 
+  // ── Secrets (set with `wrangler secret put <NAME> --env <slug>`, never
+  // committed) ── BETTER_AUTH_SECRET, RESEND_API_KEY, XERO_CLIENT_SECRET,
+  // QUICKBOOKS_CLIENT_SECRET, SAGE_CLIENT_SECRET, FREEAGENT_CLIENT_SECRET.
+
   "env": {
-    "production": {
+    // First onboarded client ("Ktrgcrms@outlook..." Cloudflare account).
+    // Kept name-less (no `account_id`) so it deploys wherever the CI
+    // token/local `wrangler login` session is authenticated, matching the
+    // account these ids were provisioned on.
+    "ktr": {
+      "name": "groundworkos-api",
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "groundworkos",
+          "database_id": "7a982d10-b66d-4500-af43-380b9b6ad23c",
+          "migrations_dir": "../../lib/db/migrations",
+        },
+      ],
+      "r2_buckets": [
+        {
+          "binding": "DOCS_BUCKET",
+          "bucket_name": "ktr-groundworks-docs",
+        },
+      ],
+      "kv_namespaces": [
+        {
+          "binding": "KV",
+          "id": "8f3ba7f136024cc0a699f2da0853d367",
+        },
+      ],
       "vars": {
         "APP_URL": "https://groundworkos.ktrgcrms.workers.dev",
+        "BOOTSTRAP_ADMIN_EMAIL": "lauhonyanhk1@gmail.com",
+        "SIGNUP_ALLOWED_EMAIL_DOMAINS": "",
+        "XERO_CLIENT_ID": "",
+        "XERO_REDIRECT_URI": "",
+        "QUICKBOOKS_CLIENT_ID": "",
+        "QUICKBOOKS_REDIRECT_URI": "",
+        "SAGE_CLIENT_ID": "",
+        "SAGE_REDIRECT_URI": "",
+        "FREEAGENT_CLIENT_ID": "",
+        "FREEAGENT_REDIRECT_URI": "",
       },
     },
+
+    // Template for the next client - copy this block, rename the key, and
+    // fill in the ids from Step 1 of the onboarding checklist above. Leave
+    // `account_id` set explicitly here (rather than relying on whichever
+    // account the CI token happens to belong to) so a misconfigured token
+    // fails loudly instead of silently deploying to the wrong account.
+    // "acme": {
+    //   "name": "groundworkos-api-acme",
+    //   "account_id": "<acme's Cloudflare account id>",
+    //   // Database name kept as "groundworkos" for every client (each is on
+    //   // its own Cloudflare account, so there's no name collision) - the
+    //   // deploy workflow's `wrangler d1 migrations apply groundworkos
+    //   // --env <slug>` step assumes this name.
+    //   "d1_databases": [
+    //     { "binding": "DB", "database_name": "groundworkos", "database_id": "<...>", "migrations_dir": "../../lib/db/migrations" },
+    //   ],
+    //   "r2_buckets": [
+    //     { "binding": "DOCS_BUCKET", "bucket_name": "acme-docs" },
+    //   ],
+    //   "kv_namespaces": [
+    //     { "binding": "KV", "id": "<...>" },
+    //   ],
+    //   "vars": {
+    //     "APP_URL": "https://app.acme.example.com",
+    //     "BOOTSTRAP_ADMIN_EMAIL": "admin@acme.example.com",
+    //     "SIGNUP_ALLOWED_EMAIL_DOMAINS": "",
+    //     "XERO_CLIENT_ID": "", "XERO_REDIRECT_URI": "",
+    //     "QUICKBOOKS_CLIENT_ID": "", "QUICKBOOKS_REDIRECT_URI": "",
+    //     "SAGE_CLIENT_ID": "", "SAGE_REDIRECT_URI": "",
+    //     "FREEAGENT_CLIENT_ID": "", "FREEAGENT_REDIRECT_URI": "",
+    //   },
+    // },
   },
 }

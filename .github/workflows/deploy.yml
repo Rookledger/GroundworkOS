@@ -1,0 +1,78 @@
+name: Deploy
+
+# Deploys one client's GroundworkOS instance (its API Worker + frontend
+# Worker) to that client's own Cloudflare account. Each client is a named
+# Wrangler environment (see artifacts/api-server/wrangler.jsonc and
+# artifacts/groundworkos/wrangler.jsonc's `env.<client>` blocks) and a
+# matching GitHub Environment of the same name holding that client's
+# CLOUDFLARE_API_TOKEN (and CLOUDFLARE_ACCOUNT_ID, if not set inline in
+# wrangler.jsonc) as environment secrets - see DEPLOYMENT.md's "Multiple
+# clients, multiple Cloudflare accounts" section.
+#
+# Manual trigger only: deploys are deliberate, per-client actions, not tied
+# to every push to main (multiple clients would otherwise all redeploy
+# together off one branch).
+
+on:
+  workflow_dispatch:
+    inputs:
+      client:
+        description: "Client slug - must match an env.<slug> block in both wrangler.jsonc files and a GitHub Environment of the same name"
+        required: true
+        type: string
+      run_migrations:
+        description: "Also apply pending D1 migrations to this client's database"
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.client }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply D1 migrations
+        if: ${{ inputs.run_migrations }}
+        working-directory: artifacts/api-server
+        run: pnpm exec wrangler d1 migrations apply groundworkos --env "${{ inputs.client }}" --remote
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Deploy API Worker
+        working-directory: artifacts/api-server
+        run: pnpm exec wrangler deploy --env "${{ inputs.client }}"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Build frontend
+        working-directory: artifacts/groundworkos
+        run: pnpm run build
+        env:
+          BASE_PATH: /
+
+      - name: Deploy frontend Worker
+        working-directory: artifacts/groundworkos
+        run: pnpm exec wrangler deploy --env "${{ inputs.client }}"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
