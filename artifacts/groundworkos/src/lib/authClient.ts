@@ -16,7 +16,12 @@ import { inferAdditionalFields } from "better-auth/client/plugins";
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export const authClient = createAuthClient({
-  baseURL: `${basePath}/api/auth`,
+  // Better Auth's client requires an absolute base URL - a bare relative
+  // path like "/api/auth" throws `BetterAuthError: Invalid base URL` during
+  // init and blanks the whole app before it can render. Resolving against
+  // `window.location.origin` keeps this same-origin in every deployment
+  // (see the class comment above) while satisfying that requirement.
+  baseURL: `${window.location.origin}${basePath}/api/auth`,
   fetchOptions: {
     credentials: "include",
   },
