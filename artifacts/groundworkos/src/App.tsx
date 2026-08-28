@@ -5,6 +5,7 @@ import {
   Router as WouterRouter,
   useLocation,
   Redirect,
+  Link,
 } from "wouter";
 import {
   QueryClient,
@@ -262,9 +263,9 @@ function SignInPage() {
           {setupOpen ? (
             <>
               No account yet?{" "}
-              <a href={`${basePath}/setup`} style={{ color: "#1b5e78" }}>
+              <Link to="/setup" style={{ color: "#1b5e78" }}>
                 Set up GroundworkOS
-              </a>{" "}
+              </Link>{" "}
               to create the first (admin) account.
             </>
           ) : (
