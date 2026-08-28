@@ -32,11 +32,15 @@ the frontend bundle by Vite at build time).
 ## Step 1 — Provision D1, R2 and KV
 
 `artifacts/api-server/wrangler.jsonc` already points at the D1 database
-(`ktr-groundworks`), KV namespace (`ktr-groundworks-kv`) and R2 bucket
+(`groundworkos`), KV namespace (`groundworkos-kv`) and R2 bucket
 (`ktr-groundworks-docs`) provisioned for this account — there is nothing to
-create for this deployment. If you're forking this repo for your own
-Cloudflare account, provision your own resources instead and update
-`wrangler.jsonc` accordingly:
+create for this deployment. (A prior commit briefly pointed the D1/KV
+bindings at a "ktr-groundworks"/"ktr-groundworks-kv" database and namespace
+that do not exist in this Cloudflare account — confirmed directly in the
+dashboard on 2026-08-28 - and has been reverted; the R2 bucket name was
+correct.) If you're forking this repo for your own Cloudflare account,
+provision your own resources instead and update `wrangler.jsonc`
+accordingly:
 
 ```bash
 pnpm exec wrangler d1 create <your-db-name>
@@ -64,7 +68,7 @@ schema in `lib/db/src/schema`). Apply them to the real, hosted D1 database
 from `artifacts/api-server`:
 
 ```bash
-pnpm exec wrangler d1 migrations apply ktr-groundworks --remote
+pnpm exec wrangler d1 migrations apply groundworkos --remote
 ```
 
 This is idempotent — Wrangler tracks which migrations have already run, so
@@ -74,7 +78,7 @@ any time you pull new migrations.
 `artifacts/api-server/src/seed.ts` inserts fixed demo data (clients, jobs,
 quotes, invoices, subcontractors, plant, etc.) for local development — run
 `pnpm run seed` from `artifacts/api-server` after applying migrations
-locally (`wrangler d1 migrations apply ktr-groundworks --local`, see the
+locally (`wrangler d1 migrations apply groundworkos --local`, see the
 README's Install & Run section). It only ever opens the local SQLite file
 Wrangler keeps under `.wrangler/state` for `wrangler dev` — there is no
 connection string or flag that points it at a hosted database, so it
@@ -198,7 +202,7 @@ has to be seeded directly in D1:
    the placeholder below:
 
    ```bash
-   pnpm exec wrangler d1 execute ktr-groundworks --remote --command "
+   pnpm exec wrangler d1 execute groundworkos --remote --command "
      INSERT INTO invitations (id, email, role, token, created_at, expires_at)
      VALUES ('bootstrap-invite', 'you@yourcompany.co.uk', 'admin', 'REPLACE_WITH_A_RANDOM_TOKEN', unixepoch() * 1000, (unixepoch() + 604800) * 1000);
    "
@@ -235,7 +239,7 @@ restoring from a backup), you can set a user's `role` column to `admin`
 directly with `wrangler d1 execute` instead:
 
 ```bash
-pnpm exec wrangler d1 execute ktr-groundworks --remote --command "
+pnpm exec wrangler d1 execute groundworkos --remote --command "
   UPDATE user SET role = 'admin' WHERE email = 'you@yourcompany.co.uk';
 "
 ```
@@ -249,7 +253,7 @@ Push new commits to the connected branch:
 - The Worker does **not** redeploy itself on push — run `wrangler deploy`
   again yourself (or wire it into CI/CD, e.g. a GitHub Actions step running
   `wrangler deploy` with an API token).
-- Any new D1 migrations need `wrangler d1 migrations apply ktr-groundworks
+- Any new D1 migrations need `wrangler d1 migrations apply groundworkos
 --remote` re-run after deploying — this doesn't happen automatically the
   way the old Express version's start-command migration step did.
 
@@ -278,7 +282,7 @@ renews HTTPS certificates automatically. If you change domains, update
   logged.
 - **D1 errors mentioning a missing table**: migrations haven't been applied
   to the remote database yet — re-run Step 2's `wrangler d1 migrations
-apply ktr-groundworks --remote`.
+apply groundworkos --remote`.
 - **Uploads fail**: check that the R2 bucket in `wrangler.jsonc` exists and
   the binding name matches (`DOCS_BUCKET`), and check `wrangler tail` for
   the underlying error.
