@@ -20,12 +20,11 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "groundworkos",
-      // Placeholder - replace with the real database_id after running
-      // `wrangler d1 create groundworkos` (see DEPLOYMENT.md Step 1 for the
-      // full cutover steps). Wrangler refuses to deploy with a placeholder
-      // id, so this is intentionally obvious rather than silently wrong.
-      "database_id": "REPLACE_WITH_D1_DATABASE_ID",
+      // Matches the D1 database actually present in the Cloudflare account
+      // (verified via the Cloudflare API on 2026-08-28), not a fresh
+      // `groundworkos` database - see DEPLOYMENT.md Step 1.
+      "database_name": "ktr-groundworks",
+      "database_id": "16349ddf-699b-4363-9e8b-3c7a018ebecf",
       "migrations_dir": "../../lib/db/migrations",
     },
   ],
@@ -37,7 +36,11 @@
   "r2_buckets": [
     {
       "binding": "DOCS_BUCKET",
-      "bucket_name": "groundworkos-docs",
+      // Reused the existing "ktr-groundworks-docs" bucket rather than
+      // creating a duplicate. R2 isn't enabled for API access on this
+      // account yet (dashboard-only), so this name is unverified via API -
+      // confirm it exists in the dashboard before deploying.
+      "bucket_name": "ktr-groundworks-docs",
     },
   ],
 
@@ -51,7 +54,9 @@
   "kv_namespaces": [
     {
       "binding": "KV",
-      "id": "REPLACE_WITH_KV_NAMESPACE_ID",
+      // Matches the "ktr-groundworks-kv" namespace actually present in the
+      // Cloudflare account (verified via the Cloudflare API on 2026-08-28).
+      "id": "c1f965d5dd6e461cbbf684264ab9322b",
     },
   ],
 

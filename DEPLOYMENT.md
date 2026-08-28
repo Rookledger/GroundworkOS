@@ -31,26 +31,30 @@ the frontend bundle by Vite at build time).
 
 ## Step 1 — Provision D1, R2 and KV
 
-From `artifacts/api-server`:
+`artifacts/api-server/wrangler.jsonc` already points at the D1 database
+(`ktr-groundworks`), KV namespace (`ktr-groundworks-kv`) and R2 bucket
+(`ktr-groundworks-docs`) provisioned for this account — there is nothing to
+create for this deployment. If you're forking this repo for your own
+Cloudflare account, provision your own resources instead and update
+`wrangler.jsonc` accordingly:
 
 ```bash
-pnpm exec wrangler d1 create groundworkos
+pnpm exec wrangler d1 create <your-db-name>
 pnpm exec wrangler kv namespace create KV
-pnpm exec wrangler r2 bucket create groundworkos-docs
+pnpm exec wrangler r2 bucket create <your-bucket-name>
 ```
 
 Each command prints an id. Open `artifacts/api-server/wrangler.jsonc` and
-replace the placeholders with the real values:
+set:
 
-- `d1_databases[0].database_id` — the `database_id` from the `d1 create`
-  output (replaces `REPLACE_WITH_D1_DATABASE_ID`).
-- `kv_namespaces[0].id` — the `id` from the `kv namespace create` output
-  (replaces `REPLACE_WITH_KV_NAMESPACE_ID`).
-- `r2_buckets[0].bucket_name` only needs to match the bucket name you
-  created (`groundworkos-docs` above); R2 bindings don't need an id.
+- `d1_databases[0].database_name` / `database_id` — the name you passed to
+  `d1 create` and the `database_id` it printed.
+- `kv_namespaces[0].id` — the `id` from the `kv namespace create` output.
+- `r2_buckets[0].bucket_name` — the bucket name you created; R2 bindings
+  don't need an id.
 
-Wrangler refuses to deploy with the placeholder D1 id still in place, so
-this step isn't optional.
+Wrangler refuses to deploy with a placeholder D1 id still in place, so this
+step isn't optional when starting from scratch.
 
 ## Step 2 — Apply the database schema
 
@@ -60,7 +64,7 @@ schema in `lib/db/src/schema`). Apply them to the real, hosted D1 database
 from `artifacts/api-server`:
 
 ```bash
-pnpm exec wrangler d1 migrations apply groundworkos --remote
+pnpm exec wrangler d1 migrations apply ktr-groundworks --remote
 ```
 
 This is idempotent — Wrangler tracks which migrations have already run, so
@@ -70,7 +74,7 @@ any time you pull new migrations.
 `artifacts/api-server/src/seed.ts` inserts fixed demo data (clients, jobs,
 quotes, invoices, subcontractors, plant, etc.) for local development — run
 `pnpm run seed` from `artifacts/api-server` after applying migrations
-locally (`wrangler d1 migrations apply groundworkos --local`, see the
+locally (`wrangler d1 migrations apply ktr-groundworks --local`, see the
 README's Install & Run section). It only ever opens the local SQLite file
 Wrangler keeps under `.wrangler/state` for `wrangler dev` — there is no
 connection string or flag that points it at a hosted database, so it
@@ -194,7 +198,7 @@ has to be seeded directly in D1:
    the placeholder below:
 
    ```bash
-   pnpm exec wrangler d1 execute groundworkos --remote --command "
+   pnpm exec wrangler d1 execute ktr-groundworks --remote --command "
      INSERT INTO invitations (id, email, role, token, created_at, expires_at)
      VALUES ('bootstrap-invite', 'you@yourcompany.co.uk', 'admin', 'REPLACE_WITH_A_RANDOM_TOKEN', unixepoch() * 1000, (unixepoch() + 604800) * 1000);
    "
@@ -231,7 +235,7 @@ restoring from a backup), you can set a user's `role` column to `admin`
 directly with `wrangler d1 execute` instead:
 
 ```bash
-pnpm exec wrangler d1 execute groundworkos --remote --command "
+pnpm exec wrangler d1 execute ktr-groundworks --remote --command "
   UPDATE user SET role = 'admin' WHERE email = 'you@yourcompany.co.uk';
 "
 ```
@@ -245,7 +249,7 @@ Push new commits to the connected branch:
 - The Worker does **not** redeploy itself on push — run `wrangler deploy`
   again yourself (or wire it into CI/CD, e.g. a GitHub Actions step running
   `wrangler deploy` with an API token).
-- Any new D1 migrations need `wrangler d1 migrations apply groundworkos
+- Any new D1 migrations need `wrangler d1 migrations apply ktr-groundworks
 --remote` re-run after deploying — this doesn't happen automatically the
   way the old Express version's start-command migration step did.
 
@@ -274,7 +278,7 @@ renews HTTPS certificates automatically. If you change domains, update
   logged.
 - **D1 errors mentioning a missing table**: migrations haven't been applied
   to the remote database yet — re-run Step 2's `wrangler d1 migrations
-apply groundworkos --remote`.
+apply ktr-groundworks --remote`.
 - **Uploads fail**: check that the R2 bucket in `wrangler.jsonc` exists and
   the binding name matches (`DOCS_BUCKET`), and check `wrangler tail` for
   the underlying error.
