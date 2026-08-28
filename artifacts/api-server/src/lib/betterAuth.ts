@@ -15,12 +15,19 @@ import type { Bindings } from "../types";
  * wiring up config objects, no I/O happens until a route actually calls
  * into it.
  *
- * `emailAndPassword.disableSignUp` keeps the public `/api/auth/sign-up/*`
- * HTTP endpoint switched off - GroundworkOS is invite-only end to end (see
- * routes/admin.ts's POST /invitations/accept), so the only way a Better Auth
- * user ever gets created is via `auth.api.signUpEmail(...)` called directly
- * from that trusted server-side route, never through the public API surface
- * this handler exposes.
+ * `emailAndPassword.disableSignUp` is deliberately left `false` here, even
+ * though GroundworkOS is invite-only end to end. Better Auth enforces that
+ * flag inside `signUpEmail` itself, which is the *same* handler function
+ * whether it's reached through the public `/api/auth/sign-up/email` HTTP
+ * route or called directly as `auth.api.signUpEmail(...)` - there's no
+ * separate "internal" path that bypasses it. Setting `disableSignUp: true`
+ * therefore didn't just close the public route, it also broke the two
+ * trusted server-side callers that legitimately need signUpEmail:
+ * routes/admin.ts's POST /invitations/accept and POST /setup/first-admin,
+ * both of which started failing with "Email and password sign up is not
+ * enabled". The public route is closed instead at the HTTP layer, in
+ * app.ts, which blocks POST /api/auth/sign-up/email before it ever reaches
+ * this handler while leaving `auth.api.signUpEmail(...)` itself usable.
  *
  * `user.additionalFields.role` with `input: false` means a client can never
  * set/override their own role through the public API (sign-up, update-user,
@@ -44,7 +51,7 @@ export function createAuth(env: Bindings) {
     trustedOrigins: env.APP_URL ? [env.APP_URL] : [],
     emailAndPassword: {
       enabled: true,
-      disableSignUp: true,
+      disableSignUp: false,
     },
     user: {
       additionalFields: {
