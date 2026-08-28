@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "groundworkos",
+  "compatibility_date": "2025-08-25",
+  // Frontend is a static Vite SPA build (see vite.config.ts outDir) -
+  // served as Cloudflare Workers static assets rather than a Worker
+  // script. This is the config the "groundworkos" Workers & Pages
+  // service needs so `wrangler deploy` can target this project instead
+  // of erroring out at the pnpm workspace root (multiple wrangler
+  // configs exist - see artifacts/api-server/wrangler.jsonc).
+  "assets": {
+    "directory": "dist/public",
+    "not_found_handling": "single-page-application"
+  }
+}
