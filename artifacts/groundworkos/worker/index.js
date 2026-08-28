@@ -11,9 +11,22 @@
  * don't match a static asset file (Cloudflare serves matching assets
  * directly, without invoking this script at all), so it just needs to
  * decide, for the leftover requests, whether they're an API call to
- * forward or an SPA client-side route to fall back to index.html for -
- * replicating the `not_found_handling: "single-page-application"` behavior
- * this Worker replaces now that a script is present.
+ * forward or an SPA client-side route to fall back to the app shell for.
+ *
+ * The fallback used to construct a request for the literal "/index.html"
+ * file and fetch that from the assets binding. That silently broke every
+ * client-side route (e.g. /accept-invite, /setup, /portal/:token): Cloudflare's
+ * default `html_handling` ("auto-trailing-slash") treats a request for
+ * "/index.html" as a clean-URL candidate and 30x-redirects it to "/" before
+ * ever returning content, and this Worker returned that redirect response
+ * as-is. The browser then followed it, landing on "/" instead of the
+ * originally-requested path - so wouter's Switch never even ran the router
+ * against "/setup" or "/accept-invite"; it navigated to "/" first and only
+ * then rendered. `not_found_handling: "single-page-application"` below is
+ * Cloudflare's built-in equivalent for exactly this case: `env.ASSETS.fetch`
+ * returns the app shell directly, with a real 200, for the original request
+ * path - no redirect, no lost route. See DEPLOYMENT.md / wrangler.jsonc's
+ * assets block for the flag.
  *
  * Deliberately plain JS, not TypeScript: this file lives outside
  * `src/` (which is what the frontend's tsconfig and Vite build cover) and
@@ -29,7 +42,11 @@ export default {
       return env.API.fetch(request);
     }
 
-    const indexRequest = new Request(new URL("/index.html", url), request);
-    return env.ASSETS.fetch(indexRequest);
+    // Pass the ORIGINAL request through unchanged - not a rewritten request
+    // for "/index.html" (see comment above for why that redirected away from
+    // the requested path). With `not_found_handling: "single-page-application"`
+    // set, any path that isn't a literal static asset gets the app shell
+    // back directly from this same call.
+    return env.ASSETS.fetch(request);
   },
 };
