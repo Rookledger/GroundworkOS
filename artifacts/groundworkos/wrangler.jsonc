@@ -3,13 +3,24 @@
   "name": "groundworkos",
   "compatibility_date": "2025-08-25",
   // Frontend is a static Vite SPA build (see vite.config.ts outDir) -
-  // served as Cloudflare Workers static assets rather than a Worker
-  // script. This is the config the "groundworkos" Workers & Pages
-  // service needs so `wrangler deploy` can target this project instead
-  // of erroring out at the pnpm workspace root (multiple wrangler
-  // configs exist - see artifacts/api-server/wrangler.jsonc).
+  // served as Cloudflare Workers static assets. A thin Worker script
+  // (worker/index.js) also sits in front of the assets: it only runs for
+  // requests that don't match a static file, and forwards `/api/*` to the
+  // separately-deployed `groundworkos-api` Worker via the service binding
+  // below (see that file's comment for why - no custom domain/zone means
+  // no Workers Route), falling back to index.html for everything else
+  // (SPA client-side routes) the way `not_found_handling` used to.
+  "main": "worker/index.js",
   "assets": {
     "directory": "dist/public",
-    "not_found_handling": "single-page-application"
-  }
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      "binding": "API",
+      // Must match the service's own `name` in
+      // artifacts/api-server/wrangler.jsonc.
+      "service": "groundworkos-api"
+    }
+  ]
 }

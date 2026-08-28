@@ -71,12 +71,23 @@
 
   // ── Plain vars (non-secret configuration) ─────────────────────────────────
   "vars": {
-    // Frontend origin (Cloudflare Pages project), used for CORS, Better
-    // Auth's baseURL/trustedOrigins, and OAuth redirect building. Set the
-    // real value with `wrangler secret put APP_URL` per environment, or
-    // override it below/in `.dev.vars` for local dev.
-    "APP_URL": "",
-    "BOOTSTRAP_ADMIN_EMAIL": "",
+    // Frontend origin - the "groundworkos" Worker's own workers.dev domain,
+    // since there's no custom domain/zone on this account yet (see the
+    // frontend's wrangler.jsonc: it proxies /api/* to this Worker via a
+    // service binding rather than a Workers Route, which requires a zone).
+    // Used for CORS, Better Auth's baseURL/trustedOrigins, and OAuth
+    // redirect building. The Cloudflare Git-connected Build for this Worker
+    // deploys with no `--env` flag, so it reads these top-level `vars`, not
+    // the unused `env.production` block below - update this value (and
+    // that block, for consistency) together if the frontend ever moves to
+    // a custom domain.
+    "APP_URL": "https://groundworkos.ktrgcrms.workers.dev",
+    // Restricts the first-admin bootstrap flow (DEPLOYMENT.md Step 7) to
+    // this address so it can't be claimed by whoever accepts an invite
+    // first. Double-check this is the right inbox before inviting yourself
+    // as the first admin - change it in the Cloudflare dashboard (Settings
+    // -> Variables) or here if not.
+    "BOOTSTRAP_ADMIN_EMAIL": "lauhonyanhk1@gmail.com",
     "SIGNUP_ALLOWED_EMAIL_DOMAINS": "",
     "XERO_CLIENT_ID": "",
     "XERO_REDIRECT_URI": "",
@@ -91,7 +102,7 @@
   "env": {
     "production": {
       "vars": {
-        "APP_URL": "https://app.groundworkos.example",
+        "APP_URL": "https://groundworkos.ktrgcrms.workers.dev",
       },
     },
   },
