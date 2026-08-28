@@ -15,7 +15,7 @@ Manage jobs, CIS compliance, quotes, invoices, plant, subcontractors, timesheets
 | Database       | Cloudflare D1 (SQLite) + Drizzle ORM                 |
 | Object storage | Cloudflare R2 (RAMS PDFs, insurance certs, photos)   |
 | Rate limiting  | Cloudflare KV (also OAuth CSRF state)                |
-| Auth           | Clerk                                                |
+| Auth           | Better Auth (email + password, invite-only)          |
 | Monorepo       | pnpm workspaces                                      |
 | Email          | Resend                                               |
 
@@ -56,35 +56,34 @@ The frontend deploys to Cloudflare Pages and the backend deploys as a separate C
 
 ### Environment Variables
 
-Cloudflare Workers have no single `.env` file: **non-secret** values live as `vars` in `artifacts/api-server/wrangler.jsonc`, and **secrets** are set with `wrangler secret put <NAME>` (or, for local dev, a `.dev.vars` file in `artifacts/api-server` — see Wrangler's docs; that file is already gitignored). The frontend build is a separate concern again — Vite inlines its `VITE_*` variables into the built bundle, so those are set wherever you run `pnpm --filter @workspace/groundworkos run build` (a Cloudflare Pages project's build environment variables, in production).
+Cloudflare Workers have no single `.env` file: **non-secret** values live as `vars` in `artifacts/api-server/wrangler.jsonc`, and **secrets** are set with `wrangler secret put <NAME>` (or, for local dev, a `.dev.vars` file in `artifacts/api-server` — see Wrangler's docs; that file is already gitignored). The frontend build is a separate concern again — Vite inlines its build-time variables into the built bundle, so those are set wherever you run `pnpm --filter @workspace/groundworkos run build` (a Cloudflare Pages project's build environment variables, in production).
 
 Required (the Worker returns a 500 "Server misconfigured" on every request if any of these are missing or malformed — see `artifacts/api-server/src/lib/validateEnv.ts`):
 
 ```env
 # App settings
-APP_URL=https://your-app.example.com   # the frontend's origin — used for CORS and the CSP
+APP_URL=https://your-app.example.com   # the frontend's origin — used for CORS, the CSP and Better Auth's baseURL/trustedOrigins
 
-# Clerk Auth (get from dashboard.clerk.com) — email-only sign-in;
-# no Google or other social/OAuth sign-in is configured.
-CLERK_PUBLISHABLE_KEY=pk_live_...
-CLERK_SECRET_KEY=sk_live_...
+# Better Auth — email + password sign-in only, no social/OAuth sign-in
+# provider is configured. Session tokens are signed/encrypted with this
+# secret, so it must be at least 32 characters (e.g. `openssl rand -base64 32`).
+BETTER_AUTH_SECRET=...
 ```
 
-The frontend build additionally requires, as **build-time** variables (not read by the Worker at all):
+The frontend build additionally requires, as a **build-time** variable (not read by the Worker at all):
 
 ```env
-VITE_CLERK_PUBLISHABLE_KEY=pk_live_...   # MUST be the exact same value as CLERK_PUBLISHABLE_KEY above
 BASE_PATH=/
 ```
 
-`VITE_CLERK_PUBLISHABLE_KEY` and `CLERK_PUBLISHABLE_KEY` must be identical — one is inlined into the frontend bundle by Vite, the other read by the Worker at runtime, and **nothing automatically keeps them in sync** (the Worker no longer checks this for you at boot; that check was dropped when the frontend and backend became separate deployments with no shared filesystem — double-check both values yourself before deploying).
+Better Auth runs same-origin on the Worker (mounted at `/api/auth/*`), so unlike the project's earlier Clerk setup, the frontend needs no separate publishable key or other auth env var of its own.
 
 Everything else is optional:
 
 ```env
-# Sign-up restriction backstop (optional — on top of Clerk Dashboard →
-# Configure → Restrictions, which is the primary control)
-CLERK_WEBHOOK_SIGNING_SECRET=whsec_...
+# GroundworkOS is invite-only end to end — there is no public sign-up
+# endpoint. This restricts which email domains an admin is allowed to
+# invite (checked in POST /admin/invitations).
 SIGNUP_ALLOWED_EMAIL_DOMAINS=yourcompany.co.uk
 
 # Locks the first-admin bootstrap flow to one email address (see User Roles below)
@@ -133,7 +132,7 @@ pnpm -r --parallel run dev
 
 This starts two independent dev servers: `wrangler dev` for the API (`artifacts/api-server`, defaults to `http://localhost:8787`) and Vite for the frontend (`artifacts/groundworkos`, requires a `PORT` env var — e.g. `PORT=5173`). The frontend's API calls are relative paths (`/api/...`), so the two aren't wired together out of the box the way a single combined process would be — either add a Vite dev proxy forwarding `/api` to the wrangler dev server, or exercise the two independently (e.g. hit the API directly with `curl`/an HTTP client while iterating on it).
 
-Local dev also needs `artifacts/api-server/.dev.vars` set with at least `APP_URL`, `CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` (see Environment Variables above) — `wrangler dev` reads that file automatically and it's already gitignored.
+Local dev also needs `artifacts/api-server/.dev.vars` set with at least `APP_URL` and `BETTER_AUTH_SECRET` (see Environment Variables above) — `wrangler dev` reads that file automatically and it's already gitignored.
 
 ---
 
@@ -160,7 +159,7 @@ Local dev also needs `artifacts/api-server/.dev.vars` set with at least `APP_URL
 
 ## Testing
 
-- `pnpm run test` — unit tests (plain Node/vitest). Each router is mounted stand-alone with a fake D1/Clerk/logger injected via `c.set(...)`, so these never touch a real database.
+- `pnpm run test` — unit tests (plain Node/vitest). Each router is mounted stand-alone with a fake D1/auth/logger injected via `c.set(...)`, so these never touch a real database.
 - `pnpm run test:integration` — `@workspace/api-server`'s integration suite, which runs each router against a **real local D1 database inside an actual Workers runtime** (Miniflare/workerd, via `@cloudflare/vitest-pool-workers` — see `artifacts/api-server/vitest.integration.config.ts`). Migrations from `lib/db/migrations` are applied automatically before the suite runs; no external database or seed step is required. This replaces the project's earlier Postgres-backed integration suite.
 
 Both run in CI (`.github/workflows/ci.yml`) on every push and PR, alongside `pnpm run typecheck` and `pnpm run lint`.
@@ -169,9 +168,9 @@ Both run in CI (`.github/workflows/ci.yml`) on every push and PR, alongside `pnp
 
 ## User Roles
 
-Sign-in is email-only (Clerk's email code / password flows) — no Google or other social/OAuth sign-in provider is enabled. GroundworkOS is invite-only by default; see `CLERK_WEBHOOK_SIGNING_SECRET` / `SIGNUP_ALLOWED_EMAIL_DOMAINS` above and the Clerk Dashboard's Restrictions setting.
+Sign-in is email + password only (Better Auth) — no Google or other social/OAuth sign-in provider is configured. GroundworkOS is invite-only end to end: there is no public sign-up endpoint at all (`emailAndPassword.disableSignUp` in `artifacts/api-server/src/lib/betterAuth.ts`). Every account is created by an admin inviting an email address from **Settings → Users**; the invitee accepts at `/accept-invite?token=...`, which sets their name/password and signs them in. See `SIGNUP_ALLOWED_EMAIL_DOMAINS` above to restrict which domains an admin is allowed to invite.
 
-Roles are stored in Clerk `publicMetadata.role`. Set via the **Settings → Users** page (admin only) or directly in the Clerk dashboard.
+Roles are stored in the `role` column of D1's `user` table (Better Auth's user schema, extended with this project's own field — see `lib/db/src/schema/auth.ts`). Set via the **Settings → Users** page (admin only), or directly with a D1 query if you're locked out.
 
 | Role      | Access                                                              |
 | --------- | --------------------------------------------------------------------- |
@@ -179,14 +178,14 @@ Roles are stored in Clerk `publicMetadata.role`. Set via the **Settings → User
 | `manager` | All operational features: jobs, quotes, invoices, reports, settings |
 | `foreman` | Dashboard, jobs, schedule, timesheets                               |
 
-**First-time setup (bootstrap):** A user with no role set defaults to `foreman`. The very first admin is created automatically: while the workspace has zero admins, the first non-admin who opens **Settings → Users** is promoted to `admin` the moment that page checks `GET /api/admin/bootstrap-status` — no button click required, the page just reloads itself once the promotion lands. `POST /api/admin/bootstrap` still exists and does the same promotion on demand, so a manual "Make me admin" button remains as a fallback for the rare case the automatic path doesn't apply to you (e.g. `BOOTSTRAP_ADMIN_EMAIL` is set to someone else). Either path only succeeds while no admin exists yet; once any account has `role: "admin"`, bootstrap permanently stops working and all further role changes must go through that admin's **Settings → Users** page. Because this now happens automatically instead of behind an explicit click, `BOOTSTRAP_ADMIN_EMAIL` (see above) matters more on any workspace that might be reachable before you've had a chance to sign up — without it, whoever opens Settings → Users first claims admin. If you're locked out entirely (e.g. restoring from a backup with no admins left), you can also set `{ "role": "admin" }` on an account's Public metadata directly in the Clerk dashboard.
+**First-time setup (bootstrap):** A user with no role set defaults to `foreman`. Because sign-up is invite-only, a brand-new deployment has zero users at all — and creating an invitation itself requires an admin — so the very first account has to be seeded directly in D1; see **[DEPLOYMENT.md](./DEPLOYMENT.md)**'s "First login and admin user" step for the exact command. Once that first person can sign in, the automatic bootstrap flow takes over: while the workspace has zero admins, the first non-admin who opens **Settings → Users** is promoted to `admin` the moment that page checks `GET /api/admin/bootstrap-status` — no button click required, the page just reloads itself once the promotion lands. `POST /api/admin/bootstrap` still exists and does the same promotion on demand, so a manual "Make me admin" button remains as a fallback for the rare case the automatic path doesn't apply to you (e.g. `BOOTSTRAP_ADMIN_EMAIL` is set to someone else). Either path only succeeds while no admin exists yet; once any account has `role: "admin"`, bootstrap permanently stops working and all further role changes must go through that admin's **Settings → Users** page. Because this now happens automatically instead of behind an explicit click, `BOOTSTRAP_ADMIN_EMAIL` (see above) matters more on any workspace that might be reachable before you've had a chance to claim it — without it, whoever opens Settings → Users first claims admin. If you're locked out entirely (e.g. restoring from a backup with no admins left), you can also set a user's `role` column to `admin` directly with a D1 query.
 
 ---
 
 ## First Login Checklist
 
-1. Sign up via the app — you'll be assigned `foreman` role by default
-2. Go to **Settings → Users** — since you're the first user, this page auto-promotes you to admin and reloads itself; if you land on a "Make me admin" button instead, click it to bootstrap yourself manually
+1. Seed the very first invitation directly in D1 and accept it at `/accept-invite?token=...` (see [DEPLOYMENT.md](./DEPLOYMENT.md)) — you'll be assigned the invitation's role
+2. Go to **Settings → Users** — if you weren't invited as `admin`, this page auto-promotes the first non-admin visitor and reloads itself; if you land on a "Make me admin" button instead, click it to bootstrap yourself manually
 3. Refresh the app — full sidebar now visible
 4. Go to **Settings** and complete your company details (name, address, VAT number, bank details)
 5. Invite any additional users and set their roles from **Settings → Users**
@@ -220,11 +219,11 @@ GroundworkOS is built around UK Construction Industry Scheme requirements:
 
 A few non-obvious design decisions and gotchas worth knowing before making changes:
 
-**Roles & access control** — Roles live in Clerk `publicMetadata.role` and are read independently on the frontend (`hooks/useRole.ts`) and backend (`lib/auth.ts`, `admin.ts`); any change to role logic must be applied in all places at once, since a mismatch between frontend and backend checks has been a real bug source. A user with no role set defaults to `foreman` (the lowest-privilege role) — the very first admin is instead created via the bootstrap flow (`GET /api/admin/bootstrap-status`, run automatically the first time a non-admin opens Settings → Users on an admin-less workspace, and `POST /api/admin/bootstrap` for the manual "Make me admin" button; see the User Roles section above), a deliberate choice so a stranger reaching a public sign-up page never lands with elevated access just by virtue of an unset role. Any endpoint gated to admin (e.g. the audit trail) must have every consumer of that endpoint gated too, not just the page that owns it — the dashboard's "Recent Activity" panel reads the same audit endpoint as the full Audit Log page.
+**Roles & access control** — Roles live in D1's `user.role` column (Better Auth's user schema, extended with this field — see `lib/db/src/schema/auth.ts`) and are read independently on the frontend (`hooks/useRole.ts`, via Better Auth's `useSession()`) and backend (`lib/auth.ts`, `admin.ts`); any change to role logic must be applied in all places at once, since a mismatch between frontend and backend checks has been a real bug source. A user with no role set defaults to `foreman` (the lowest-privilege role) — the very first admin is instead created via the bootstrap flow (`GET /api/admin/bootstrap-status`, run automatically the first time a non-admin opens Settings → Users on an admin-less workspace, and `POST /api/admin/bootstrap` for the manual "Make me admin" button; see the User Roles section above), a deliberate choice so nobody lands with elevated access just by virtue of an unset role. Any endpoint gated to admin (e.g. the audit trail) must have every consumer of that endpoint gated too, not just the page that owns it — the dashboard's "Recent Activity" panel reads the same audit endpoint as the full Audit Log page.
 
 **API data shape** — The database and API layer use camelCase (Drizzle convention), while the frontend's `types.ts` uses snake_case throughout. The bridge between them lives in `artifacts/groundworkos/src/lib/apiTransforms.ts`, called from `artifacts/groundworkos/src/store/DataLoader.tsx`. Any new field added to the schema needs a matching entry in the transform layer or it won't reach the frontend.
 
-**Data integrity rule** — Never persist a client-supplied id as a database primary key on create/edit endpoints; generate ids server-side instead (`generateId()` in `lib/generateId.ts`, `crypto.randomUUID()`). A shared default-form object that baked in a single client-generated id at module load time once caused every _second_ record of a given type to silently fail to save (a primary-key collision on the second insert). Client-side temporary ids should only ever be used as React keys, never sent to the database as the row's identity.
+**Data integrity rule** — Never persist a client-supplied id as a database primary key on create/edit endpoints; generate ids server-side instead (`generateId()` in `artifacts/api-server/src/lib/generateId.ts`, `crypto.randomUUID()`). A shared default-form object that baked in a single client-generated id at module load time once caused every _second_ record of a given type to silently fail to save (a primary-key collision on the second insert). Client-side temporary ids should only ever be used as React keys, never sent to the database as the row's identity.
 
 **UI loading state** — Pages read from a shared app-wide store that starts empty; a single loading gate in the main layout (driven by the core list queries: clients/jobs/quotes/invoices) blocks rendering until the first load completes, so no page can flash a false "no results" state. If a new top-level dataset becomes something a page depends on for its first paint, add it to that gate's condition.
 

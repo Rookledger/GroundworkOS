@@ -23,7 +23,9 @@ the frontend bundle by Vite at build time).
   run it as `pnpm exec wrangler ...` from that directory (or `pnpm --filter
 @workspace/api-server exec wrangler ...` from the repo root). Run `wrangler
   login` once to authenticate it against your Cloudflare account.
-- A Clerk account (clerk.com) for authentication — free to start.
+- A `BETTER_AUTH_SECRET` value (e.g. `openssl rand -base64 32`) — Better Auth
+  runs on the Worker itself, so there's no separate third-party auth account
+  to sign up for.
 - Optional: a custom domain on Cloudflare, if you don't want to use the
   default `*.pages.dev` / `*.workers.dev` domains.
 
@@ -83,14 +85,16 @@ from seed data.
 block (committed to the repo, or overridden per environment under `env.*`):
 
 - `APP_URL` — the frontend's origin, e.g. `https://app.yourdomain.com`.
-  Used for CORS and the Content-Security-Policy.
-- `CLERK_PUBLISHABLE_KEY=pk_live_...`
-- `BOOTSTRAP_ADMIN_EMAIL` — optional, see Step 6.
-- `SIGNUP_ALLOWED_EMAIL_DOMAINS` — optional.
+  Used for CORS, the Content-Security-Policy, and Better Auth's
+  `baseURL`/`trustedOrigins`.
+- `BOOTSTRAP_ADMIN_EMAIL` — optional, see Step 7.
+- `SIGNUP_ALLOWED_EMAIL_DOMAINS` — optional. GroundworkOS is invite-only end
+  to end (no public sign-up endpoint), so this restricts which email domains
+  an admin is allowed to invite from Settings → Users.
 - `XERO_CLIENT_ID` / `XERO_REDIRECT_URI` (and the `QUICKBOOKS_*`, `SAGE_*`,
   `FREEAGENT_*` equivalents) — optional, only set the ones for providers
   this client actually uses. Redirect URIs must point at your API's domain,
-  e.g. `https://app.yourdomain.com/api/xero/callback` (see Step 7 for why
+  e.g. `https://app.yourdomain.com/api/xero/callback` (see Step 6 for why
   that's the same domain as the frontend, not the Worker's own
   `*.workers.dev` domain).
 
@@ -98,39 +102,36 @@ block (committed to the repo, or overridden per environment under `env.*`):
 `artifacts/api-server`:
 
 ```bash
-pnpm exec wrangler secret put CLERK_SECRET_KEY
-pnpm exec wrangler secret put CLERK_WEBHOOK_SIGNING_SECRET   # optional
+pnpm exec wrangler secret put BETTER_AUTH_SECRET
 pnpm exec wrangler secret put RESEND_API_KEY                 # optional
 pnpm exec wrangler secret put XERO_CLIENT_SECRET              # optional, + QUICKBOOKS_/SAGE_/FREEAGENT_ equivalents
 ```
 
-`APP_URL`, `CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` are the only
-strictly required ones — the Worker checks these on every request
-(`lib/validateEnv.ts`) and returns a 500 "Server misconfigured" (logging the
-full list of problems) if any are missing or malformed, rather than letting
-whichever route happens to read them first fail unhelpfully.
+`APP_URL` and `BETTER_AUTH_SECRET` are the only strictly required ones — the
+Worker checks these on every request (`src/lib/validateEnv.ts`) and returns a
+500 "Server misconfigured" (logging the full list of problems) if either is
+missing or malformed, rather than letting whichever route happens to read
+them first fail unhelpfully. `BETTER_AUTH_SECRET` must be at least 32
+characters (Better Auth uses it for session token signing/encryption) — the
+same check rejects a shorter value.
 
-Auth (from dashboard.clerk.com) — sign-in is email-only; no Google or other
-social/OAuth sign-in provider is configured.
+Auth is Better Auth, running on the Worker itself — sign-in is email +
+password only; no Google or other social/OAuth sign-in provider is
+configured.
 
 ### Frontend build variables (Cloudflare Pages, not the Worker)
 
-Set these as **Cloudflare Pages build environment variables** for the
-`artifacts/groundworkos` project — Vite inlines them into the built bundle,
-so the Worker never sees them and setting them as Worker vars/secrets
-instead does nothing for the frontend:
+Set this as a **Cloudflare Pages build environment variable** for the
+`artifacts/groundworkos` project — Vite reads it at build time, so the
+Worker never sees it and setting it as a Worker var/secret instead does
+nothing for the frontend:
 
-- `VITE_CLERK_PUBLISHABLE_KEY=pk_live_...` — **must be the exact same
-  value** as `CLERK_PUBLISHABLE_KEY` above. Nothing automatically enforces
-  this: the frontend and the API server each read their own copy from a
-  different variable, and the old boot-time mismatch check (comparing a
-  `clerk-manifest.json` written alongside the built frontend against the
-  server's own key) was removed when the two became separate deployments
-  with no shared filesystem to read that manifest from. If they ever
-  diverge, the browser's Content-Security-Policy blocks Clerk's script
-  entirely and the app renders a blank page with only a console error to
-  explain why — double-check both values match before every deploy.
 - `BASE_PATH=/` — required at build time by the frontend's Vite config.
+
+Better Auth runs same-origin on the Worker (mounted at `/api/auth/*`), so
+unlike the project's earlier Clerk setup, the frontend needs no publishable
+key or other auth build variable of its own — there's nothing here to keep
+in sync with a Worker secret.
 
 ## Step 4 — Deploy the Worker
 
@@ -152,8 +153,7 @@ with:
 - Build command: `pnpm install --frozen-lockfile && pnpm --filter
 @workspace/groundworkos run build`
 - Build output directory: `artifacts/groundworkos/dist/public`
-- Build environment variables: `VITE_CLERK_PUBLISHABLE_KEY` and `BASE_PATH`
-  (see Step 3).
+- Build environment variables: `BASE_PATH` (see Step 3).
 
 Pushing to the connected branch triggers an automatic build and deploy.
 
@@ -179,45 +179,62 @@ API calls simply won't reach the Worker in the first place.
 
 ## Step 7 — First login and admin user
 
-New accounts default to the `foreman` role (lowest privilege) — nobody gets
-`admin` just by having an unset role. The very first admin is instead
-granted through a bootstrap flow: the first signed-in, non-admin user to
-open **Settings → Users** on an admin-less workspace is promoted to admin
-automatically (that page calls `GET /api/admin/bootstrap-status`, which
-performs the promotion itself rather than only reporting on it, then
-reloads), and a "Make me admin" button (`POST /api/admin/bootstrap`)
-remains as a manual fallback for the rare case the automatic path doesn't
-apply to you. Either way, that means whoever reaches your app and opens
-Settings → Users first — not necessarily you — can also bootstrap first,
-automatically, with no click required, so lock this down **before** anyone
-else can reach the app:
+GroundworkOS is invite-only end to end — `emailAndPassword.disableSignUp` in
+`artifacts/api-server/src/lib/betterAuth.ts` means there is no public
+sign-up endpoint at all. Every account is normally created by an admin
+inviting an email from **Settings → Users** (`POST /api/admin/invitations`),
+which the invitee accepts at `/accept-invite?token=...`. On a brand-new
+deployment that's a chicken-and-egg problem — there are zero users, and
+creating an invitation itself requires an admin — so the very first account
+has to be seeded directly in D1:
 
-1. **Prerequisite — before your domain is publicly reachable**, go to the
-   Clerk Dashboard → **Configure → Restrictions** and set sign-up mode to
-   **Restricted** (invite-only). Do this first: an open-signup instance
-   sitting on a live public URL is a land grab, since bootstrap grants admin
-   automatically to whichever account opens Settings → Users first — no
-   click needed — and there is no way to tell that account apart from a
-   stranger's after the fact. Optionally, also set `BOOTSTRAP_ADMIN_EMAIL`
-   (Step 3) to lock the bootstrap endpoint itself to your own email address
-   as a second layer of defense — left unset, the server logs a warning on
-   every bootstrap attempt that it's open to whoever signs in first.
-2. Visit your domain and sign up through the app.
-3. Go to **Settings → Users**. You should land there already promoted:
-   since the workspace had no admin yet, opening this page auto-promoted
-   you the moment it checked bootstrap status, and it reloads itself once
-   that happens. If for some reason you instead see a "Make me admin"
-   button in place of the normal admin-only view, click it — this calls
-   `POST /api/admin/bootstrap`, which sets your own Clerk
-   `publicMetadata.role` to `admin`, but only while no admin exists yet (and
-   only for the `BOOTSTRAP_ADMIN_EMAIL` address, if you set one). Once
-   you're the admin, both bootstrap paths stop working for everyone else,
-   and further role changes go through the same **Settings → Users** page.
-4. The full sidebar should now be visible.
+1. Insert an invitation row for yourself, with `role` set straight to
+   `admin` (this skips the bootstrap flow below entirely). Generate a random
+   token however you like (e.g. `openssl rand -hex 16`) and substitute it for
+   the placeholder below:
+
+   ```bash
+   pnpm exec wrangler d1 execute groundworkos --remote --command "
+     INSERT INTO invitations (id, email, role, token, created_at, expires_at)
+     VALUES ('bootstrap-invite', 'you@yourcompany.co.uk', 'admin', 'REPLACE_WITH_A_RANDOM_TOKEN', unixepoch() * 1000, (unixepoch() + 604800) * 1000);
+   "
+   ```
+
+   (from `artifacts/api-server`; `unixepoch() + 604800` gives the invite a
+   7-day expiry, matching `INVITATION_TTL_MS` in `routes/admin.ts`.)
+2. Visit `https://app.yourdomain.com/accept-invite?token=REPLACE_WITH_A_RANDOM_TOKEN`
+   and set your name and password. This creates your Better Auth account,
+   stamps the `admin` role onto it, and signs you in.
+3. Go to **Settings → Users** — the full admin view should already be
+   visible, since your account was invited straight in as `admin`.
+
+Alternatively, you can seed the first invitation with a lower role (e.g.
+`foreman`) and rely on the automatic bootstrap flow instead: the first
+signed-in, non-admin user to open **Settings → Users** on an admin-less
+workspace is promoted to admin automatically (that page calls
+`GET /api/admin/bootstrap-status`, which performs the promotion itself
+rather than only reporting on it, then reloads), and a "Make me admin"
+button (`POST /api/admin/bootstrap`) remains as a manual fallback for the
+rare case the automatic path doesn't apply to you. Either way, that means
+whoever accepts an invitation and opens Settings → Users first — not
+necessarily you — can also bootstrap first, automatically, with no click
+required. If you go this route, set `BOOTSTRAP_ADMIN_EMAIL` (Step 3) to your
+own email address first, so bootstrap is restricted to you even if someone
+else's invitation gets accepted before yours — left unset, the server logs a
+warning on every bootstrap attempt that it's open to whoever gets there
+first. Once any account has `role: "admin"`, both bootstrap paths stop
+working for everyone else, and further role changes go through the same
+**Settings → Users** page.
 
 Fallback: if you're ever locked out with no admin account at all (e.g.
-restoring from a backup), you can set `{ "role": "admin" }` on an account's
-Public metadata directly in the Clerk dashboard instead.
+restoring from a backup), you can set a user's `role` column to `admin`
+directly with `wrangler d1 execute` instead:
+
+```bash
+pnpm exec wrangler d1 execute groundworkos --remote --command "
+  UPDATE user SET role = 'admin' WHERE email = 'you@yourcompany.co.uk';
+"
+```
 
 ## Updating the app later
 
@@ -243,18 +260,18 @@ renews HTTPS certificates automatically. If you change domains, update
 
 ## Troubleshooting
 
-- **Frontend build fails**: check that `BASE_PATH` and
-  `VITE_CLERK_PUBLISHABLE_KEY` are set as Cloudflare Pages build
-  environment variables — Vite's config throws during `build` if either is
-  missing.
+- **Frontend build fails or serves from the wrong path**: check that
+  `BASE_PATH` is set as a Cloudflare Pages build environment variable —
+  Vite's config logs a warning and falls back to `/` if it's missing.
 - **App loads but every API call fails / blank page after sign-in**: the
   `/api/*` Workers Route (Step 6) probably isn't bound, so those relative
   `fetch("/api/...")` calls are hitting Pages instead of the Worker. Check
   Workers Routes in the Cloudflare dashboard for the zone.
-- **Every request returns "Server misconfigured" (500)**: `APP_URL`,
-  `CLERK_PUBLISHABLE_KEY` or `CLERK_SECRET_KEY` is missing or malformed —
-  check `wrangler.jsonc` vars and the secrets set in Step 3, and check the
-  Worker's logs (`wrangler tail`) for the specific problem(s) logged.
+- **Every request returns "Server misconfigured" (500)**: `APP_URL` or
+  `BETTER_AUTH_SECRET` is missing or malformed (the latter must be at least
+  32 characters) — check `wrangler.jsonc` vars and the secrets set in Step 3,
+  and check the Worker's logs (`wrangler tail`) for the specific problem(s)
+  logged.
 - **D1 errors mentioning a missing table**: migrations haven't been applied
   to the remote database yet — re-run Step 2's `wrangler d1 migrations
 apply groundworkos --remote`.
