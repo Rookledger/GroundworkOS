@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { getAuth } from "@hono/clerk-auth";
 import healthRouter from "./health";
 import storageRouter from "./storage";
 import clientsRouter from "./clients";
@@ -24,7 +23,6 @@ import timesheetsRouter from "./timesheets";
 import purchaseOrdersRouter from "./purchase_orders";
 import emailRouter from "./email";
 import auditRouter from "./audit";
-import clerkWebhookRouter from "./clerk_webhook";
 import type { AppEnv } from "../types";
 
 const router = new Hono<AppEnv>();
@@ -37,29 +35,31 @@ const PUBLIC_PATHS = [
   "/sage/callback",
   "/freeagent/callback",
   "/portal",
-  // Server-to-server from Clerk, not a signed-in user - authenticated by
-  // svix signature verification inside the handler instead of a session.
-  "/webhooks/clerk",
+  // The person accepting an invitation doesn't have a session yet - see
+  // routes/admin.ts's POST /invitations/accept.
+  "/invitations/accept",
 ];
 
 /**
  * `router` is mounted at "/api" in app.ts (`app.route("/api", router)`), so
  * `c.req.path` here still includes that prefix - strip it before comparing
- * against PUBLIC_PATHS, which (like the old Express version's `req.path`,
- * already relative to where the router was mounted) are written relative to
- * "/api".
+ * against PUBLIC_PATHS, which are written relative to "/api". Better Auth's
+ * own endpoints ("/api/auth/*") are mounted directly on `app` in app.ts,
+ * before this router, so they never reach this guard at all.
+ *
+ * `userId`/`_role` are already set by app.ts's session middleware whenever
+ * a valid Better Auth session exists - this just rejects the request when
+ * neither is set, rather than doing its own lookup.
  */
 router.use(async (c, next) => {
   const path = c.req.path.replace(/^\/api/, "") || "/";
   if (PUBLIC_PATHS.some((p) => path === p || path.startsWith(p + "/"))) {
     return next();
   }
-  const auth = getAuth(c);
-  const userId = auth?.sessionClaims?.userId ?? auth?.userId;
+  const userId = c.get("userId");
   if (!userId) {
     return c.json({ error: "Unauthorized" }, 401);
   }
-  c.set("userId", userId as string);
   await next();
 });
 
@@ -87,6 +87,5 @@ router.route("/", timesheetsRouter);
 router.route("/", purchaseOrdersRouter);
 router.route("/", emailRouter);
 router.route("/", auditRouter);
-router.route("/", clerkWebhookRouter);
 
 export default router;

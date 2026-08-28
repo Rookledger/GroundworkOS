@@ -1,36 +1,19 @@
 import { Hono } from "hono";
 import type { Context } from "hono";
-import { getAuth } from "@hono/clerk-auth";
+import { eq } from "drizzle-orm";
+import { userTable, invitationsTable } from "@workspace/db";
 import { isRole, resolveRole } from "@workspace/shared-role";
+import { emailDomainAllowed, parseAllowedDomains } from "../lib/signupPolicy.js";
+import { createAuth } from "../lib/betterAuth.js";
 import type { AppEnv } from "../types";
 
 const router = new Hono<AppEnv>();
 
 // --- Shared helpers ---
 
-/** Typed accessor for the Clerk client @hono/clerk-auth attaches to the context. */
-function getClerk(c: Context<AppEnv>) {
-  return c.get("clerk");
-}
-
-/**
- * The Clerk User shape, derived structurally from whatever `getClerk(c)`
- * actually returns rather than imported directly from the `@clerk/backend`
- * package. @hono/clerk-auth pins its own (older) `@clerk/backend` internally
- * for the `ClerkClient` type it attaches to the context, which is a
- * different - structurally incompatible for strict assignment purposes -
- * `User` type than the one this package's own `@clerk/backend` dependency
- * would resolve to. Deriving it from the actual client return type keeps
- * this file correct regardless of which version ends up satisfying either
- * import at any given time.
- */
-type ClerkUser = Awaited<
-  ReturnType<ReturnType<typeof getClerk>["users"]["getUserList"]>
->["data"][number];
-
-/** Reads the authenticated Clerk user id off the request, or null if signed out. */
+/** Reads the authenticated user id off the request, or null if signed out. */
 function getUserId(c: Context<AppEnv>): string | null {
-  return c.get("userId") ?? getAuth(c)?.userId ?? null;
+  return c.get("userId") ?? null;
 }
 
 /**
@@ -38,13 +21,11 @@ function getUserId(c: Context<AppEnv>): string | null {
  * POST /admin/bootstrap grants admin to whichever signed-in user calls it
  * first on an admin-less workspace - fine as a one-time setup step on a
  * workspace nobody else can reach yet, but a land grab if the service is
- * already publicly reachable with Clerk sign-up Restrictions still open:
- * whoever signs up first can also bootstrap first and permanently own the
- * instance. Setting BOOTSTRAP_ADMIN_EMAIL restricts that first grab to a
- * single known email address, matched case-insensitively against the
- * caller's primary Clerk email address. See DEPLOYMENT.md Step 7 for the
- * recommended primary control: setting Clerk Dashboard -> Restrictions to
- * "Restricted" BEFORE the service is publicly reachable at all.
+ * already publicly reachable: whoever accepts an invitation first (or, on a
+ * misconfigured deployment, whoever otherwise gets a session first) can also
+ * bootstrap first and permanently own the instance. Setting
+ * BOOTSTRAP_ADMIN_EMAIL restricts that first grab to a single known email
+ * address, matched case-insensitively against the caller's own email.
  *
  * Unlike the original Express version, this can't be read and warned about
  * once at process startup - Workers have no module-level env, only
@@ -56,109 +37,65 @@ function bootstrapAdminEmail(c: Context<AppEnv>): string | null {
 }
 
 /**
- * Clerk's max page size for getUserList. adminExists() and findAdmins()
- * below page through the full user list in chunks of this size rather than
- * fetching a single page, so a workspace can grow past this many users
- * without the admin check silently only looking at the first page.
- */
-const USER_LIST_PAGE_SIZE = 500;
-
-/**
- * Pages through every Clerk user, calling `onUser` for each one in
- * creation order. Stops as soon as `onUser` returns true for some user
- * (without fetching further pages); otherwise pages until Clerk's
- * `totalCount` is exhausted. This is the only place that calls
- * getUserList for admin-detection purposes - adminExists() and
- * findAdmins() are both thin wrappers around it, so there is exactly one
- * place that has to get pagination right.
- */
-async function forEachUser(
-  c: Context<AppEnv>,
-  onUser: (user: ClerkUser) => boolean | void,
-): Promise<void> {
-  let offset = 0;
-  for (;;) {
-    const response = await getClerk(c).users.getUserList({
-      limit: USER_LIST_PAGE_SIZE,
-      offset,
-    });
-    for (const user of response.data) {
-      if (onUser(user) === true) return;
-    }
-    offset += response.data.length;
-    // Defend against an infinite loop if Clerk ever returns an empty page
-    // with a stale/incorrect totalCount instead of a genuinely exhausted list.
-    if (response.data.length === 0 || offset >= response.totalCount) return;
-  }
-}
-
-/**
  * True if the workspace already has an effective admin.
  *
  * Role resolution across the app treats a user with NO explicit role as a
  * foreman (see getUserRole in lib/auth.ts), so a brand-new signup is never
  * counted as an admin here. Only a user with an explicit "admin" role in
- * Clerk publicMetadata counts. This is what lets the bootstrap flow below
- * unlock exactly once, on a genuinely admin-less workspace, and stay locked
- * afterwards.
- *
- * Pages through the *entire* user list (see forEachUser) rather than a
- * single page - a workspace with more than USER_LIST_PAGE_SIZE users used
- * to be able to have its one and only admin fall outside a single 500-user
- * page, which made this function return false and silently re-open
- * bootstrap on a live workspace. Still cheap in the common case: it stops
- * at the first admin found instead of always walking every user.
+ * the `user.role` D1 column counts. This is what lets the bootstrap flow
+ * below unlock exactly once, on a genuinely admin-less workspace, and stay
+ * locked afterwards.
  */
 export async function adminExists(c: Context<AppEnv>): Promise<boolean> {
-  let found = false;
-  await forEachUser(c, (user) => {
-    if (resolveRole(user.publicMetadata?.role) === "admin") {
-      found = true;
-      return true;
-    }
-    return false;
-  });
-  return found;
+  const [row] = await c
+    .get("db")
+    .select({ id: userTable.id })
+    .from(userTable)
+    .where(eq(userTable.role, "admin"))
+    .limit(1);
+  return !!row;
 }
 
 /**
  * Every user currently holding an explicit "admin" role, with just enough
- * detail (id, updatedAt) to break a tie deterministically. Unlike
- * adminExists(), this cannot stop early - it needs the *whole* set of
- * admins to detect a bootstrap race (see the TOCTOU comment in POST
- * /admin/bootstrap below), so it always pages through every user.
+ * detail (id, updatedAt) to break a tie deterministically. Used by the
+ * TOCTOU guard in attemptBootstrap() below.
  */
 async function findAdmins(
   c: Context<AppEnv>,
-): Promise<Pick<ClerkUser, "id" | "updatedAt">[]> {
-  const admins: Pick<ClerkUser, "id" | "updatedAt">[] = [];
-  await forEachUser(c, (user) => {
-    if (resolveRole(user.publicMetadata?.role) === "admin") {
-      admins.push({ id: user.id, updatedAt: user.updatedAt });
-    }
-    return false;
-  });
-  return admins;
+): Promise<Pick<typeof userTable.$inferSelect, "id" | "updatedAt">[]> {
+  return c
+    .get("db")
+    .select({ id: userTable.id, updatedAt: userTable.updatedAt })
+    .from(userTable)
+    .where(eq(userTable.role, "admin"));
 }
 
 /**
  * Guards a route to admins only. Returns null (having already written the
  * 401/403 response) if the caller isn't an admin, so the route handler can
- * `const userId = await requireAdmin(c); if (!userId) return res;` — but
- * since Hono handlers must return a Response, this instead returns the
- * Response to short-circuit with, or null to continue.
+ * `const denied = await requireAdmin(c); if (denied) return denied;`.
  */
-async function requireAdmin(
-  c: Context<AppEnv>,
-): Promise<Response | null> {
+async function requireAdmin(c: Context<AppEnv>): Promise<Response | null> {
   const userId = getUserId(c);
   if (!userId) {
     return c.json({ error: "Unauthorized" }, 401);
   }
-  const user = await getClerk(c).users.getUser(userId);
-  // Users with no explicit role default to foreman; only an explicit
-  // "admin" role passes here.
-  if (resolveRole(user.publicMetadata?.role) !== "admin") {
+  // The session middleware (app.ts) already sets `_role` alongside
+  // `userId` for every request with a valid session, so this is normally
+  // just a cache read - the DB fallback only matters for a route that
+  // somehow reaches here without going through that middleware.
+  let role = c.get("_role");
+  if (!role) {
+    const [row] = await c
+      .get("db")
+      .select({ role: userTable.role })
+      .from(userTable)
+      .where(eq(userTable.id, userId))
+      .limit(1);
+    role = resolveRole(row?.role);
+  }
+  if (role !== "admin") {
     return c.json({ error: "Forbidden: admin role required" }, 403);
   }
   return null;
@@ -170,18 +107,24 @@ router.get("/admin/users", async (c) => {
   const denied = await requireAdmin(c);
   if (denied) return denied;
   try {
-    const response = await getClerk(c).users.getUserList({ limit: 100 });
-    const users = response.data.map((u) => ({
+    const rows = await c
+      .get("db")
+      .select({
+        id: userTable.id,
+        name: userTable.name,
+        email: userTable.email,
+        role: userTable.role,
+        image: userTable.image,
+        createdAt: userTable.createdAt,
+      })
+      .from(userTable);
+    const users = rows.map((u) => ({
       id: u.id,
-      firstName: u.firstName,
-      lastName: u.lastName,
-      email: u.emailAddresses[0]?.emailAddress ?? null,
-      role: resolveRole(u.publicMetadata?.role),
-      imageUrl: u.imageUrl,
+      name: u.name,
+      email: u.email,
+      role: resolveRole(u.role),
+      image: u.image,
       createdAt: new Date(u.createdAt).toISOString(),
-      lastSignInAt: u.lastSignInAt
-        ? new Date(u.lastSignInAt).toISOString()
-        : null,
     }));
     return c.json(users);
   } catch (err) {
@@ -200,9 +143,11 @@ router.patch("/admin/users/:id/role", async (c) => {
     return c.json({ error: "Invalid role" }, 400);
   }
   try {
-    await getClerk(c).users.updateUserMetadata(c.req.param("id"), {
-      publicMetadata: { role },
-    });
+    await c
+      .get("db")
+      .update(userTable)
+      .set({ role, updatedAt: new Date() })
+      .where(eq(userTable.id, c.req.param("id")));
     return c.json({ ok: true });
   } catch (err) {
     return c.json(
@@ -214,35 +159,29 @@ router.patch("/admin/users/:id/role", async (c) => {
 
 // --- Invitations (admin only) ---
 //
-// GroundworkOS is a single-company, invite-only instance (see Clerk
-// Dashboard -> Restrictions, where public sign-up is disabled). This is the
-// in-app way for an admin to actually invite a teammate instead of using the
-// Clerk Dashboard directly. The invited role is stamped into the
-// invitation's publicMetadata, which Clerk copies onto the user's own
-// publicMetadata once they accept and sign up - so a newly-invited teammate
-// already has the right role from their very first sign-in.
+// GroundworkOS is a single-company, invite-only instance: the only way an
+// account is ever created is via an invitation issued here and accepted
+// through POST /invitations/accept below. There is no public sign-up
+// surface at all (see lib/betterAuth.ts's emailAndPassword.disableSignUp).
+
+const INVITATION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 router.get("/admin/invitations", async (c) => {
   const denied = await requireAdmin(c);
   if (denied) return denied;
   try {
-    // This @clerk/backend version's getInvitationList has no orderBy
-    // param, so sort client-side to keep the same newest-first ordering.
-    const response = await getClerk(c).invitations.getInvitationList({
-      status: "pending",
-    });
-    response.data.sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-    );
-    const invitations = response.data.map((inv) => ({
-      id: inv.id,
-      email: inv.emailAddress,
-      role: resolveRole(
-        (inv.publicMetadata as Record<string, unknown> | null)?.role,
-      ),
-      createdAt: new Date(inv.createdAt).toISOString(),
-    }));
-    return c.json(invitations);
+    const rows = await c.get("db").select().from(invitationsTable);
+    const now = Date.now();
+    const pending = rows
+      .filter((inv) => !inv.acceptedAt && inv.expiresAt.getTime() > now)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .map((inv) => ({
+        id: inv.id,
+        email: inv.email,
+        role: resolveRole(inv.role),
+        createdAt: inv.createdAt.toISOString(),
+      }));
+    return c.json(pending);
   } catch (err) {
     return c.json(
       {
@@ -264,12 +203,71 @@ router.post("/admin/invitations", async (c) => {
   if (!isRole(role)) {
     return c.json({ error: "Invalid role" }, 400);
   }
+
+  const allowedDomains = parseAllowedDomains(c.env.SIGNUP_ALLOWED_EMAIL_DOMAINS);
+  if (!emailDomainAllowed(email, allowedDomains)) {
+    return c.json(
+      { error: "This email domain is not allowed to be invited" },
+      400,
+    );
+  }
+
   try {
-    await getClerk(c).invitations.createInvitation({
-      emailAddress: email,
-      publicMetadata: { role },
-      notify: true,
-    });
+    const invitedBy = getUserId(c);
+    const now = new Date();
+    const invitation = {
+      id: crypto.randomUUID(),
+      email,
+      role,
+      token: crypto.randomUUID(),
+      invitedBy,
+      createdAt: now,
+      expiresAt: new Date(now.getTime() + INVITATION_TTL_MS),
+      acceptedAt: null,
+    };
+    await c.get("db").insert(invitationsTable).values(invitation);
+
+    const resendApiKey = c.env.RESEND_API_KEY;
+    if (resendApiKey) {
+      try {
+        const { Resend } = await import("resend");
+        const resend = new Resend(resendApiKey);
+        const acceptUrl = `${c.env.APP_URL ?? ""}/accept-invite?token=${invitation.token}`;
+        await resend.emails.send({
+          from: "onboarding@resend.dev",
+          to: email,
+          subject: "You're invited to GroundworkOS",
+          html: `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"/></head>
+<body style="font-family:'Inter',Arial,sans-serif;background:#f0ede8;margin:0;padding:24px;">
+  <div style="max-width:480px;margin:0 auto;background:#fafaf8;border-radius:12px;overflow:hidden;border:1px solid #d9d4ce;">
+    <div style="background:#1b5e78;padding:24px 28px;">
+      <div style="font-family:'Space Grotesk',Arial,sans-serif;font-weight:700;font-size:20px;color:#ffffff;">GroundworkOS</div>
+    </div>
+    <div style="padding:24px 28px;">
+      <p style="color:#181410;font-size:15px;line-height:1.6;">You've been invited to join GroundworkOS as a <strong>${role}</strong>.</p>
+      <p style="margin-top:20px;">
+        <a href="${acceptUrl}" style="display:inline-block;padding:10px 20px;border-radius:6px;background:#1b5e78;color:#ffffff;text-decoration:none;font-family:'Space Grotesk',Arial,sans-serif;font-weight:600;">Accept invitation</a>
+      </p>
+      <p style="color:#7a7469;font-size:12px;margin-top:20px;">This invitation expires in 7 days. If you weren't expecting this, you can ignore this email.</p>
+    </div>
+  </div>
+</body>
+</html>`,
+        });
+      } catch (emailErr) {
+        // The invitation row is still created even if the email fails to
+        // send - an admin can see it's pending and share the accept link
+        // manually. Don't fail the whole request over a transient email
+        // provider error.
+        c.get("logger").warn(
+          { err: emailErr },
+          "Failed to send invitation email",
+        );
+      }
+    }
+
     return c.json({ ok: true });
   } catch (err) {
     return c.json(
@@ -285,7 +283,10 @@ router.delete("/admin/invitations/:id", async (c) => {
   const denied = await requireAdmin(c);
   if (denied) return denied;
   try {
-    await getClerk(c).invitations.revokeInvitation(c.req.param("id"));
+    await c
+      .get("db")
+      .delete(invitationsTable)
+      .where(eq(invitationsTable.id, c.req.param("id")));
     return c.json({ ok: true });
   } catch (err) {
     return c.json(
@@ -298,26 +299,113 @@ router.delete("/admin/invitations/:id", async (c) => {
   }
 });
 
+/**
+ * Public (no session required - the person accepting doesn't have one yet).
+ * Looks up the invitation by token, creates the Better Auth user
+ * server-side (via auth.api.signUpEmail, which handles password hashing
+ * internally the same way it would for the disabled public sign-up
+ * endpoint), then stamps the invited role directly with a follow-up Drizzle
+ * update - the `role` additionalField's `input: false` (see
+ * lib/betterAuth.ts) blocks a public caller from setting their own role
+ * through signUpEmail's body, but this trusted server-side path is the one
+ * place that's supposed to grant a specific invited role.
+ */
+router.post("/invitations/accept", async (c) => {
+  const { token, name, password } = await c.req.json();
+  if (
+    typeof token !== "string" ||
+    typeof name !== "string" ||
+    typeof password !== "string" ||
+    !name.trim() ||
+    !password
+  ) {
+    return c.json({ error: "token, name and password are required" }, 400);
+  }
+
+  const db = c.get("db");
+  const [invitation] = await db
+    .select()
+    .from(invitationsTable)
+    .where(eq(invitationsTable.token, token));
+
+  if (!invitation) {
+    return c.json({ error: "Invitation not found" }, 404);
+  }
+  if (invitation.acceptedAt) {
+    return c.json({ error: "This invitation has already been accepted" }, 400);
+  }
+  if (invitation.expiresAt.getTime() < Date.now()) {
+    return c.json({ error: "This invitation has expired" }, 400);
+  }
+  if (!isRole(invitation.role)) {
+    return c.json({ error: "Invitation has an invalid role" }, 500);
+  }
+
+  try {
+    const auth = createAuth(c.env);
+
+    // Server-side calls into Better Auth's API throw on failure (an
+    // APIError, with `.message`/`.status`) rather than returning an error
+    // object, hence the try/catch around the whole flow.
+    const signUpResult = await auth.api.signUpEmail({
+      body: { email: invitation.email, password, name: name.trim() },
+    });
+    const userId = signUpResult.user?.id;
+    if (!userId) {
+      return c.json({ error: "Failed to create account" }, 500);
+    }
+
+    await db
+      .update(userTable)
+      .set({ role: invitation.role, updatedAt: new Date() })
+      .where(eq(userTable.id, userId));
+
+    await db
+      .update(invitationsTable)
+      .set({ acceptedAt: new Date() })
+      .where(eq(invitationsTable.id, invitation.id));
+
+    // Sign the caller in fresh (rather than trying to reuse whatever
+    // session signUpEmail itself may or may not have started) now that the
+    // invited role is already stamped onto the user row, so the resulting
+    // session's own `role` field is correct from the very first response.
+    // `asResponse: true` returns a real Fetch Response with the session's
+    // `Set-Cookie` header already on it, which is returned to the caller
+    // as-is so they're signed in immediately without a second round trip.
+    const signInResponse = await auth.api.signInEmail({
+      body: { email: invitation.email, password },
+      asResponse: true,
+    });
+    return signInResponse;
+  } catch (err) {
+    return c.json(
+      {
+        error:
+          err instanceof Error ? err.message : "Failed to accept invitation",
+      },
+      500,
+    );
+  }
+});
+
 // --- First-time admin bootstrap ---
 //
 // Unset roles default to foreman (the lowest privilege), so nobody - not
-// even the very first person to sign up - ever gets admin just by being
-// unset. That means a brand-new deployment starts with zero admins, and the
-// "admin only" guard above would lock everyone out of user management
-// forever with no way to ever grant the first admin role. attemptBootstrap()
-// below is the one place that grants it: it promotes the *calling* user to
-// admin, but only while the workspace still has none. Once any user has an
-// explicit "admin" role, bootstrap permanently stops working (adminExists()
-// above returns true) and role changes must go through the admin-only
-// endpoint above. This does not rely on, or interact with, the unset-role
-// default in any way.
+// even the very first person to accept an invitation - ever gets admin just
+// by being unset. That means a brand-new deployment starts with zero
+// admins, and the "admin only" guard above would lock everyone out of user
+// management forever with no way to ever grant the first admin role.
+// attemptBootstrap() below is the one place that grants it: it promotes the
+// *calling* user to admin, but only while the workspace still has none.
+// Once any user has an explicit "admin" role, bootstrap permanently stops
+// working (adminExists() above returns true) and role changes must go
+// through the admin-only endpoint above. This does not rely on, or
+// interact with, the unset-role default in any way.
 //
 // Two entry points call it:
 // - GET /admin/bootstrap-status runs it automatically, best-effort, for
 //   any signed-in non-admin caller on an admin-less workspace - see the
-//   comment on that route below. UsersPage.tsx calls this route as soon as
-//   a non-admin opens Settings -> Users, so in practice this promotes the
-//   first person to land on that page, with no separate button click.
+//   comment on that route below.
 // - POST /admin/bootstrap runs it on explicit request, so the frontend's
 //   "Make me admin" button (and anyone scripting against the API directly)
 //   keeps working exactly as before, and callers get a real HTTP status
@@ -326,23 +414,15 @@ router.delete("/admin/invitations/:id", async (c) => {
 // Two things this can't fix on its own, and how they're handled:
 //
 // - Land grab: on an admin-less workspace, this grants admin to whichever
-//   signed-in user is resolved first - there's no way for the server to
-//   know who the "real" operator is. If BOOTSTRAP_ADMIN_EMAIL is set,
-//   bootstrap is restricted to that one email address; if unset, this
-//   route logs a warning (see below) and the primary defense is Clerk
-//   Dashboard -> Restrictions, set to "Restricted" before the service is
-//   ever publicly reachable (DEPLOYMENT.md Step 7). Auto-running this from
-//   bootstrap-status (rather than requiring a manual click) makes that
-//   defense more important than before: on an admin-less, publicly
-//   reachable workspace with no BOOTSTRAP_ADMIN_EMAIL set, simply opening
-//   Settings -> Users is now enough to claim admin.
-// - TOCTOU: the adminExists() check and the metadata write below are two
-//   separate Clerk API calls, not one atomic operation, so two concurrent
+//   signed-in user is resolved first. If BOOTSTRAP_ADMIN_EMAIL is set,
+//   bootstrap is restricted to that one email address; if unset, this route
+//   logs a warning (see below).
+// - TOCTOU: the adminExists() check and the role write below are two
+//   separate D1 statements, not one atomic operation, so two concurrent
 //   callers can both observe "no admin" and both write "admin" before
-//   either write is visible to the other's check. Clerk's API has no
-//   compare-and-swap for metadata, so attemptBootstrap() re-checks
-//   immediately after writing and has the loser of the race demote itself
-//   back - see the comment inline below.
+//   either write is visible to the other's check. attemptBootstrap()
+//   re-checks immediately after writing and has the loser of the race
+//   demote itself back - see the comment inline below.
 
 const ALREADY_BOOTSTRAPPED_ERROR = {
   error:
@@ -351,31 +431,33 @@ const ALREADY_BOOTSTRAPPED_ERROR = {
 
 /**
  * Attempts to promote `userId` to admin on a genuinely admin-less
- * workspace. Never throws - Clerk/network failures are caught and reported
- * as a 500 result, same as every other route in this file, so both callers
- * (the explicit POST route and the automatic call from bootstrap-status)
- * can treat this as a plain result object instead of a try/catch.
+ * workspace. Never throws - D1 failures are caught and reported as a 500
+ * result, same as every other route in this file, so both callers (the
+ * explicit POST route and the automatic call from bootstrap-status) can
+ * treat this as a plain result object instead of a try/catch.
  */
 async function attemptBootstrap(
   c: Context<AppEnv>,
   userId: string,
 ): Promise<{ status: number; body: Record<string, unknown> }> {
   try {
-    const caller = await getClerk(c).users.getUser(userId);
+    const db = c.get("db");
+    const [caller] = await db
+      .select({ role: userTable.role, email: userTable.email })
+      .from(userTable)
+      .where(eq(userTable.id, userId));
 
     const adminEmail = bootstrapAdminEmail(c);
     if (!adminEmail) {
       c.get("logger").warn(
         "BOOTSTRAP_ADMIN_EMAIL is not set - POST /admin/bootstrap will grant admin to whichever " +
-          "signed-in user calls it first on this admin-less workspace. Set Clerk Dashboard -> " +
-          'Restrictions to "Restricted" BEFORE this service is publicly reachable, or set ' +
-          "BOOTSTRAP_ADMIN_EMAIL to lock the bootstrap route to one known email address.",
+          "signed-in user calls it first on this admin-less workspace. Set BOOTSTRAP_ADMIN_EMAIL " +
+          "to lock the bootstrap route to one known email address.",
       );
     }
 
     if (adminEmail) {
-      const callerEmail =
-        caller.primaryEmailAddress?.emailAddress?.toLowerCase();
+      const callerEmail = caller?.email?.toLowerCase();
       if (callerEmail !== adminEmail) {
         return {
           status: 403,
@@ -395,27 +477,28 @@ async function attemptBootstrap(
     // The role this user held before bootstrapping - used to restore it if
     // this call turns out to have lost the TOCTOU race just below, rather
     // than unconditionally dropping the loser to foreman.
-    const priorRole = resolveRole(caller.publicMetadata?.role);
+    const priorRole = resolveRole(caller?.role);
 
-    await getClerk(c).users.updateUserMetadata(userId, {
-      publicMetadata: { role: "admin" },
-    });
+    await db
+      .update(userTable)
+      .set({ role: "admin", updatedAt: new Date() })
+      .where(eq(userTable.id, userId));
 
     // TOCTOU guard: the adminExists() check above and this write are not
     // atomic, so two concurrent callers can both have observed "no admin"
-    // and both reach this point. Clerk's API has no compare-and-swap for
-    // metadata, so the best available fix is a re-check immediately after
-    // writing: list every admin that exists now. If more than one shows up,
-    // this was a race - deterministically pick a single winner (earliest
-    // updatedAt, ties broken by the lower user id, so every caller in the
-    // race picks the same winner from the same data) and have every other
-    // caller demote itself back to its prior role and report the same
-    // "already exists" error a caller who simply lost the race would see.
+    // and both reach this point. The best available fix is a re-check
+    // immediately after writing: list every admin that exists now. If more
+    // than one shows up, this was a race - deterministically pick a single
+    // winner (earliest updatedAt, ties broken by the lower user id, so
+    // every caller in the race picks the same winner from the same data)
+    // and have every other caller demote itself back to its prior role and
+    // report the same "already exists" error a caller who simply lost the
+    // race would see.
     const admins = await findAdmins(c);
     if (admins.length > 1) {
       const winner = admins.reduce((a, b) =>
-        a.updatedAt !== b.updatedAt
-          ? a.updatedAt < b.updatedAt
+        a.updatedAt.getTime() !== b.updatedAt.getTime()
+          ? a.updatedAt.getTime() < b.updatedAt.getTime()
             ? a
             : b
           : a.id < b.id
@@ -423,9 +506,10 @@ async function attemptBootstrap(
             : b,
       );
       if (winner.id !== userId) {
-        await getClerk(c).users.updateUserMetadata(userId, {
-          publicMetadata: { role: priorRole },
-        });
+        await db
+          .update(userTable)
+          .set({ role: priorRole, updatedAt: new Date() })
+          .where(eq(userTable.id, userId));
         return { status: 409, body: ALREADY_BOOTSTRAPPED_ERROR };
       }
     }
@@ -457,8 +541,7 @@ router.get("/admin/bootstrap-status", async (c) => {
     //
     // `justBootstrapped` tells the frontend this exact call is what did it,
     // so it can reload immediately instead of rendering "Admin access
-    // required" from a stale client-side role cache (Clerk's cached role on
-    // this client hasn't caught up with the write this request just made).
+    // required" from a stale client-side session.
     let justBootstrapped = false;
     if (!(await adminExists(c))) {
       const result = await attemptBootstrap(c, userId);

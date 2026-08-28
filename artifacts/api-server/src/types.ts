@@ -13,9 +13,7 @@ export type Bindings = {
   KV: KVNamespace;
 
   APP_URL?: string;
-  CLERK_PUBLISHABLE_KEY: string;
-  CLERK_SECRET_KEY: string;
-  CLERK_WEBHOOK_SIGNING_SECRET?: string;
+  BETTER_AUTH_SECRET: string;
   BOOTSTRAP_ADMIN_EMAIL?: string;
   SIGNUP_ALLOWED_EMAIL_DOMAINS?: string;
 
@@ -39,10 +37,13 @@ export type Bindings = {
 export type Variables = {
   db: Database;
   logger: Logger;
-  /** Clerk user id of the caller, set by requireAuth once verified. */
+  /** Better Auth user id of the caller, set by the session middleware in
+   * app.ts once a valid session is resolved. */
   userId?: string;
-  /** Per-request role cache, set by getUserRole so repeated calls within
-   * the same request don't re-hit Clerk. */
+  /** The caller's role, set alongside `userId` by the same session
+   * middleware - read directly off the session's own D1-backed user row, so
+   * every other reader (getUserRole, requireRole, admin.ts) just reads this
+   * instead of doing its own lookup. */
   _role?: import("@workspace/shared-role").Role;
 };
 

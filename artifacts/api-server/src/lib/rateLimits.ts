@@ -1,5 +1,4 @@
 import type { MiddlewareHandler } from "hono";
-import { getAuth } from "@hono/clerk-auth";
 import type { AppEnv } from "../types";
 
 /**
@@ -10,16 +9,19 @@ export const HEALTH_CHECK_PATHS = ["/api/healthz", "/api/readyz"] as const;
 
 /**
  * Unauthenticated routes that are a genuine abuse surface: the OAuth
- * provider callbacks and the Clerk webhook. Anyone can hit these without
- * any auth, and a legitimate caller only ever hits them a handful of times,
- * so they keep a deliberately tight limit.
+ * provider callbacks and Better Auth's own endpoints (sign-in, session
+ * refresh, etc - see app.ts, which mounts the Better Auth handler
+ * unauthenticated by design, same as Clerk's hosted endpoints used to be).
+ * Anyone can hit these without any auth, and a legitimate caller only ever
+ * hits them a handful of times per session, so they keep a deliberately
+ * tight limit.
  */
 export const PUBLIC_ROUTE_PATHS = [
   "/api/xero/callback",
   "/api/quickbooks/callback",
   "/api/sage/callback",
   "/api/freeagent/callback",
-  "/api/webhooks/clerk",
+  "/api/auth/*",
 ] as const;
 
 /**
@@ -33,12 +35,12 @@ export const STORAGE_UPLOAD_RELAY_PATH = "/api/storage/uploads/direct";
 const FIFTEEN_MINUTES_SEC = 15 * 60;
 
 /**
- * Resolves the authenticated Clerk user id for a request, if any. Must run
- * after clerkMiddleware (see app.ts) for getAuth to have anything to read.
+ * Resolves the authenticated user id for a request, if any. Must run after
+ * the session middleware (see app.ts) for `userId` to be set - that
+ * middleware is the only thing that ever sets it now.
  */
-function clerkUserId(c: Parameters<MiddlewareHandler<AppEnv>>[0]) {
-  const auth = getAuth(c);
-  return c.get("userId") ?? auth?.userId ?? undefined;
+function authedUserId(c: Parameters<MiddlewareHandler<AppEnv>>[0]) {
+  return c.get("userId") ?? undefined;
 }
 
 /**
@@ -85,7 +87,7 @@ function kvFixedWindowLimiter(opts: {
 /**
  * Per-user budget for the authenticated bulk of the /api surface.
  *
- * Keyed on the Clerk user id rather than IP: the intended deployment is a
+ * Keyed on the authenticated user id rather than IP: the intended deployment is a
  * single construction company, and everyone in one office can share one
  * NAT'd public IP. An IP-keyed limit would mean the whole team fights over
  * one shared budget - one person running a busy screen could 429 everyone
@@ -102,7 +104,7 @@ export const createApiUserLimiter = (): MiddlewareHandler<AppEnv> =>
   kvFixedWindowLimiter({
     limit: 300,
     windowSec: FIFTEEN_MINUTES_SEC,
-    keyFn: (c) => `user:${clerkUserId(c) ?? "unknown"}`,
+    keyFn: (c) => `user:${authedUserId(c) ?? "unknown"}`,
   });
 
 /**
@@ -140,7 +142,7 @@ export const createStorageUploadLimiter = (): MiddlewareHandler<AppEnv> =>
     limit: 1200,
     windowSec: FIFTEEN_MINUTES_SEC,
     keyFn: (c) => {
-      const userId = clerkUserId(c);
+      const userId = authedUserId(c);
       return userId
         ? `user:${userId}`
         : `ip:${c.req.header("CF-Connecting-IP") ?? "unknown"}`;
@@ -160,7 +162,7 @@ export const createHealthCheckLimiter = (): MiddlewareHandler<AppEnv> =>
     keyFn: (c) => `ip:${c.req.header("CF-Connecting-IP") ?? "unknown"}`,
   });
 
-/** Tight limit for the unauthenticated OAuth callbacks and Clerk webhook. */
+/** Tight limit for the unauthenticated OAuth callbacks. */
 export const createPublicRouteLimiter = (): MiddlewareHandler<AppEnv> =>
   kvFixedWindowLimiter({
     limit: 30,

@@ -12,15 +12,13 @@
     "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
-    "@clerk/backend": "^3.8.4",
-    "@hono/clerk-auth": "^3.0.6",
     "@workspace/api-zod": "workspace:*",
     "@workspace/db": "workspace:*",
     "@workspace/shared-role": "workspace:*",
+    "better-auth": "^1.7.2",
     "drizzle-orm": "catalog:",
     "hono": "^4.9.9",
     "resend": "^6.14.0",
-    "svix": "^1.75.0",
     "zod": "catalog:"
   },
   "devDependencies": {

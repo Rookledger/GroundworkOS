@@ -1,7 +1,6 @@
-@layer theme, base, clerk, components, utilities;
+@layer theme, base, components, utilities;
 @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap");
 @import "tailwindcss";
-@import "@clerk/themes/shadcn.css";
 
 :root {
   --bg: #f0ede8;

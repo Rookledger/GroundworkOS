@@ -4,8 +4,8 @@
   "main": "src/index.ts",
   "compatibility_date": "2025-08-25",
   // nodejs_compat is required by a few dependencies that assume a Node-like
-  // global environment even though they run fine on V8 isolates (the Clerk
-  // backend SDK, svix webhook verification, Resend). It does NOT bring back
+  // global environment even though they run fine on V8 isolates (Better
+  // Auth, Resend). It does NOT bring back
   // `fs`, raw TCP/TLS sockets, or child_process - those stay unavailable on
   // Workers, and nothing in this codebase uses them any more (see the R2
   // object storage backend replacing the old S3 client, and the removal of
@@ -56,18 +56,16 @@
   ],
 
   // ── Secrets (set with `wrangler secret put <NAME>`, never committed) ─────
-  // CLERK_SECRET_KEY, CLERK_WEBHOOK_SIGNING_SECRET, RESEND_API_KEY,
-  // XERO_CLIENT_SECRET, QUICKBOOKS_CLIENT_SECRET, SAGE_CLIENT_SECRET,
-  // FREEAGENT_CLIENT_SECRET.
+  // BETTER_AUTH_SECRET, RESEND_API_KEY, XERO_CLIENT_SECRET,
+  // QUICKBOOKS_CLIENT_SECRET, SAGE_CLIENT_SECRET, FREEAGENT_CLIENT_SECRET.
 
   // ── Plain vars (non-secret configuration) ─────────────────────────────────
   "vars": {
-    // Frontend origin (Cloudflare Pages project), used for CORS, Clerk
-    // authorized parties, the CSP, and OAuth redirect building. Set the real
-    // value with `wrangler secret put APP_URL` per environment, or override
-    // it below/in `.dev.vars` for local dev.
+    // Frontend origin (Cloudflare Pages project), used for CORS, Better
+    // Auth's baseURL/trustedOrigins, and OAuth redirect building. Set the
+    // real value with `wrangler secret put APP_URL` per environment, or
+    // override it below/in `.dev.vars` for local dev.
     "APP_URL": "",
-    "CLERK_PUBLISHABLE_KEY": "",
     "BOOTSTRAP_ADMIN_EMAIL": "",
     "SIGNUP_ALLOWED_EMAIL_DOMAINS": "",
     "XERO_CLIENT_ID": "",

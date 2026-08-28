@@ -1,19 +1,17 @@
 import { useState, useEffect, useCallback } from "react";
-import { useUser } from "@clerk/react";
 import { toast } from "sonner";
+import { useSession } from "../lib/authClient";
 import { useRole, isAtLeast, ROLE_LABELS, type Role } from "../hooks/useRole";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-interface ClerkUser {
+interface AppUser {
   id: string;
-  firstName: string | null;
-  lastName: string | null;
+  name: string;
   email: string | null;
   role: Role;
-  imageUrl: string;
+  image: string | null;
   createdAt: string;
-  lastSignInAt: string | null;
 }
 
 interface Invitation {
@@ -31,9 +29,10 @@ const ROLE_COLORS: Record<Role, { bg: string; text: string; border: string }> =
   };
 
 export function UsersPage() {
-  const { user: currentUser } = useUser();
+  const { data: session, refetch: refetchSession } = useSession();
+  const currentUser = session?.user;
   const role = useRole();
-  const [users, setUsers] = useState<ClerkUser[]>([]);
+  const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
   const [bootstrapping, setBootstrapping] = useState(false);
@@ -56,12 +55,12 @@ export function UsersPage() {
       if (data.justBootstrapped) {
         // The server just promoted this caller to admin as a side effect of
         // this same status check (see routes/admin.ts) - no button click
-        // needed. Clerk's client-side role cache hasn't caught up with that
-        // write yet, so reload the same way handleBootstrap does after a
-        // manual click, rather than briefly flashing "Admin access
+        // needed. The client's cached session role hasn't caught up with
+        // that write yet, so reload the same way handleBootstrap does after
+        // a manual click, rather than briefly flashing "Admin access
         // required".
         toast.success("You're now an admin. Reloading...");
-        await currentUser?.reload();
+        await refetchSession();
         window.location.reload();
         return;
       }
@@ -77,7 +76,7 @@ export function UsersPage() {
       setLoading(true);
       const r = await fetch(`${BASE}/api/admin/users`);
       if (!r.ok) throw new Error();
-      const data: ClerkUser[] = await r.json();
+      const data: AppUser[] = await r.json();
       setUsers(data);
     } catch {
       toast.error("Failed to load users");
@@ -148,7 +147,7 @@ export function UsersPage() {
     }
   }
 
-  /** Self-promotes the current user to admin, then reloads so Clerk's cached role updates everywhere. */
+  /** Self-promotes the current user to admin, then reloads so the cached session role updates everywhere. */
   async function handleBootstrap() {
     setBootstrapping(true);
     try {
@@ -156,7 +155,7 @@ export function UsersPage() {
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || "Failed to become admin");
       toast.success("You're now an admin. Reloading...");
-      await currentUser?.reload();
+      await refetchSession();
       window.location.reload();
     } catch (err: any) {
       // Most likely someone else became admin in the meantime (409); hide
@@ -501,15 +500,8 @@ export function UsersPage() {
             </span>
           </div>
           {users.map((u, idx) => {
-            const name =
-              [u.firstName, u.lastName].filter(Boolean).join(" ") ||
-              u.email ||
-              "Unknown";
-            const initials = (
-              u.firstName?.[0] ??
-              u.email?.[0] ??
-              "?"
-            ).toUpperCase();
+            const name = u.name || u.email || "Unknown";
+            const initials = (u.name?.[0] ?? u.email?.[0] ?? "?").toUpperCase();
             const isSelf = u.id === currentUser?.id;
             const colors = ROLE_COLORS[u.role];
             return (
