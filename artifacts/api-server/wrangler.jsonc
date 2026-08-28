@@ -20,11 +20,13 @@
   "d1_databases": [
     {
       "binding": "DB",
-      // Matches the D1 database actually present in the Cloudflare account
-      // (verified via the Cloudflare API on 2026-08-28), not a fresh
-      // `groundworkos` database - see DEPLOYMENT.md Step 1.
-      "database_name": "ktr-groundworks",
-      "database_id": "16349ddf-699b-4363-9e8b-3c7a018ebecf",
+      // Confirmed directly in the Cloudflare dashboard (Storage & databases
+      // -> D1 SQLite Database) on 2026-08-28: this is the only D1 database
+      // that exists in the Ktrgcrms@outlook... account. A prior commit
+      // pointed this at a "ktr-groundworks" database/id that do not exist
+      // in that account - see DEPLOYMENT.md Step 1.
+      "database_name": "groundworkos",
+      "database_id": "7a982d10-b66d-4500-af43-380b9b6ad23c",
       "migrations_dir": "../../lib/db/migrations",
     },
   ],
@@ -54,9 +56,12 @@
   "kv_namespaces": [
     {
       "binding": "KV",
-      // Matches the "ktr-groundworks-kv" namespace actually present in the
-      // Cloudflare account (verified via the Cloudflare API on 2026-08-28).
-      "id": "c1f965d5dd6e461cbbf684264ab9322b",
+      // Confirmed directly in the Cloudflare dashboard (Storage & databases
+      // -> Workers KV) on 2026-08-28: this is the only KV namespace that
+      // exists in the Ktrgcrms@outlook... account. A prior commit pointed
+      // this at a "ktr-groundworks-kv" namespace/id that do not exist in
+      // that account.
+      "id": "8f3ba7f136024cc0a699f2da0853d367",
     },
   ],
 
