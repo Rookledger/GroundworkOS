@@ -266,6 +266,60 @@ the Pages project and adding the Workers Route. Cloudflare issues and
 renews HTTPS certificates automatically. If you change domains, update
 `APP_URL`, the Workers Route pattern, and any OAuth redirect URIs to match.
 
+## Multiple clients, multiple Cloudflare accounts
+
+GroundworkOS is single-tenant per deployment - each client needs their own
+Worker, D1 database, KV namespace and R2 bucket. For a handful of clients,
+forking the repo per client (Step 1's "if you're forking this repo" note) is
+the simplest option. Past ~5 clients, maintaining N forks means hand-porting
+every fix N times, so both `wrangler.jsonc` files instead define each client
+as a named [Wrangler environment](https://developers.cloudflare.com/workers/wrangler/environments/)
+(`env.<slug>`) in one repo, deployed independently to that client's own
+Cloudflare account via `.github/workflows/deploy.yml`.
+
+### Onboarding a new client
+
+1. On the client's own Cloudflare account (`wrangler login` against it, or
+   just note their account ID and mint an API token for it):
+
+   ```bash
+   pnpm exec wrangler d1 create groundworkos
+   pnpm exec wrangler kv namespace create KV
+   pnpm exec wrangler r2 bucket create <slug>-docs
+   ```
+
+2. In `artifacts/api-server/wrangler.jsonc`, copy the `env.ktr` block,
+   rename it to the client's slug, and fill in the ids from Step 1 plus
+   their Cloudflare `account_id` (Dashboard → Workers & Pages → Overview,
+   right sidebar). A commented-out template block is already there to copy.
+3. In `artifacts/groundworkos/wrangler.jsonc`, do the same, pointing
+   `services[0].service` at the API Worker's `name` from the block above.
+4. In the GitHub repo, create a **GitHub Environment** named exactly `<slug>`
+   (Settings → Environments → New environment) and add two environment
+   secrets to it: `CLOUDFLARE_API_TOKEN` (scoped to that client's account -
+   Workers Scripts:Edit, D1:Edit, Workers R2 Storage:Edit, Workers KV
+   Storage:Edit permissions) and `CLOUDFLARE_ACCOUNT_ID` (skip this one if
+   you set `account_id` inline in step 2/3 instead).
+5. Set that client's Worker secrets once, authenticated against their
+   account (`wrangler login` locally, or `CLOUDFLARE_API_TOKEN=... wrangler
+   secret put ... --env <slug>` from CI/your machine):
+
+   ```bash
+   pnpm exec wrangler secret put BETTER_AUTH_SECRET --env <slug>
+   # + RESEND_API_KEY / XERO_CLIENT_SECRET / etc, whichever this client uses
+   ```
+
+6. From the GitHub Actions tab, run the **Deploy** workflow with
+   `client: <slug>`. It applies D1 migrations, then deploys both Workers to
+   that client's account.
+7. Follow Step 7 above (first admin / bootstrap) against the client's
+   deployed URL.
+
+Each client's Worker, database, and secrets are fully isolated by Cloudflare
+account - there's no shared state between clients beyond the source code
+itself, and a bug fix merged to `main` reaches every client the next time
+their `client: <slug>` deploy is run.
+
 ## Troubleshooting
 
 - **Frontend build fails or serves from the wrong path**: check that

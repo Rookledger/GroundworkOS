@@ -28,5 +28,31 @@
       // artifacts/api-server/wrangler.jsonc.
       "service": "groundworkos-api"
     }
-  ]
+  ],
+
+  // ── Multi-client deployment ────────────────────────────────────────────
+  // Same per-client pattern as artifacts/api-server/wrangler.jsonc: each
+  // client is a named environment below, deployed with
+  // `wrangler deploy --env <slug>`, and its `services[0].service` must
+  // match that client's API Worker `name` (the `env.<slug>.name` set in
+  // api-server's wrangler.jsonc). The top-level config above is local-dev
+  // only (`wrangler dev` with no `--env`) and mirrors "ktr".
+  "env": {
+    "ktr": {
+      "name": "groundworkos",
+      "services": [
+        { "binding": "API", "service": "groundworkos-api" }
+      ],
+    },
+
+    // Template for the next client - copy this block, rename the key, and
+    // point `service` at that client's API Worker name.
+    // "acme": {
+    //   "name": "groundworkos-acme",
+    //   "account_id": "<acme's Cloudflare account id>",
+    //   "services": [
+    //     { "binding": "API", "service": "groundworkos-api-acme" }
+    //   ],
+    // },
+  },
 }
