@@ -1,68 +1,24 @@
 /**
- * Clerk's browser SDK (clerk.browser.js) is served from - and makes its XHR
- * calls back to - the Clerk Frontend API host, which is per-instance rather
- * than a single fixed Clerk domain. That host isn't configured separately:
- * it's embedded in CLERK_PUBLISHABLE_KEY, which has the shape
- * `pk_(test|live)_<base64>`, where the base64 segment decodes to
- * `<frontend-api-host>$` (note the trailing `$`).
- *
- * Decoded with the Web `atob` global instead of Node's `Buffer` - both work
- * fine under `nodejs_compat`, but `atob`/`btoa` are the platform-native
- * choice on a V8 isolate and avoid pulling in the Buffer polyfill just for
- * this one call.
- */
-export function decodeClerkFrontendApiHost(
-  publishableKey: string | undefined,
-): string | null {
-  if (!publishableKey) return null;
-
-  const match = publishableKey.match(/^pk_(test|live)_(.+)$/);
-  if (!match) return null;
-
-  let decoded: string;
-  try {
-    decoded = atob(match[2]);
-  } catch {
-    return null;
-  }
-
-  if (!decoded.endsWith("$")) return null;
-
-  return decoded.slice(0, -1);
-}
-
-export function clerkFrontendApiOrigin(
-  publishableKey: string | undefined,
-): string | null {
-  const host = decodeClerkFrontendApiHost(publishableKey);
-  return host ? `https://${host}` : null;
-}
-
-/**
  * Builds the Content-Security-Policy directives object consumed by Hono's
- * `secureHeaders` middleware (see app.ts). When CLERK_PUBLISHABLE_KEY is
- * set, the Clerk Frontend API origin it encodes is added everywhere
- * Clerk's SDK needs it at runtime: script-src (loading clerk.browser.js),
- * connect-src (the SDK's XHR/fetch calls), img-src (user avatars),
- * worker-src (Clerk's background token-refresh worker), and frame-src
- * (Clerk's bot-protection challenge and account-portal iframes). blob: and
- * data: are allowed on worker-src/img-src because Clerk creates its worker
- * from a blob: URL and can render avatar/data: images.
+ * `secureHeaders` middleware (see app.ts).
+ *
+ * Clerk's browser SDK used to load from - and call back to - a per-instance
+ * Clerk Frontend API origin decoded out of CLERK_PUBLISHABLE_KEY, which is
+ * why this used to need to allow-list that origin everywhere the SDK
+ * touched (script-src, connect-src, img-src, worker-src, frame-src). Better
+ * Auth has no such external origin: it's mounted at `/api/auth/*` on this
+ * same Worker (see app.ts) and the frontend talks to it via same-site
+ * fetch/cookies, so everything it needs is already covered by 'self'.
  */
-export function buildCspDirectives(
-  publishableKey: string | undefined,
-): Record<string, string[]> {
-  const origin = clerkFrontendApiOrigin(publishableKey);
-  const clerkOrigins = origin ? [origin] : [];
-
+export function buildCspDirectives(): Record<string, string[]> {
   return {
     "default-src": ["'self'"],
-    "script-src": ["'self'", ...clerkOrigins],
+    "script-src": ["'self'"],
     "style-src": ["'self'", "'unsafe-inline'"],
-    "img-src": ["'self'", "data:", "blob:", ...clerkOrigins],
-    "connect-src": ["'self'", ...clerkOrigins],
-    "worker-src": ["'self'", "blob:", "data:", ...clerkOrigins],
-    "frame-src": ["'self'", ...clerkOrigins],
+    "img-src": ["'self'", "data:", "blob:"],
+    "connect-src": ["'self'"],
+    "worker-src": ["'self'", "blob:", "data:"],
+    "frame-src": ["'self'"],
     "frame-ancestors": ["'none'"],
     "object-src": ["'none'"],
   };

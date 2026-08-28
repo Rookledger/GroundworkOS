@@ -1,84 +1,46 @@
 import { Hono } from "hono";
 import type { Context } from "hono";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { getUserRole, requireRole } from "./auth";
 import type { AppEnv } from "../types";
 
-vi.mock("@hono/clerk-auth", () => ({ getAuth: () => undefined }));
-
-function makeClerk() {
-  return { users: { getUser: vi.fn() } };
-}
-type FakeClerk = ReturnType<typeof makeClerk>;
-
-/** Minimal fake Context carrying just what getUserRole reads/writes:
- * `userId`/`_role`/`clerk` via get/set. */
-function makeContext(
-  clerk: FakeClerk,
-  vars: Record<string, unknown> = {},
-): Context<AppEnv> {
+/** Minimal fake Context carrying just what getUserRole reads: `_role` via
+ * get/set. */
+function makeContext(vars: Record<string, unknown> = {}): Context<AppEnv> {
   const store = new Map<string, unknown>(Object.entries(vars));
-  store.set("clerk", clerk);
   return {
     get: (key: string) => store.get(key),
     set: (key: string, value: unknown) => store.set(key, value),
   } as unknown as Context<AppEnv>;
 }
 
-beforeEach(() => {
-  vi.clearAllMocks();
-});
-
 describe("getUserRole", () => {
-  it("defaults to foreman when there is no authenticated user (no-role-defaults-to-foreman)", async () => {
-    const clerk = makeClerk();
-    await expect(getUserRole(makeContext(clerk))).resolves.toBe("foreman");
-    expect(clerk.users.getUser).not.toHaveBeenCalled();
+  it("defaults to foreman when there is no session (no-role-defaults-to-foreman)", () => {
+    expect(getUserRole(makeContext())).toBe("foreman");
   });
 
-  it("defaults to foreman when Clerk has no explicit role for the user", async () => {
-    const clerk = makeClerk();
-    clerk.users.getUser.mockResolvedValue({ publicMetadata: {} });
-    await expect(
-      getUserRole(makeContext(clerk, { userId: "user_1" })),
-    ).resolves.toBe("foreman");
+  it("reads the role the session middleware already cached on the context", () => {
+    expect(getUserRole(makeContext({ _role: "manager" }))).toBe("manager");
   });
 
-  it("uses the explicit role stored in Clerk publicMetadata", async () => {
-    const clerk = makeClerk();
-    clerk.users.getUser.mockResolvedValue({
-      publicMetadata: { role: "foreman" },
-    });
-    await expect(
-      getUserRole(makeContext(clerk, { userId: "user_1" })),
-    ).resolves.toBe("foreman");
-  });
-
-  it("uses a cached role on the request without calling Clerk again", async () => {
-    const clerk = makeClerk();
-    await expect(
-      getUserRole(makeContext(clerk, { _role: "manager" })),
-    ).resolves.toBe("manager");
-    expect(clerk.users.getUser).not.toHaveBeenCalled();
-  });
-
-  it("does not swallow a Clerk lookup failure (fails closed, not open to admin)", async () => {
-    const clerk = makeClerk();
-    clerk.users.getUser.mockRejectedValue(new Error("Clerk outage"));
-    await expect(
-      getUserRole(makeContext(clerk, { userId: "user_1" })),
-    ).rejects.toThrow("Clerk outage");
+  it("defaults to foreman even when userId is set but _role never got cached", () => {
+    // Shouldn't happen in practice (app.ts's session middleware always sets
+    // both together), but getUserRole must not assume otherwise.
+    expect(getUserRole(makeContext({ userId: "user_1" }))).toBe("foreman");
   });
 });
 
 describe("requireRole", () => {
-  /** Mounts a bare GET / behind requireRole(minRole), with a fake Clerk
-   * client and caller identity injected via middleware. */
-  function buildApp(minRole: Parameters<typeof requireRole>[0], clerk: FakeClerk) {
+  /** Mounts a bare GET / behind requireRole(minRole), with the caller's role
+   * injected via middleware exactly as app.ts's session middleware would. */
+  function buildApp(
+    minRole: Parameters<typeof requireRole>[0],
+    role: "admin" | "manager" | "foreman" | undefined,
+  ) {
     const app = new Hono<AppEnv>();
     app.use(async (c, next) => {
       c.set("userId", "user_1");
-      c.set("clerk", clerk as never);
+      if (role) c.set("_role", role);
       await next();
     });
     app.get("/", requireRole(minRole), (c) => c.json({ ok: true }));
@@ -86,11 +48,7 @@ describe("requireRole", () => {
   }
 
   it("calls next() when the caller's role meets the minimum", async () => {
-    const clerk = makeClerk();
-    clerk.users.getUser.mockResolvedValue({
-      publicMetadata: { role: "manager" },
-    });
-    const app = buildApp("manager", clerk);
+    const app = buildApp("manager", "manager");
 
     const res = await app.request("/");
 
@@ -99,11 +57,7 @@ describe("requireRole", () => {
   });
 
   it("rejects with 403 when the caller's role is below the minimum", async () => {
-    const clerk = makeClerk();
-    clerk.users.getUser.mockResolvedValue({
-      publicMetadata: { role: "foreman" },
-    });
-    const app = buildApp("manager", clerk);
+    const app = buildApp("manager", "foreman");
 
     const res = await app.request("/");
 
@@ -111,22 +65,18 @@ describe("requireRole", () => {
   });
 
   it("rejects an admin-gated route for a user with no explicit role (no-role-defaults-to-foreman)", async () => {
-    const clerk = makeClerk();
-    clerk.users.getUser.mockResolvedValue({ publicMetadata: {} });
-    const app = buildApp("admin", clerk);
+    const app = buildApp("admin", undefined);
 
     const res = await app.request("/");
 
     expect(res.status).toBe(403);
   });
 
-  it("fails closed with 503 (not a silent admin fallback) when the role can't be verified", async () => {
-    const clerk = makeClerk();
-    clerk.users.getUser.mockRejectedValue(new Error("Clerk outage"));
-    const app = buildApp("foreman", clerk);
+  it("allows an admin-gated route for an explicit admin", async () => {
+    const app = buildApp("admin", "admin");
 
     const res = await app.request("/");
 
-    expect(res.status).toBe(503);
+    expect(res.status).toBe(200);
   });
 });

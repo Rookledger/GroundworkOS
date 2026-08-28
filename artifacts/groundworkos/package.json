@@ -73,13 +73,12 @@
     "zod": "catalog:"
   },
   "dependencies": {
-    "@clerk/react": "^6.11.1",
     "@workspace/object-storage-web": "workspace:*",
-    "@clerk/themes": "^2.4.57",
     "@react-pdf/renderer": "^4.5.1",
     "@uppy/aws-s3": "^5.1.0",
     "@uppy/core": "^5.2.0",
     "@uppy/dashboard": "^5.1.1",
-    "@uppy/react": "^5.2.0"
+    "@uppy/react": "^5.2.0",
+    "better-auth": "^1.7.2"
   }
 }

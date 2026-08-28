@@ -1,10 +1,11 @@
 /**
- * Optional defense-in-depth for sign-up restriction, used by
- * routes/clerk_webhook.ts. The primary control lives in the Clerk Dashboard
- * (Restrictions -> sign-up mode = Restricted, and/or its own allowlist),
- * which stops an account from ever being created. SIGNUP_ALLOWED_EMAIL_DOMAINS
- * is a server-side backstop for that same rule, checked after the fact
- * against whichever account Clerk did create.
+ * Sign-up restriction, enforced synchronously in routes/admin.ts's
+ * POST /admin/invitations. GroundworkOS is invite-only end to end - the
+ * only way a Better Auth user is ever created is via an admin-issued
+ * invitation (see routes/admin.ts's POST /invitations/accept) - so
+ * SIGNUP_ALLOWED_EMAIL_DOMAINS, when set, is checked against the invited
+ * email address at invite-creation time, before any invitation (and
+ * therefore before any account) exists.
  */
 
 /** Parses the comma-separated SIGNUP_ALLOWED_EMAIL_DOMAINS env var into a

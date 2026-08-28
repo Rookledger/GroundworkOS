@@ -11,10 +11,11 @@ import type { AppEnv } from "../types";
 /**
  * Integration test: runs the real routers against a real (local, migrated)
  * D1 database - see vitest.integration.config.ts and
- * test/apply-migrations.ts. Clerk is stubbed here rather than in
+ * test/apply-migrations.ts. Identity/role is injected directly via
+ * `c.set("userId", ...)` / `c.set("_role", ...)` in a small stand-in
+ * middleware (mirroring app.ts's real session middleware) rather than
  * routes/index.ts or lib/auth.ts, so production auth code is completely
- * untouched; only this test's identity/role for `c.get("clerk")` and
- * `c.get("userId")` differs.
+ * untouched.
  *
  * The four accounting providers (Xero, QuickBooks, Sage, FreeAgent) share
  * connect/callback/disconnect/status plumbing via accountingOAuthFactory.ts.
@@ -25,23 +26,15 @@ import type { AppEnv } from "../types";
  * whose path is registered with the provider and can't move.
  */
 function buildApp() {
-  const clerk = {
-    users: {
-      getUser: vi
-        .fn()
-        .mockResolvedValue({ publicMetadata: { role: "admin" } }),
-    },
-  };
   const app = new Hono<AppEnv>();
   app.use(async (c, next) => {
     c.set("db", createDb(env.DB));
-    c.set("clerk", clerk as never);
     c.set("userId", "integration-test-user");
+    c.set("_role", "admin");
     c.set(
       "logger",
       { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() } as never,
     );
-    c.set("clerkAuth", (() => undefined) as never);
     await next();
   });
   app.route("/", xeroRouter);

@@ -1,7 +1,6 @@
 import { Hono } from "hono";
 import type { Context } from "hono";
-import { getAuth } from "@hono/clerk-auth";
-import { auditLogsTable } from "@workspace/db";
+import { auditLogsTable, userTable } from "@workspace/db";
 import { desc, eq, and, gte } from "drizzle-orm";
 import { generateId } from "../lib/generateId.js";
 import { requireRole } from "../lib/auth.js";
@@ -9,6 +8,14 @@ import type { AppEnv } from "../types";
 
 const router = new Hono<AppEnv>();
 
+/**
+ * Best-effort attribution for the audit trail. `userId` comes straight off
+ * the context (set by app.ts's session middleware); name/email are looked
+ * up from the same D1 `user` row the session itself resolved to, rather
+ * than from session claims (Better Auth's session object doesn't carry a
+ * denormalized display name/email the way Clerk's `sessionClaims` did).
+ * Never throws - audit log failures must never crash the main request.
+ */
 export async function logAudit(
   c: Context<AppEnv>,
   entityType: string,
@@ -17,13 +24,19 @@ export async function logAudit(
   changes: Record<string, unknown> | null,
 ) {
   try {
-    const auth = getAuth(c);
-    const userId = auth?.userId ?? null;
-    const claims = auth?.sessionClaims as
-      | { fullName?: string; name?: string; email?: string }
-      | undefined;
-    const userName = claims?.fullName ?? claims?.name ?? null;
-    const userEmail = claims?.email ?? null;
+    const userId = c.get("userId") ?? null;
+    let userName: string | null = null;
+    let userEmail: string | null = null;
+    if (userId) {
+      const [user] = await c
+        .get("db")
+        .select({ name: userTable.name, email: userTable.email })
+        .from(userTable)
+        .where(eq(userTable.id, userId))
+        .limit(1);
+      userName = user?.name ?? null;
+      userEmail = user?.email ?? null;
+    }
     await c.get("db").insert(auditLogsTable).values({
       id: generateId(),
       entityType,

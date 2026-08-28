@@ -1,9 +1,10 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
-import { clerkMiddleware } from "@hono/clerk-auth";
 import { createDb } from "@workspace/db";
+import { resolveRole } from "@workspace/shared-role";
 import router from "./routes";
+import { createAuth } from "./lib/betterAuth";
 import { buildCspDirectives } from "./lib/csp";
 import { validateEnv } from "./lib/validateEnv";
 import { logger } from "./lib/logger";
@@ -59,15 +60,16 @@ app.use(async (c, next) => {
 /**
  * Security headers. Hono's secureHeaders sets a restrictive
  * Content-Security-Policy and other hardening headers on every response,
- * mirroring what helmet did on the Express version. Clerk's browser SDK
- * loads from - and calls back to - the Clerk Frontend API origin encoded in
- * CLERK_PUBLISHABLE_KEY, so buildCspDirectives adds that origin wherever
- * Clerk needs it (see lib/csp.ts). HSTS is left to Cloudflare's edge, which
- * already terminates TLS for the zone and adds it there.
+ * mirroring what helmet did on the Express version. Better Auth runs
+ * same-origin on this same Worker (see lib/betterAuth.ts, mounted below),
+ * so - unlike Clerk's externally-hosted Frontend API - there is no external
+ * auth origin the CSP needs to allow-list (see lib/csp.ts). HSTS is left to
+ * Cloudflare's edge, which already terminates TLS for the zone and adds it
+ * there.
  */
 app.use(async (c, next) =>
   secureHeaders({
-    contentSecurityPolicy: buildCspDirectives(c.env.CLERK_PUBLISHABLE_KEY),
+    contentSecurityPolicy: buildCspDirectives(),
     crossOriginEmbedderPolicy: false,
     // Superseded by the CSP's own frame-ancestors directive above.
     xFrameOptions: false,
@@ -86,20 +88,38 @@ app.use(async (c, next) =>
   cors({ credentials: true, origin: c.env.APP_URL || "*" })(c, next),
 );
 
-app.use(clerkMiddleware());
+/**
+ * Session middleware, replacing Clerk's `clerkMiddleware()`. Resolves the
+ * caller's session (if any) via Better Auth's own server-side API - reading
+ * straight off the session cookie on the incoming request - and, when a
+ * session exists, sets both `userId` and `_role` on the context together,
+ * straight off the session's own D1-backed user row. Every downstream
+ * consumer (routes/index.ts's auth guard, lib/auth.ts's getUserRole,
+ * routes/admin.ts) just reads these off the context instead of doing its
+ * own lookup or falling back to a separate auth-library helper.
+ */
+app.use(async (c, next) => {
+  const auth = createAuth(c.env);
+  const session = await auth.api.getSession({ headers: c.req.raw.headers });
+  if (session) {
+    c.set("userId", session.user.id);
+    c.set("_role", resolveRole(session.user.role));
+  }
+  await next();
+});
 
 /**
- * Rate limiting. Mounted after clerkMiddleware (above) so `getAuth(c)` is
- * populated and the limiters below can key off the authenticated Clerk user
- * id instead of just IP - a whole company office can sit behind one NAT'd
+ * Rate limiting. Mounted after the session middleware (above) so `userId`
+ * is populated and the limiters below can key off the authenticated user id
+ * instead of just IP - a whole company office can sit behind one NAT'd
  * public IP and would otherwise share a single budget. See lib/rateLimits.ts
  * for each limiter and the reasoning behind its numbers: a per-user budget
  * for authenticated API traffic, a separate and tighter IP-keyed budget for
  * unauthenticated traffic, a more generous per-user budget for the bulk
  * photo/document upload relay, a much tighter limit on the unauthenticated
- * OAuth callbacks and Clerk webhook, and a deliberately high limit on the
- * health/readiness probes so uptime monitors can never rate-limit
- * themselves into a false "down".
+ * OAuth callbacks and Better Auth's own endpoints, and a deliberately high
+ * limit on the health/readiness probes so uptime monitors can never
+ * rate-limit themselves into a false "down".
  */
 for (const path of HEALTH_CHECK_PATHS) app.use(path, createHealthCheckLimiter());
 for (const path of PUBLIC_ROUTE_PATHS) app.use(path, createPublicRouteLimiter());
@@ -107,6 +127,23 @@ app.use(`${STORAGE_UPLOAD_RELAY_PATH}/*`, createStorageUploadLimiter());
 
 app.use("/api/*", createApiUserLimiter());
 app.use("/api/*", createApiAnonLimiter());
+
+/**
+ * Better Auth's own handler - sign-in, sign-out, session refresh, etc. This
+ * is deliberately unauthenticated: Better Auth verifies credentials/session
+ * tokens internally, the same way the routes it replaces (Clerk's hosted
+ * endpoints) never needed routes/index.ts's own auth guard either. Mounted
+ * directly on `app`, not under `router` (which is mounted at "/api" and
+ * whose own auth guard - see routes/index.ts's PUBLIC_PATHS - never sees
+ * these requests at all, since they're handled here first).
+ *
+ * `emailAndPassword.disableSignUp` (see lib/betterAuth.ts) keeps the public
+ * sign-up endpoint under this handler switched off - the only way an
+ * account is created is via the invite-accept route (routes/admin.ts).
+ */
+app.on(["GET", "POST"], "/api/auth/*", (c) =>
+  createAuth(c.env).handler(c.req.raw),
+);
 
 app.route("/api", router);
 

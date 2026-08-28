@@ -11,16 +11,8 @@ import {
   QueryClientProvider,
   useQueryClient,
 } from "@tanstack/react-query";
-import {
-  ClerkProvider,
-  SignIn,
-  SignUp,
-  Show,
-  useClerk,
-  useUser,
-} from "@clerk/react";
 import { Toaster } from "sonner";
-import { clerkAppearance } from "./lib/clerkAppearance";
+import { authClient, useSession } from "./lib/authClient";
 import { AppProvider } from "./store/AppContext";
 import { DataLoader } from "./store/DataLoader";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
@@ -50,35 +42,27 @@ import { useApp } from "./store/AppContext";
 const queryClient = new QueryClient();
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-
-function stripBase(path: string): string {
-  return basePath && path.startsWith(basePath)
-    ? path.slice(basePath.length) || "/"
-    : path;
-}
-
-if (!clerkPubKey) {
-  throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY");
-}
-
-function ClerkQueryClientCacheInvalidator() {
-  const { addListener } = useClerk();
+/**
+ * Clears the React Query cache whenever the signed-in user changes (sign
+ * out, sign in as someone else) - replaces ClerkQueryClientCacheInvalidator,
+ * which used to watch Clerk's own listener for the same purpose. Better
+ * Auth's `useSession()` hook re-renders on session changes, so a plain
+ * effect keyed on the session's user id does the same job.
+ */
+function AuthQueryClientCacheInvalidator() {
+  const { data: session } = useSession();
   const qc = useQueryClient();
   const prevUserIdRef = useRef<string | null | undefined>(undefined);
   useEffect(() => {
-    const unsubscribe = addListener(({ user }) => {
-      const userId = user?.id ?? null;
-      if (
-        prevUserIdRef.current !== undefined &&
-        prevUserIdRef.current !== userId
-      ) {
-        qc.clear();
-      }
-      prevUserIdRef.current = userId;
-    });
-    return unsubscribe;
-  }, [addListener, qc]);
+    const userId = session?.user?.id ?? null;
+    if (
+      prevUserIdRef.current !== undefined &&
+      prevUserIdRef.current !== userId
+    ) {
+      qc.clear();
+    }
+    prevUserIdRef.current = userId;
+  }, [session?.user?.id, qc]);
   return null;
 }
 
@@ -91,7 +75,6 @@ function ClerkQueryClientCacheInvalidator() {
 // after that first signup.
 function AutoAdminBootstrap() {
   const role = useRole();
-  const { user } = useUser();
   const attempted = useRef(false);
 
   useEffect(() => {
@@ -103,7 +86,10 @@ function AutoAdminBootstrap() {
         if (!r.ok) return;
         const data = await r.json();
         if (data.justBootstrapped) {
-          await user?.reload();
+          // Refetch the session so its (now-updated) `role` field is
+          // current before reloading - mirrors the old `user.reload()`
+          // call this replaces.
+          await authClient.getSession({ query: { disableCookieCache: true } });
           window.location.reload();
         }
       } catch {
@@ -111,51 +97,261 @@ function AutoAdminBootstrap() {
         // "Make me admin" fallback if this silently fails.
       }
     })();
-  }, [role, user]);
+  }, [role]);
 
   return null;
 }
 
+const authCardStyle: React.CSSProperties = {
+  width: 400,
+  maxWidth: "100%",
+  backgroundColor: "#fafaf8",
+  border: "1px solid #d9d4ce",
+  borderRadius: 12,
+  padding: 32,
+  boxShadow: "0 8px 32px rgba(24,20,16,0.08)",
+};
+
+const authLabelStyle: React.CSSProperties = {
+  fontFamily: "'Space Grotesk', sans-serif",
+  fontWeight: 600,
+  fontSize: 11,
+  color: "#7a7469",
+  textTransform: "uppercase",
+  letterSpacing: "0.06em",
+};
+
+const authInputStyle: React.CSSProperties = {
+  fontFamily: "'Inter', sans-serif",
+  fontSize: 14,
+  padding: "10px 12px",
+  borderRadius: 6,
+  border: "1px solid #d9d4ce",
+  backgroundColor: "#ffffff",
+  color: "#181410",
+  width: "100%",
+};
+
+const authButtonStyle = (disabled: boolean): React.CSSProperties => ({
+  padding: "10px 20px",
+  borderRadius: 6,
+  backgroundColor: "#1b5e78",
+  color: "#fff",
+  fontFamily: "'Space Grotesk', sans-serif",
+  fontWeight: 600,
+  fontSize: 13,
+  border: "none",
+  cursor: disabled ? "default" : "pointer",
+  opacity: disabled ? 0.6 : 1,
+  width: "100%",
+});
+
 function SignInPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      const { error: signInError } = await authClient.signIn.email({
+        email: email.trim(),
+        password,
+      });
+      if (signInError) {
+        setError(signInError.message ?? "Failed to sign in");
+      }
+    } catch {
+      setError("Failed to sign in");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div
       className="flex min-h-dvh items-center justify-center px-4"
       style={{ backgroundColor: "#f0ede8" }}
     >
-      <SignIn
-        routing="path"
-        path={`${basePath}/sign-in`}
-        signUpUrl={`${basePath}/sign-up`}
-      />
+      <form onSubmit={handleSubmit} style={authCardStyle}>
+        <h1
+          style={{
+            fontFamily: "'Space Grotesk', sans-serif",
+            fontWeight: 700,
+            fontSize: 20,
+            color: "#181410",
+            letterSpacing: "-0.02em",
+            marginBottom: 4,
+          }}
+        >
+          Welcome back
+        </h1>
+        <p style={{ color: "#7a7469", fontSize: 13, marginBottom: 24 }}>
+          Sign in to GroundworkOS
+        </p>
+        <div style={{ display: "grid", gap: 16 }}>
+          <div style={{ display: "grid", gap: 6 }}>
+            <label style={authLabelStyle}>Email</label>
+            <input
+              type="email"
+              required
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              style={authInputStyle}
+            />
+          </div>
+          <div style={{ display: "grid", gap: 6 }}>
+            <label style={authLabelStyle}>Password</label>
+            <input
+              type="password"
+              required
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={authInputStyle}
+            />
+          </div>
+          {error && (
+            <p style={{ color: "#c13a2a", fontSize: 12 }}>{error}</p>
+          )}
+          <button type="submit" disabled={loading} style={authButtonStyle(loading)}>
+            {loading ? "Signing in..." : "Sign in"}
+          </button>
+        </div>
+        <p
+          style={{
+            marginTop: 20,
+            fontSize: 12,
+            color: "#a8a099",
+            textAlign: "center",
+            lineHeight: 1.6,
+          }}
+        >
+          GroundworkOS is invite-only. If you've received an invitation
+          email, follow its link to set up your account instead.
+        </p>
+      </form>
     </div>
   );
 }
 
-function SignUpPage() {
+/**
+ * There is no general public sign-up route any more (see
+ * lib/betterAuth.ts's emailAndPassword.disableSignUp) - GroundworkOS is
+ * invite-only end to end. This is what the invite email actually links to
+ * (`${APP_URL}/accept-invite?token=...` - see routes/admin.ts's
+ * POST /admin/invitations): the invitee sets their name/password, the
+ * backend creates their account server-side with the role the invitation
+ * specified, and they're signed in immediately.
+ */
+function AcceptInvitePage() {
+  const [location] = useLocation();
+  const token = new URLSearchParams(location.split("?")[1] ?? "").get(
+    "token",
+  );
+  const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!token) return;
+    setError(null);
+    setLoading(true);
+    try {
+      const r = await fetch(`${basePath}/api/invitations/accept`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ token, name: name.trim(), password }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setError(data.error ?? "Failed to accept invitation");
+        return;
+      }
+      window.location.href = basePath || "/";
+    } catch {
+      setError("Failed to accept invitation");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (!token) {
+    return (
+      <div
+        className="flex min-h-dvh items-center justify-center px-4"
+        style={{ backgroundColor: "#f0ede8" }}
+      >
+        <div style={authCardStyle}>
+          <p style={{ color: "#c13a2a", fontSize: 14 }}>
+            This invitation link is missing its token. Ask your admin to
+            resend the invitation.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
-      className="flex min-h-dvh flex-col items-center justify-center gap-4 px-4"
+      className="flex min-h-dvh items-center justify-center px-4"
       style={{ backgroundColor: "#f0ede8" }}
     >
-      <p
-        style={{
-          maxWidth: 440,
-          textAlign: "center",
-          fontSize: 13,
-          color: "#7a7469",
-          fontFamily: "'Inter', sans-serif",
-          lineHeight: 1.6,
-        }}
-      >
-        GroundworkOS is invite-only. If you've received an invitation email, use
-        the same email address below to finish setting up your account.
-        Otherwise, ask your admin to invite you from Settings &rarr; Users.
-      </p>
-      <SignUp
-        routing="path"
-        path={`${basePath}/sign-up`}
-        signInUrl={`${basePath}/sign-in`}
-      />
+      <form onSubmit={handleSubmit} style={authCardStyle}>
+        <h1
+          style={{
+            fontFamily: "'Space Grotesk', sans-serif",
+            fontWeight: 700,
+            fontSize: 20,
+            color: "#181410",
+            letterSpacing: "-0.02em",
+            marginBottom: 4,
+          }}
+        >
+          Accept your invitation
+        </h1>
+        <p style={{ color: "#7a7469", fontSize: 13, marginBottom: 24 }}>
+          Set your name and password to finish joining GroundworkOS
+        </p>
+        <div style={{ display: "grid", gap: 16 }}>
+          <div style={{ display: "grid", gap: 6 }}>
+            <label style={authLabelStyle}>Your name</label>
+            <input
+              type="text"
+              required
+              autoComplete="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              style={authInputStyle}
+            />
+          </div>
+          <div style={{ display: "grid", gap: 6 }}>
+            <label style={authLabelStyle}>Password</label>
+            <input
+              type="password"
+              required
+              minLength={8}
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={authInputStyle}
+            />
+          </div>
+          {error && (
+            <p style={{ color: "#c13a2a", fontSize: 12 }}>{error}</p>
+          )}
+          <button type="submit" disabled={loading} style={authButtonStyle(loading)}>
+            {loading ? "Setting up..." : "Accept and sign in"}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
@@ -274,58 +470,45 @@ function AuthenticatedApp() {
 }
 
 function RouteGuard() {
-  return (
-    <>
-      <Show when="signed-in">
-        <AuthenticatedApp />
-      </Show>
-      <Show when="signed-out">
-        <Redirect to="/sign-in" />
-      </Show>
-    </>
-  );
+  const { data: session, isPending } = useSession();
+
+  if (isPending) {
+    return (
+      <div
+        className="flex min-h-dvh items-center justify-center"
+        style={{ backgroundColor: "#f0ede8", color: "#7a7469" }}
+      >
+        Loading…
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <Redirect to="/sign-in" />;
+  }
+
+  return <AuthenticatedApp />;
 }
 
-function ClerkProviderWithRoutes() {
-  const [, setLocation] = useLocation();
+function AppShell() {
   return (
-    <ClerkProvider
-      publishableKey={clerkPubKey}
-      appearance={clerkAppearance}
-      signInUrl={`${basePath}/sign-in`}
-      signUpUrl={`${basePath}/sign-up`}
-      localization={{
-        signIn: {
-          start: { title: "Welcome back", subtitle: "Sign in to GroundworkOS" },
-        },
-        signUp: {
-          start: {
-            title: "Create account",
-            subtitle: "Join GroundworkOS today",
-          },
-        },
-      }}
-      routerPush={(to) => setLocation(stripBase(to))}
-      routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
-    >
-      <QueryClientProvider client={queryClient}>
-        <ClerkQueryClientCacheInvalidator />
-        <Toaster position="bottom-right" richColors closeButton />
-        <Switch>
-          <Route path="/sign-in/*?" component={SignInPage} />
-          <Route path="/sign-up/*?" component={SignUpPage} />
-          <Route path="/portal/:token" component={PortalPage} />
-          <Route component={RouteGuard} />
-        </Switch>
-      </QueryClientProvider>
-    </ClerkProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthQueryClientCacheInvalidator />
+      <Toaster position="bottom-right" richColors closeButton />
+      <Switch>
+        <Route path="/sign-in/*?" component={SignInPage} />
+        <Route path="/accept-invite" component={AcceptInvitePage} />
+        <Route path="/portal/:token" component={PortalPage} />
+        <Route component={RouteGuard} />
+      </Switch>
+    </QueryClientProvider>
   );
 }
 
 function App() {
   return (
     <WouterRouter base={basePath}>
-      <ClerkProviderWithRoutes />
+      <AppShell />
     </WouterRouter>
   );
 }

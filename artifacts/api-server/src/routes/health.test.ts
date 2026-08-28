@@ -11,11 +11,6 @@ import type { AppEnv, Bindings } from "../types";
 
 vi.mock("../lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
 
-// The rate limiters (lib/rateLimits.ts) call getAuth(c) to key authenticated
-// traffic by Clerk user id. These tests never run the real clerkMiddleware,
-// so stub getAuth to report "signed out" instead of throwing.
-vi.mock("@hono/clerk-auth", () => ({ getAuth: () => undefined }));
-
 /** Minimal fake standing in for `c.get("db")` - just enough for readyz's
  * single `db.run(sql\`SELECT 1\`)` probe. */
 function makeDb(run: (...args: unknown[]) => unknown) {

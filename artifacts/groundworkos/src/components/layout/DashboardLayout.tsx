@@ -30,10 +30,10 @@ import {
 } from "lucide-react";
 import { useAlerts } from "../../hooks/useAlerts";
 import { GlobalSearch } from "../ui/GlobalSearch";
-import { useUser, useClerk } from "@clerk/react";
+import { authClient, useSession } from "../../lib/authClient";
 import { useRole, isAtLeast, type Role } from "../../hooks/useRole";
 import { useApp } from "../../store/AppContext";
-import { clerkAppearance } from "../../lib/clerkAppearance";
+import { AccountModal } from "./AccountModal";
 
 const ALL_NAV = [
   {
@@ -170,8 +170,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [bellOpen, setBellOpen] = useState(false);
   const bellRef = useRef<HTMLDivElement>(null);
   const [location] = useLocation();
-  const { user } = useUser();
-  const { signOut, openUserProfile } = useClerk();
+  const { data: session } = useSession();
+  const user = session?.user;
+  const [accountModalOpen, setAccountModalOpen] = useState(false);
   const role = useRole();
   const alerts = useAlerts();
 
@@ -209,20 +210,12 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     currentItem && "name" in currentItem ? currentItem.name : "Dashboard";
 
   const initials = user
-    ? (
-        (user.firstName?.[0] ?? "") + (user.lastName?.[0] ?? "")
-      ).toUpperCase() ||
-      user.primaryEmailAddress?.emailAddress?.[0]?.toUpperCase() ||
-      "G"
+    ? (user.name?.[0] ?? user.email?.[0] ?? "G").toUpperCase()
     : "G";
 
-  const displayName = user
-    ? user.firstName && user.lastName
-      ? `${user.firstName} ${user.lastName}`
-      : (user.firstName ?? user.primaryEmailAddress?.emailAddress ?? "User")
-    : "Loading…";
+  const displayName = user ? (user.name || user.email || "User") : "Loading…";
 
-  const displayEmail = user?.primaryEmailAddress?.emailAddress ?? "";
+  const displayEmail = user?.email ?? "";
   const badge = ROLE_BADGE[role];
 
   const criticalCount = alerts.filter((a) => a.severity === "critical").length;
@@ -397,17 +390,21 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 )}
               </div>
               <button
-                onClick={() =>
-                  openUserProfile({ appearance: clerkAppearance })
-                }
-                title="Change password / account security"
+                onClick={() => setAccountModalOpen(true)}
+                title="Account / change password"
                 className="flex-shrink-0 p-1 rounded transition-colors hover:bg-[#e8e4dd]"
                 style={{ color: "#a8a099" }}
               >
                 <KeyRound className="w-3.5 h-3.5" />
               </button>
               <button
-                onClick={() => signOut()}
+                onClick={() =>
+                  authClient.signOut({
+                    fetchOptions: {
+                      onSuccess: () => window.location.reload(),
+                    },
+                  })
+                }
                 title="Sign out"
                 className="flex-shrink-0 p-1 rounded transition-colors hover:bg-[#e8e4dd]"
                 style={{ color: "#a8a099" }}
@@ -633,6 +630,12 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       </div>
 
       <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <AccountModal
+        open={accountModalOpen}
+        onClose={() => setAccountModalOpen(false)}
+        name={displayName}
+        email={displayEmail}
+      />
     </div>
   );
 }

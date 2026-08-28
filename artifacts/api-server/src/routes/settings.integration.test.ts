@@ -1,7 +1,7 @@
 import { env } from "cloudflare:test";
 import { Hono } from "hono";
-import { describe, expect, it, vi } from "vitest";
-import { createDb, companySettingsTable } from "@workspace/db";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { createDb, companySettingsTable, userTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import settingsRouter from "./settings";
 import type { AppEnv } from "../types";
@@ -9,60 +9,62 @@ import type { AppEnv } from "../types";
 /**
  * Integration test: runs the real router against a real (local, migrated)
  * D1 database - see vitest.integration.config.ts and
- * test/apply-migrations.ts. Clerk is stubbed here rather than in
+ * test/apply-migrations.ts. Identity/role is injected directly via
+ * `c.set("userId", ...)` / `c.set("_role", ...)` in a small stand-in
+ * middleware (mirroring app.ts's real session middleware) rather than
  * routes/index.ts or lib/auth.ts, so production auth code is completely
- * untouched; only this test's identity/role for `c.get("clerk")` and
- * `c.get("userId")` differs.
+ * untouched.
  *
- * Unlike most other integration tests, this file also drives
- * clerk.users.getUserList: PUT /settings/company's bootstrap gating
- * (routes/settings.ts) calls adminExists() (routes/admin.ts), which calls
- * getUserList, so exercising that gating logic - not just a default admin
- * role - is the whole point of this file. Defaults to "an admin exists",
- * matching a normal, already-onboarded deployment.
+ * Unlike most other integration tests, this file also drives the `user`
+ * table directly: PUT /settings/company's bootstrap gating (routes/
+ * settings.ts) calls adminExists() (routes/admin.ts), which is now a real
+ * D1 query against that table - so exercising that gating logic means
+ * seeding (or not seeding) an admin row, not just setting the caller's own
+ * cached role.
  */
-function buildApp() {
-  const clerk = {
-    users: {
-      getUser: vi
-        .fn()
-        .mockResolvedValue({ publicMetadata: { role: "admin" } }),
-      getUserList: vi
-        .fn()
-        .mockResolvedValue({
-          data: [{ publicMetadata: { role: "admin" } }],
-          totalCount: 1,
-        }),
-    },
-  };
+function buildApp(role: "admin" | "manager" | "foreman" = "admin") {
   const app = new Hono<AppEnv>();
   app.use(async (c, next) => {
     c.set("db", createDb(env.DB));
-    c.set("clerk", clerk as never);
     c.set("userId", "integration-test-user");
+    c.set("_role", role);
     c.set(
       "logger",
       { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() } as never,
     );
-    c.set("clerkAuth", (() => undefined) as never);
     await next();
   });
   app.route("/", settingsRouter);
-  return { app, clerk };
+  return app;
 }
 
 const db = createDb(env.DB);
 
+function makeUser(overrides: Partial<typeof userTable.$inferInsert> = {}) {
+  const now = new Date();
+  return {
+    id: "settings-test-admin",
+    name: "Existing Admin",
+    email: "existing-admin@example.com",
+    emailVerified: false,
+    role: "admin",
+    createdAt: now,
+    updatedAt: now,
+    ...overrides,
+  };
+}
+
+// adminExists() (routes/admin.ts) queries the `user` table directly, so
+// each test controls it by inserting (or not inserting) an admin row here -
+// cleaned up after every test so state never leaks between them.
+afterEach(async () => {
+  await db.delete(userTable);
+});
+
 describe("PUT /settings/company bootstrap gating", () => {
   it("rejects a foreman once an admin already exists", async () => {
-    const { app, clerk } = buildApp();
-    clerk.users.getUserList.mockResolvedValueOnce({
-      data: [{ publicMetadata: { role: "admin" } }],
-      totalCount: 1,
-    } as any);
-    clerk.users.getUser.mockResolvedValueOnce({
-      publicMetadata: { role: "foreman" },
-    } as any);
+    await db.insert(userTable).values(makeUser());
+    const app = buildApp("foreman");
 
     const res = await app.request("/settings/company", {
       method: "PUT",
@@ -73,14 +75,9 @@ describe("PUT /settings/company bootstrap gating", () => {
   });
 
   it("allows a foreman through while no admin exists yet, mirroring the admin bootstrap flow", async () => {
-    const { app, clerk } = buildApp();
-    // adminExists() === false makes the route call next() and skip
-    // requireRole entirely, so no getUser override is queued here - one
-    // would sit unconsumed and leak into a later request.
-    clerk.users.getUserList.mockResolvedValueOnce({
-      data: [],
-      totalCount: 0,
-    } as any);
+    // No admin row inserted - adminExists() === false makes the route call
+    // next() and skip requireRole entirely.
+    const app = buildApp("foreman");
 
     const res = await app.request("/settings/company", {
       method: "PUT",
@@ -103,7 +100,7 @@ describe("PUT /settings/company bootstrap gating", () => {
 
 describe("full write cycle for PUT /settings/company", () => {
   it("persists company settings and reflects them on GET, replacing rather than merging on a second PUT", async () => {
-    const { app } = buildApp();
+    const app = buildApp("admin");
 
     const firstPut = await app.request("/settings/company", {
       method: "PUT",
