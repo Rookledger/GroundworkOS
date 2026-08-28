@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { Context } from "hono";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { userTable, invitationsTable } from "@workspace/db";
 import { isRole, resolveRole } from "@workspace/shared-role";
 import { emailDomainAllowed, parseAllowedDomains } from "../lib/signupPolicy.js";
@@ -388,6 +388,154 @@ router.post("/invitations/accept", async (c) => {
   }
 });
 
+// --- Public sign-up (open only while the workspace has zero users) ---
+//
+// GroundworkOS's account model, past the very first account, is invite-only
+// end to end (see the block above) - but something has to create that first
+// account on a brand-new deployment, and asking the operator to hand-craft
+// a D1 row isn't a real "sign up" flow. Rather than open unrestricted public
+// registration, this exposes exactly one self-service registration surface,
+// and it only ever works while the `user` table is completely empty. The
+// instant a single account exists here - admin or not - userCount() below
+// stops returning 0, both routes start refusing, and the workspace is
+// invite-only from then on with no way back into this flow short of an
+// admin issuing invitations (or, if every account were ever removed,
+// emptying the table again).
+
+/** Total number of users in the workspace, admin or otherwise. */
+async function userCount(c: Context<AppEnv>): Promise<number> {
+  const [row] = await c
+    .get("db")
+    .select({ count: sql<number>`count(*)` })
+    .from(userTable);
+  return Number(row?.count ?? 0);
+}
+
+/**
+ * Public (no session required, and no invitation either - see above). Lets
+ * the frontend decide whether to offer a "set up GroundworkOS" link on the
+ * sign-in page without guessing: SignInPage only shows it while `open` is
+ * true, which is exactly the same condition POST /setup/first-admin itself
+ * enforces below, so the UI and the API can never disagree about whether
+ * sign-up is currently available.
+ */
+router.get("/setup/status", async (c) => {
+  try {
+    return c.json({ open: (await userCount(c)) === 0 });
+  } catch (err) {
+    return c.json(
+      {
+        error:
+          err instanceof Error ? err.message : "Failed to check setup status",
+      },
+      500,
+    );
+  }
+});
+
+const ALREADY_SET_UP_ERROR = {
+  error:
+    "GroundworkOS is already set up. Ask an admin for an invitation instead.",
+};
+
+/**
+ * Public (no session required - nobody has an account yet on a genuinely
+ * empty workspace). Creates the very first account, the same way
+ * POST /invitations/accept creates an invited one: via auth.api.signUpEmail
+ * server-side (bypassing the disabled public Better Auth sign-up endpoint,
+ * see lib/betterAuth.ts), then a follow-up Drizzle update to stamp the
+ * "admin" role - `role`'s `input: false` additionalField config blocks a
+ * caller from granting themselves that role through signUpEmail's body
+ * directly.
+ */
+router.post("/setup/first-admin", async (c) => {
+  const { name, email, password } = await c.req.json();
+  if (
+    typeof name !== "string" ||
+    typeof email !== "string" ||
+    typeof password !== "string" ||
+    !name.trim() ||
+    !email.includes("@") ||
+    !password
+  ) {
+    return c.json({ error: "name, email and password are required" }, 400);
+  }
+
+  const allowedDomains = parseAllowedDomains(c.env.SIGNUP_ALLOWED_EMAIL_DOMAINS);
+  if (!emailDomainAllowed(email, allowedDomains)) {
+    return c.json({ error: "This email domain is not allowed to sign up" }, 400);
+  }
+
+  try {
+    if ((await userCount(c)) > 0) {
+      return c.json(ALREADY_SET_UP_ERROR, 409);
+    }
+
+    const auth = createAuth(c.env);
+    const db = c.get("db");
+
+    const signUpResult = await auth.api.signUpEmail({
+      body: { email, password, name: name.trim() },
+    });
+    const userId = signUpResult.user?.id;
+    if (!userId) {
+      return c.json({ error: "Failed to create account" }, 500);
+    }
+
+    await db
+      .update(userTable)
+      .set({ role: "admin", updatedAt: new Date() })
+      .where(eq(userTable.id, userId));
+
+    // TOCTOU guard, mirroring attemptBootstrap() below: the userCount()
+    // check above and this account's creation are two separate D1
+    // round-trips, not one atomic operation, so two concurrent callers can
+    // both observe zero users and both reach this point, each creating its
+    // own account. Re-list every admin that exists now and deterministically
+    // pick a single winner (earliest updatedAt, ties broken by the lower
+    // user id, so every caller in the race computes the same winner from
+    // the same data). Every other caller's freshly-created account is
+    // demoted back to the ordinary default role rather than deleted - it
+    // doesn't vanish out from under the person who just chose its password,
+    // and an existing admin can still see and manage it under
+    // Settings > Users afterwards.
+    const admins = await findAdmins(c);
+    if (admins.length > 1) {
+      const winner = admins.reduce((a, b) =>
+        a.updatedAt.getTime() !== b.updatedAt.getTime()
+          ? a.updatedAt.getTime() < b.updatedAt.getTime()
+            ? a
+            : b
+          : a.id < b.id
+            ? a
+            : b,
+      );
+      if (winner.id !== userId) {
+        await db
+          .update(userTable)
+          .set({ role: "foreman", updatedAt: new Date() })
+          .where(eq(userTable.id, userId));
+        return c.json(ALREADY_SET_UP_ERROR, 409);
+      }
+    }
+
+    // Sign the caller in fresh, same as POST /invitations/accept does, now
+    // that the admin role is already stamped onto the user row.
+    const signInResponse = await auth.api.signInEmail({
+      body: { email, password },
+      asResponse: true,
+    });
+    return signInResponse;
+  } catch (err) {
+    return c.json(
+      {
+        error: err instanceof Error ? err.message : "Failed to create account",
+      },
+      500,
+    );
+  }
+});
+
 // --- First-time admin bootstrap ---
 //
 // Unset roles default to foreman (the lowest privilege), so nobody - not
@@ -395,8 +543,13 @@ router.post("/invitations/accept", async (c) => {
 // by being unset. That means a brand-new deployment starts with zero
 // admins, and the "admin only" guard above would lock everyone out of user
 // management forever with no way to ever grant the first admin role.
-// attemptBootstrap() below is the one place that grants it: it promotes the
-// *calling* user to admin, but only while the workspace still has none.
+// attemptBootstrap() below is the one place that grants it for a workspace
+// that already has some non-admin users but none of them are admin yet
+// (e.g. everyone signed up through an older build, or an admin account was
+// removed): it promotes the *calling* user to admin, but only while the
+// workspace still has none. POST /setup/first-admin above handles the more
+// common case of a completely empty workspace; this is the fallback for
+// "some users exist, but none are admin".
 // Once any user has an explicit "admin" role, bootstrap permanently stops
 // working (adminExists() above returns true) and role changes must go
 // through the admin-only endpoint above. This does not rely on, or

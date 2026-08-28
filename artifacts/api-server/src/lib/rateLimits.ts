@@ -22,6 +22,12 @@ export const PUBLIC_ROUTE_PATHS = [
   "/api/sage/callback",
   "/api/freeagent/callback",
   "/api/auth/*",
+  // Public sign-up (routes/admin.ts's /setup/status and /setup/first-admin)
+  // - only reachable while the workspace has zero users, but still a
+  // genuine unauthenticated abuse surface (account creation) up to that
+  // point, so it gets the same tight budget as the OAuth callbacks above
+  // rather than the more generous general anon limit.
+  "/api/setup/*",
 ] as const;
 
 /**
