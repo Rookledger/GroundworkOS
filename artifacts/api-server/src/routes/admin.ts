@@ -161,8 +161,9 @@ router.patch("/admin/users/:id/role", async (c) => {
 //
 // GroundworkOS is a single-company, invite-only instance: the only way an
 // account is ever created is via an invitation issued here and accepted
-// through POST /invitations/accept below. There is no public sign-up
-// surface at all (see lib/betterAuth.ts's emailAndPassword.disableSignUp).
+// through POST /invitations/accept below. The public sign-up HTTP route is
+// blocked at the app.ts layer (see that file's comment above its handler
+// for /api/auth/sign-up/email).
 
 const INVITATION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -302,9 +303,10 @@ router.delete("/admin/invitations/:id", async (c) => {
 /**
  * Public (no session required - the person accepting doesn't have one yet).
  * Looks up the invitation by token, creates the Better Auth user
- * server-side (via auth.api.signUpEmail, which handles password hashing
- * internally the same way it would for the disabled public sign-up
- * endpoint), then stamps the invited role directly with a follow-up Drizzle
+ * server-side via auth.api.signUpEmail (see app.ts for why the public
+ * /api/auth/sign-up/email route is blocked at the HTTP layer instead of via
+ * `emailAndPassword.disableSignUp` - that flag would break this call too),
+ * then stamps the invited role directly with a follow-up Drizzle
  * update - the `role` additionalField's `input: false` (see
  * lib/betterAuth.ts) blocks a public caller from setting their own role
  * through signUpEmail's body, but this trusted server-side path is the one
@@ -442,11 +444,11 @@ const ALREADY_SET_UP_ERROR = {
  * Public (no session required - nobody has an account yet on a genuinely
  * empty workspace). Creates the very first account, the same way
  * POST /invitations/accept creates an invited one: via auth.api.signUpEmail
- * server-side (bypassing the disabled public Better Auth sign-up endpoint,
- * see lib/betterAuth.ts), then a follow-up Drizzle update to stamp the
- * "admin" role - `role`'s `input: false` additionalField config blocks a
- * caller from granting themselves that role through signUpEmail's body
- * directly.
+ * server-side (see app.ts for how the public sign-up route is kept closed
+ * without disabling this call too), then a follow-up Drizzle update to
+ * stamp the "admin" role - `role`'s `input: false` additionalField config
+ * blocks a caller from granting themselves that role through signUpEmail's
+ * body directly.
  */
 router.post("/setup/first-admin", async (c) => {
   const { name, email, password } = await c.req.json();

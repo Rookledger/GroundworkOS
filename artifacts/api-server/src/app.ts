@@ -129,6 +129,23 @@ app.use("/api/*", createApiUserLimiter());
 app.use("/api/*", createApiAnonLimiter());
 
 /**
+ * Blocks the public POST /api/auth/sign-up/email route before it reaches
+ * Better Auth's handler below, so GroundworkOS stays invite-only from the
+ * outside. This used to be done with `emailAndPassword.disableSignUp` in
+ * lib/betterAuth.ts, but that flag turned out to disable `signUpEmail`
+ * everywhere - including the trusted server-side `auth.api.signUpEmail(...)`
+ * calls routes/admin.ts's POST /invitations/accept and
+ * POST /setup/first-admin make - not just this public HTTP route, which
+ * broke both of those flows with "Email and password sign up is not
+ * enabled". Blocking the route itself at this layer gets the same "no
+ * public sign-up" behavior without touching the handler both trusted
+ * callers rely on.
+ */
+app.post("/api/auth/sign-up/email", (c) =>
+  c.json({ error: "Email and password sign up is not enabled" }, 403),
+);
+
+/**
  * Better Auth's own handler - sign-in, sign-out, session refresh, etc. This
  * is deliberately unauthenticated: Better Auth verifies credentials/session
  * tokens internally, the same way the routes it replaces (Clerk's hosted
@@ -137,9 +154,12 @@ app.use("/api/*", createApiAnonLimiter());
  * whose own auth guard - see routes/index.ts's PUBLIC_PATHS - never sees
  * these requests at all, since they're handled here first).
  *
- * `emailAndPassword.disableSignUp` (see lib/betterAuth.ts) keeps the public
- * sign-up endpoint under this handler switched off - the only way an
- * account is created is via the invite-accept route (routes/admin.ts).
+ * The public sign-up route is blocked above, before it reaches here - see
+ * that block's comment and lib/betterAuth.ts for why it isn't done via
+ * `emailAndPassword.disableSignUp` any more. Account creation itself still
+ * only ever happens via the invite-accept and first-admin-setup routes in
+ * routes/admin.ts, both of which call `auth.api.signUpEmail(...)` directly
+ * in-process, never through this HTTP handler.
  */
 app.on(["GET", "POST"], "/api/auth/*", (c) =>
   createAuth(c.env).handler(c.req.raw),
