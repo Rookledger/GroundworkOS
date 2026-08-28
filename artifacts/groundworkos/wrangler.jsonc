@@ -13,7 +13,13 @@
   "main": "worker/index.js",
   "assets": {
     "directory": "dist/public",
-    "binding": "ASSETS"
+    "binding": "ASSETS",
+    // Cloudflare's built-in SPA fallback: any request that isn't a literal
+    // static asset gets index.html back with a real 200, no redirect. See
+    // worker/index.js's comment for why this replaced a hand-rolled
+    // "/index.html" fetch that was silently redirecting every client-side
+    // route (e.g. /accept-invite, /setup, /portal/:token) to "/".
+    "not_found_handling": "single-page-application"
   },
   "services": [
     {
