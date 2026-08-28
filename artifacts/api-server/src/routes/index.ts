@@ -38,6 +38,10 @@ const PUBLIC_PATHS = [
   // The person accepting an invitation doesn't have a session yet - see
   // routes/admin.ts's POST /invitations/accept.
   "/invitations/accept",
+  // Public sign-up, open only while the workspace has zero users - see
+  // routes/admin.ts's GET /setup/status and POST /setup/first-admin. Neither
+  // caller has a session yet, by definition.
+  "/setup",
 ];
 
 /**

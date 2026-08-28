@@ -146,11 +146,39 @@ const authButtonStyle = (disabled: boolean): React.CSSProperties => ({
   width: "100%",
 });
 
+/**
+ * Whether POST /setup/first-admin is currently usable - i.e. the workspace
+ * has zero users. Shared by SignInPage (to decide whether to show the
+ * "Set up GroundworkOS" link at all) and SetupPage (to redirect away, rather
+ * than show a form that would only 409 on submit, once someone's already
+ * finished setup - e.g. a second browser tab left open from before).
+ */
+function useSetupOpen() {
+  const [open, setOpen] = useState<boolean | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch(`${basePath}/api/setup/status`);
+        const data = await r.json().catch(() => ({}));
+        if (!cancelled) setOpen(r.ok ? !!data.open : false);
+      } catch {
+        if (!cancelled) setOpen(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return open;
+}
+
 function SignInPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const setupOpen = useSetupOpen();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -231,9 +259,134 @@ function SignInPage() {
             lineHeight: 1.6,
           }}
         >
-          GroundworkOS is invite-only. If you've received an invitation
-          email, follow its link to set up your account instead.
+          {setupOpen ? (
+            <>
+              No account yet?{" "}
+              <a href={`${basePath}/setup`} style={{ color: "#1b5e78" }}>
+                Set up GroundworkOS
+              </a>{" "}
+              to create the first (admin) account.
+            </>
+          ) : (
+            <>
+              GroundworkOS is invite-only. If you've received an invitation
+              email, follow its link to set up your account instead.
+            </>
+          )}
         </p>
+      </form>
+    </div>
+  );
+}
+
+/**
+ * The very first account on a brand-new deployment - the one self-service
+ * registration surface GroundworkOS has (see routes/admin.ts's
+ * GET /setup/status and POST /setup/first-admin on the backend). Only
+ * functions while the workspace has zero users; once that first account
+ * exists, POST /setup/first-admin starts refusing and this page redirects
+ * to /sign-in instead of showing a form that can no longer succeed.
+ */
+function SetupPage() {
+  const setupOpen = useSetupOpen();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      const r = await fetch(`${basePath}/api/setup/first-admin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name: name.trim(), email: email.trim(), password }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setError(data.error ?? "Failed to create account");
+        return;
+      }
+      window.location.href = basePath || "/";
+    } catch {
+      setError("Failed to create account");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (setupOpen === false) {
+    return <Redirect to="/sign-in" />;
+  }
+
+  return (
+    <div
+      className="flex min-h-dvh items-center justify-center px-4"
+      style={{ backgroundColor: "#f0ede8" }}
+    >
+      <form onSubmit={handleSubmit} style={authCardStyle}>
+        <h1
+          style={{
+            fontFamily: "'Space Grotesk', sans-serif",
+            fontWeight: 700,
+            fontSize: 20,
+            color: "#181410",
+            letterSpacing: "-0.02em",
+            marginBottom: 4,
+          }}
+        >
+          Set up GroundworkOS
+        </h1>
+        <p style={{ color: "#7a7469", fontSize: 13, marginBottom: 24 }}>
+          Create the first account. It becomes the admin - everyone after
+          this signs up by invitation only.
+        </p>
+        <div style={{ display: "grid", gap: 16 }}>
+          <div style={{ display: "grid", gap: 6 }}>
+            <label style={authLabelStyle}>Your name</label>
+            <input
+              type="text"
+              required
+              autoComplete="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              style={authInputStyle}
+            />
+          </div>
+          <div style={{ display: "grid", gap: 6 }}>
+            <label style={authLabelStyle}>Email</label>
+            <input
+              type="email"
+              required
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              style={authInputStyle}
+            />
+          </div>
+          <div style={{ display: "grid", gap: 6 }}>
+            <label style={authLabelStyle}>Password</label>
+            <input
+              type="password"
+              required
+              minLength={8}
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={authInputStyle}
+            />
+          </div>
+          {error && (
+            <p style={{ color: "#c13a2a", fontSize: 12 }}>{error}</p>
+          )}
+          <button type="submit" disabled={loading} style={authButtonStyle(loading)}>
+            {loading ? "Creating account..." : "Create admin account"}
+          </button>
+        </div>
       </form>
     </div>
   );
@@ -497,6 +650,7 @@ function AppShell() {
       <Toaster position="bottom-right" richColors closeButton />
       <Switch>
         <Route path="/sign-in/*?" component={SignInPage} />
+        <Route path="/setup" component={SetupPage} />
         <Route path="/accept-invite" component={AcceptInvitePage} />
         <Route path="/portal/:token" component={PortalPage} />
         <Route component={RouteGuard} />
