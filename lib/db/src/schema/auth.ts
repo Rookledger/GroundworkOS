@@ -65,7 +65,7 @@ export const accountTable = sqliteTable(
      * pair - our installed better-auth (^1.7.2) expects this column to
      * exist, same as every other field on this table.
      */
-    issuer: text("issuer").notNull(),
+    issuer: text("issuer").notNull().default(""),
     userId: text("user_id")
       .notNull()
       .references(() => userTable.id, { onDelete: "cascade" }),
