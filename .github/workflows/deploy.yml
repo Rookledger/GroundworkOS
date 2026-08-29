@@ -50,17 +50,26 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Debug Cloudflare auth
-        # TEMPORARY - diagnosing a persistent "database could not be found"
-        # error on the migrations step despite correct-looking token/account
-        # config. Prints which account/token CI is actually authenticated
-        # as and what D1 databases it can see - no secret values are ever
-        # printed by these commands. Remove once the D1 access issue is
-        # resolved.
+        # TEMPORARY - the earlier "database could not be found" turned out
+        # to be a stale database_id in wrangler.jsonc (now fixed to the
+        # account's real "groundworkos" D1 database, which already has 110
+        # tables and real usage on it - not a fresh/empty database). Before
+        # letting migrations run against it for real, print what's actually
+        # in there and confirm the KV namespace id resolves too, so a
+        # schema mismatch or wrong id shows up here instead of mid-deploy.
+        # No secret values are ever printed by these commands. Remove this
+        # whole step once the account's resource ids are confirmed solid.
         working-directory: artifacts/api-server
         run: |
           pnpm exec wrangler whoami
-          echo "---"
+          echo "--- d1 list ---"
           pnpm exec wrangler d1 list
+          echo "--- d1 migrations list (groundworkos, env ktr) ---"
+          pnpm exec wrangler d1 migrations list groundworkos --env "${{ inputs.client }}" --remote
+          echo "--- existing tables in groundworkos ---"
+          pnpm exec wrangler d1 execute groundworkos --env "${{ inputs.client }}" --remote --command "SELECT name, type FROM sqlite_master WHERE type IN ('table','index') ORDER BY name;"
+          echo "--- kv namespace list ---"
+          pnpm exec wrangler kv namespace list
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

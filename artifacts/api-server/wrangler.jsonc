@@ -56,7 +56,7 @@
     {
       "binding": "DB",
       "database_name": "groundworkos",
-      "database_id": "16349ddf-699b-4363-9e8b-3c7a018ebecf",
+      "database_id": "7a982d10-b66d-4500-af43-380b9b6ad23c",
       "migrations_dir": "../../lib/db/migrations",
     },
   ],
@@ -69,7 +69,7 @@
   "kv_namespaces": [
     {
       "binding": "KV",
-      "id": "c1f965d5dd6e461cbbf684264ab9322b",
+      "id": "8f3ba7f136024cc0a699f2da0853d367",
     },
   ],
   "vars": {
@@ -101,7 +101,7 @@
         {
           "binding": "DB",
           "database_name": "groundworkos",
-          "database_id": "16349ddf-699b-4363-9e8b-3c7a018ebecf",
+          "database_id": "7a982d10-b66d-4500-af43-380b9b6ad23c",
           "migrations_dir": "../../lib/db/migrations",
         },
       ],
@@ -114,7 +114,7 @@
       "kv_namespaces": [
         {
           "binding": "KV",
-          "id": "c1f965d5dd6e461cbbf684264ab9322b",
+          "id": "8f3ba7f136024cc0a699f2da0853d367",
         },
       ],
       "vars": {
