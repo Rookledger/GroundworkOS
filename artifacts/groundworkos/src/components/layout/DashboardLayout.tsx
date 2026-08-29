@@ -25,7 +25,6 @@ import {
   FileWarning,
   AlertTriangle,
   Wrench,
-  Server,
   KeyRound,
 } from "lucide-react";
 import { useAlerts } from "../../hooks/useAlerts";
@@ -108,12 +107,13 @@ const ALL_NAV = [
     icon: ScrollText,
     minRole: "admin" as Role,
   },
-  {
-    name: "Deploy Guide",
-    href: "/deploy",
-    icon: Server,
-    minRole: "admin" as Role,
-  },
+  // "Deploy Guide" (formerly here, href: "/deploy") has been removed from
+  // production navigation - it was an internal ops runbook (server
+  // provisioning steps, an "Environment & Secrets" tab listing every
+  // production env var name) that had no business being reachable from a
+  // live customer-facing app just because the viewer holds the "admin"
+  // role. Keep deployment docs in the repo (see DEPLOYMENT.md) or an
+  // internal wiki instead of shipping them inside the product.
   {
     name: "Settings",
     href: "/settings",

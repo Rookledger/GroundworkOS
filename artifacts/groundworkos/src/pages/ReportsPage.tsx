@@ -237,7 +237,14 @@ export function ReportsPage() {
   const filteredRates = rateBook.filter(
     (r: any) => rateCategory === "all" || r.category === rateCategory,
   );
+  // Defensive filter: a tax_month can only ever be a real "YYYY-MM" period
+  // (see DataLoader.tsx's mapCisReturn / api-server's cis.ts route). This
+  // guards against ever rendering a group for a falsy/malformed value,
+  // where `new Date(month + "-01")` would otherwise silently resolve to a
+  // bogus date (e.g. "Tax Month: January 2001" for an empty string) instead
+  // of failing loudly.
   const taxMonths = [...new Set(cisReturns.map((r) => r.tax_month))]
+    .filter((m) => /^\d{4}-\d{2}$/.test(m))
     .sort()
     .reverse();
 
