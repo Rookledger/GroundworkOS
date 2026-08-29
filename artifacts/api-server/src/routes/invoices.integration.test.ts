@@ -180,3 +180,39 @@ describe("full write cycle for /invoices/:id", () => {
     expect(rowsAfterDelete).toHaveLength(0);
   });
 });
+
+describe("PATCH /invoices/:id — mark as paid", () => {
+  it("accepts a status+paidAt partial update (as sent by InvoicesPage's markPaid) and stores paidAt as a real timestamp", async () => {
+    const app = buildApp();
+
+    const createRes = await app.request("/invoices", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ issuedDate: "2026-06-01", subtotal: 500 }),
+    });
+    expect(createRes.status).toBe(201);
+    const created = await createRes.json();
+
+    // Mirrors InvoicesPage.tsx's markPaid(): `paidAt: new Date().toISOString()`
+    // sent alongside `status`, with no `subtotal`/`subcontractorId` in the
+    // body. This used to throw a 500 because the raw ISO string was passed
+    // straight into a Drizzle `timestamp_ms`-mode column update.
+    const paidAt = new Date().toISOString();
+    const patchRes = await app.request(`/invoices/${created.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "paid", paidAt }),
+    });
+    expect(patchRes.status).toBe(200);
+    const patched = await patchRes.json();
+    expect(patched.status).toBe("paid");
+    expect(new Date(patched.paidAt).toISOString()).toBe(paidAt);
+
+    const [persisted] = await db
+      .select()
+      .from(invoicesTable)
+      .where(eq(invoicesTable.id, created.id));
+    expect(persisted?.paidAt).toBeInstanceOf(Date);
+    expect(persisted?.paidAt?.toISOString()).toBe(paidAt);
+  });
+});

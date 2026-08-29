@@ -91,12 +91,17 @@ export function InvoicesPage() {
         clientId: form.client_id,
         jobId: form.job_id || undefined,
         subtotal,
-        vatAmount,
-        totalAmount: total,
         status: "draft",
         issuedDate: form.issued_date,
         dueDate: form.due_date,
         notes: form.notes || undefined,
+        // The generated `InvoiceInput` type (orval, from the OpenAPI spec)
+        // requires server-generated fields like `id`/`invoiceNumber` that a
+        // create request must never send — the real runtime contract is
+        // `CreateInvoiceInput` in lib/api-zod/src/requestSchemas.ts, which
+        // this payload matches exactly (it deliberately omits `vatAmount`/
+        // `totalAmount`, which are always recomputed server-side and are
+        // rejected by that schema). The cast bridges that known gap.
       } as any);
       dispatch({ type: "ADD_INVOICE", invoice: toInvoice(result) });
       setShowModal(false);
@@ -240,7 +245,7 @@ export function InvoicesPage() {
           accent
           label="Outstanding"
           value={formatCurrency(totalOutstanding)}
-          sub={`${invoices.filter((i) => i.status === "sent" || i.status === "overdue").length} invoices`}
+          sub={`${invoices.filter((i) => i.status !== "paid" && i.status !== "credited").length} invoices`}
         />
         <StatCard
           danger={overdueTotal > 0}

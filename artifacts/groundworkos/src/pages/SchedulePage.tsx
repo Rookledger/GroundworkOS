@@ -143,8 +143,8 @@ export function SchedulePage() {
         const result = await updateScheduleEntry(editingId, {
           jobId: form.job_id || undefined,
           title: form.title.trim(),
-          startDatetime: `${form.date}T${form.time}:00`,
-          endDatetime: `${form.date}T${form.end_time}:00`,
+          startDatetime: new Date(`${form.date}T${form.time}:00`).toISOString(),
+          endDatetime: new Date(`${form.date}T${form.end_time}:00`).toISOString(),
           crewCount: parseInt(form.crew_count) || 1,
           foreman: form.foreman || undefined,
           plantAssigned: form.plant_assigned || undefined,
@@ -162,8 +162,8 @@ export function SchedulePage() {
         const result = await createScheduleEntry({
           jobId: form.job_id || undefined,
           title: form.title.trim(),
-          startDatetime: `${form.date}T${form.time}:00`,
-          endDatetime: `${form.date}T${form.end_time}:00`,
+          startDatetime: new Date(`${form.date}T${form.time}:00`).toISOString(),
+          endDatetime: new Date(`${form.date}T${form.end_time}:00`).toISOString(),
           crewCount: parseInt(form.crew_count) || 1,
           foreman: form.foreman || undefined,
           plantAssigned: form.plant_assigned || undefined,
