@@ -41,14 +41,22 @@ interface DashboardStats {
   docAlerts: number;
 }
 
+// Matches the shape GET /api/audit-logs actually returns: drizzle-orm's
+// `db.select().from(auditLogsTable)` serializes rows using the table's JS
+// property names (see lib/db/src/schema/audit_logs.ts), which are
+// camelCase - not the snake_case column names underneath. AuditLogPage.tsx
+// (the /audit page) reads this same endpoint and already expects camelCase
+// (entityType, userName, createdAt); this interface previously used
+// snake_case field names that never matched a real response, so every
+// field read off `entry` here was `undefined`.
 interface AuditEntry {
   id: string;
-  entity_type: string;
-  entity_id: string;
+  entityType: string;
+  entityId: string;
   action: string;
   changes: Record<string, any> | null;
-  user_name: string | null;
-  created_at: string;
+  userName: string | null;
+  createdAt: string;
 }
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -765,7 +773,7 @@ export function DashboardPage() {
                     );
                     const color = ACTION_COLOR[entry.action] ?? "#7a7469";
                     const entityLabel =
-                      ENTITY_LABELS[entry.entity_type] ?? entry.entity_type;
+                      ENTITY_LABELS[entry.entityType] ?? entry.entityType;
                     const summary = getChangeSummary(
                       entry.action,
                       entry.changes,
@@ -803,19 +811,19 @@ export function DashboardPage() {
                             </span>
                           </div>
                           <div className="flex items-center gap-2 mt-1">
-                            {entry.user_name && (
+                            {entry.userName && (
                               <span
                                 className="text-xs font-medium"
                                 style={{ color: "#7a7469" }}
                               >
-                                {entry.user_name}
+                                {entry.userName}
                               </span>
                             )}
                             <span
                               className="text-xs font-mono"
                               style={{ color: "#a8a099" }}
                             >
-                              {timeAgo(entry.created_at)}
+                              {timeAgo(entry.createdAt)}
                             </span>
                           </div>
                         </div>
