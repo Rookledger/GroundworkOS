@@ -75,6 +75,15 @@ export function createAuth(env: Bindings) {
           defaultValue: "foreman",
           input: false,
         },
+        // Deactivation switch (routes/admin.ts's PATCH /admin/users/:id/active)
+        // - same `input: false` as `role` above, so a caller can never
+        // reactivate their own account through the public API, only an
+        // admin's direct call to that route can.
+        active: {
+          type: "boolean",
+          defaultValue: true,
+          input: false,
+        },
       },
     },
   });

@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { eq, sql } from "drizzle-orm";
-import { userTable, invitationsTable } from "@workspace/db";
+import { userTable, invitationsTable, sessionTable } from "@workspace/db";
 import { isRole, resolveRole } from "@workspace/shared-role";
 import { emailDomainAllowed, parseAllowedDomains } from "../lib/signupPolicy.js";
 import { createAuth } from "../lib/betterAuth.js";
@@ -115,6 +115,7 @@ router.get("/admin/users", async (c) => {
         email: userTable.email,
         role: userTable.role,
         image: userTable.image,
+        active: userTable.active,
         createdAt: userTable.createdAt,
       })
       .from(userTable);
@@ -124,6 +125,7 @@ router.get("/admin/users", async (c) => {
       email: u.email,
       role: resolveRole(u.role),
       image: u.image,
+      active: u.active,
       createdAt: new Date(u.createdAt).toISOString(),
     }));
     return c.json(users);
@@ -152,6 +154,52 @@ router.patch("/admin/users/:id/role", async (c) => {
   } catch (err) {
     return c.json(
       { error: err instanceof Error ? err.message : "Failed to update role" },
+      500,
+    );
+  }
+});
+
+/**
+ * Deactivating (rather than deleting) an employee's account: flips
+ * `user.active` to false and drops every one of their existing sessions so
+ * the lockout is immediate, not just "next time their cookie expires". Their
+ * historical records - jobs, timesheets, audit log entries referencing their
+ * name - are untouched, since nothing here removes the `user` row itself.
+ * app.ts's session middleware also re-checks `active` on every request (not
+ * just at sign-in), so a session created a moment before this call can't
+ * slip through on a request that arrives just after it.
+ *
+ * Reactivating just flips the switch back and lets them sign in again -
+ * there's nothing else to restore, since deactivating never touched their
+ * account or role.
+ */
+router.patch("/admin/users/:id/active", async (c) => {
+  const denied = await requireAdmin(c);
+  if (denied) return denied;
+  const targetId = c.req.param("id");
+  const { active } = await c.req.json();
+  if (typeof active !== "boolean") {
+    return c.json({ error: "active must be a boolean" }, 400);
+  }
+  if (!active && targetId === getUserId(c)) {
+    return c.json({ error: "You can't deactivate your own account" }, 400);
+  }
+  try {
+    const db = c.get("db");
+    await db
+      .update(userTable)
+      .set({ active, updatedAt: new Date() })
+      .where(eq(userTable.id, targetId));
+    if (!active) {
+      await db.delete(sessionTable).where(eq(sessionTable.userId, targetId));
+    }
+    return c.json({ ok: true });
+  } catch (err) {
+    return c.json(
+      {
+        error:
+          err instanceof Error ? err.message : "Failed to update account status",
+      },
       500,
     );
   }

@@ -97,11 +97,20 @@ app.use(async (c, next) =>
  * consumer (routes/index.ts's auth guard, lib/auth.ts's getUserRole,
  * routes/admin.ts) just reads these off the context instead of doing its
  * own lookup or falling back to a separate auth-library helper.
+ *
+ * A deactivated account (`user.active === false`, set via
+ * routes/admin.ts's PATCH /admin/users/:id/active) is treated exactly like
+ * having no session at all - `userId`/`_role` are left unset, so every
+ * downstream auth guard rejects the request the same way it would for a
+ * signed-out caller. That route already deletes the user's existing
+ * sessions when deactivating them, but re-checking `active` here too closes
+ * the narrow window where a session created moments before deactivation
+ * could otherwise still be live for one more request.
  */
 app.use(async (c, next) => {
   const auth = createAuth(c.env);
   const session = await auth.api.getSession({ headers: c.req.raw.headers });
-  if (session) {
+  if (session && session.user.active !== false) {
     c.set("userId", session.user.id);
     c.set("_role", resolveRole(session.user.role));
   }
