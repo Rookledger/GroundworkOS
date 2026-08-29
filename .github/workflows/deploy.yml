@@ -70,6 +70,10 @@ jobs:
           pnpm exec wrangler d1 execute groundworkos --env "${{ inputs.client }}" --remote --command "SELECT name, type FROM sqlite_master WHERE type IN ('table','index') ORDER BY name;"
           echo "--- kv namespace list ---"
           pnpm exec wrangler kv namespace list
+          echo "--- existing users (email/role only, no secrets) ---"
+          pnpm exec wrangler d1 execute groundworkos --env "${{ inputs.client }}" --remote --command "SELECT email, role, created_at FROM user ORDER BY created_at;"
+          echo "--- pending/accepted invitations ---"
+          pnpm exec wrangler d1 execute groundworkos --env "${{ inputs.client }}" --remote --command "SELECT id, email, role, accepted_at, expires_at FROM invitations ORDER BY created_at;"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

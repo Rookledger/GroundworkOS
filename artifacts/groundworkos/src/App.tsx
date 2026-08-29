@@ -4,6 +4,7 @@ import {
   Route,
   Router as WouterRouter,
   useLocation,
+  useSearch,
   Redirect,
   Link,
 } from "wouter";
@@ -403,10 +404,14 @@ function SetupPage() {
  * specified, and they're signed in immediately.
  */
 function AcceptInvitePage() {
-  const [location] = useLocation();
-  const token = new URLSearchParams(location.split("?")[1] ?? "").get(
-    "token",
-  );
+  // wouter's useLocation() only ever returns the pathname, never the query
+  // string (see https://github.com/molefrog/wouter#useLocation) - parsing
+  // "?token=..." out of it here always came back empty, so every accept
+  // link ever generated failed with "missing its token" for every
+  // invitee, no exceptions. useSearch() is wouter's dedicated hook for the
+  // query string itself.
+  const search = useSearch();
+  const token = new URLSearchParams(search).get("token");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
