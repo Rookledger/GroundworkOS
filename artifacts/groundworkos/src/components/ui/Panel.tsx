@@ -26,24 +26,26 @@ export function Panel({
         border: "1px solid #d9d4ce",
       }}
     >
-      {title && (
+      {(title || actions) && (
         <div
           className="flex items-center justify-between px-5 py-3.5"
           style={{ borderBottom: "1px solid #d9d4ce" }}
         >
           <div className="flex items-center gap-2.5 min-w-0">
-            <h3
-              className="truncate"
-              style={{
-                fontFamily: "'Space Grotesk', sans-serif",
-                fontWeight: 600,
-                fontSize: "15px",
-                letterSpacing: "-0.01em",
-                color: "#181410",
-              }}
-            >
-              {title}
-            </h3>
+            {title && (
+              <h3
+                className="truncate"
+                style={{
+                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontWeight: 600,
+                  fontSize: "15px",
+                  letterSpacing: "-0.01em",
+                  color: "#181410",
+                }}
+              >
+                {title}
+              </h3>
+            )}
             {badge !== undefined && (
               <span
                 className="flex-shrink-0 inline-flex items-center justify-center px-2 py-0.5 rounded-full"
