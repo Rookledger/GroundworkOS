@@ -49,6 +49,21 @@ export function createAuth(env: Bindings) {
     secret: env.BETTER_AUTH_SECRET,
     baseURL: env.APP_URL,
     trustedOrigins: env.APP_URL ? [env.APP_URL] : [],
+    advanced: {
+      ipAddress: {
+        // Better Auth's rate limiter keys on the client IP it reads from
+        // headers - default is `x-forwarded-for` alone, which Cloudflare
+        // Workers never sets. With no header to read, getIP() returns
+        // null for every request, so every visitor collapses onto the
+        // same "null|<path>" rate-limit key and shares one counter per
+        // auth endpoint - one person's traffic (or, as happened here, a
+        // day of testing) locks out everyone else hitting the same route.
+        // `cf-connecting-ip` is the header Cloudflare actually sets to the
+        // real client IP; keep `x-forwarded-for` after it for anywhere
+        // else this ever runs.
+        ipAddressHeaders: ["cf-connecting-ip", "x-forwarded-for"],
+      },
+    },
     emailAndPassword: {
       enabled: true,
       disableSignUp: false,
