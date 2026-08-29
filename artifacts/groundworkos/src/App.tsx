@@ -193,7 +193,9 @@ function SignInPage() {
       });
       if (signInError) {
         setError(signInError.message ?? "Failed to sign in");
+        return;
       }
+      window.location.href = basePath || "/";
     } catch {
       setError("Failed to sign in");
     } finally {
