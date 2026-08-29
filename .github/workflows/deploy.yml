@@ -49,6 +49,22 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Debug Cloudflare auth
+        # TEMPORARY - diagnosing a persistent "database could not be found"
+        # error on the migrations step despite correct-looking token/account
+        # config. Prints which account/token CI is actually authenticated
+        # as and what D1 databases it can see - no secret values are ever
+        # printed by these commands. Remove once the D1 access issue is
+        # resolved.
+        working-directory: artifacts/api-server
+        run: |
+          pnpm exec wrangler whoami
+          echo "---"
+          pnpm exec wrangler d1 list
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
       - name: Set BETTER_AUTH_SECRET
         # Optional: only runs if this environment has a BETTER_AUTH_SECRET
         # GitHub secret configured. Lets a client be fully onboarded via
