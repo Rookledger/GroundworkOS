@@ -150,17 +150,18 @@ export function QuotesPage() {
         title: form.title.trim(),
         validUntil: form.valid_until || undefined,
         notes: form.notes || undefined,
-        subtotal,
-        vatAmount,
-        totalAmount: total,
         lineItems: validLineItems.map((li) => ({
-          id: li.id,
           description: li.description,
           quantity: li.quantity,
           unit: li.unit,
           unitPrice: li.unit_price,
-          total: li.total,
         })),
+        // The generated `QuoteInput`/`LineItemRecord` types (orval, from the
+        // OpenAPI spec) require server-generated fields like `id` and
+        // `quoteNumber` that a create request must never send — the real
+        // runtime contract is `CreateQuoteInput`/`QuoteLineItemInput` in
+        // lib/api-zod/src/requestSchemas.ts, which this payload matches
+        // exactly. The cast bridges that known generated-type/runtime gap.
       } as any);
       dispatch({ type: "ADD_QUOTE", quote: toQuote(result) });
       setShowModal(false);

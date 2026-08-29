@@ -25,7 +25,6 @@ const CLIENT_FIELDS = [
   "email",
   "phone",
   "address",
-  "payment_terms",
   "notes",
 ];
 const JOB_FIELDS = [
@@ -39,9 +38,9 @@ const JOB_FIELDS = [
   "description",
 ];
 
-const CLIENT_SAMPLE = `company_name,contact_name,email,phone,address,payment_terms,notes
-Apex Civil Engineering,John Smith,john@apexcivil.co.uk,0121 000 0001,"Unit 1 Business Park, Birmingham, B1 1AA",30 days,Key account
-Highway Contractors Ltd,Sarah Jones,sarah@highwayco.co.uk,0121 000 0002,"12 Trade Street, Coventry, CV1 2BB",14 days,`;
+const CLIENT_SAMPLE = `company_name,contact_name,email,phone,address,notes
+Apex Civil Engineering,John Smith,john@apexcivil.co.uk,0121 000 0001,"Unit 1 Business Park, Birmingham, B1 1AA",Key account
+Highway Contractors Ltd,Sarah Jones,sarah@highwayco.co.uk,0121 000 0002,"12 Trade Street, Coventry, CV1 2BB",`;
 
 const JOB_SAMPLE = `title,type,status,value,start_date,end_date,site_address,description
 A45 Junction Drainage,drainage,active,45000,2025-02-01,2025-04-30,"A45 Eastbound, Birmingham",Storm drainage installation
@@ -166,7 +165,6 @@ export function ImportPage() {
             email: d.email || "",
             phone: d.phone || "",
             address: d.address || "",
-            paymentTerms: d.payment_terms || "30 days",
             notes: d.notes || "",
           };
           if (!payload.companyName) throw new Error("company_name required");
@@ -175,9 +173,9 @@ export function ImportPage() {
             title: d.title || "",
             type: d.type || "groundworks",
             status: d.status || "quoted",
-            value: d.value ? Number(d.value) : null,
-            startDate: d.start_date || null,
-            endDate: d.end_date || null,
+            value: d.value ? Number(d.value) : undefined,
+            startDate: d.start_date || undefined,
+            endDate: d.end_date || undefined,
             siteAddress: d.site_address || d.address || "",
             description: d.description || "",
           };

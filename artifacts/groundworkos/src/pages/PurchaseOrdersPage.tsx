@@ -173,15 +173,15 @@ export function PurchaseOrdersPage() {
       const payload = {
         supplier: form.supplier.trim(),
         description: form.description.trim(),
-        jobId: form.jobId || null,
+        jobId: form.jobId || undefined,
         amount,
         vatAmount,
         totalAmount: amount + vatAmount,
         status: form.status,
         orderDate: form.orderDate,
-        expectedDelivery: form.expectedDelivery || null,
-        deliveryDate: form.deliveryDate || null,
-        notes: form.notes.trim() || null,
+        expectedDelivery: form.expectedDelivery || undefined,
+        deliveryDate: form.deliveryDate || undefined,
+        notes: form.notes.trim() || undefined,
       };
       if (editing) {
         const res = await fetch(`${BASE}/api/purchase-orders/${editing.id}`, {

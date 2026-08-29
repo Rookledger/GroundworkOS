@@ -122,8 +122,14 @@ router.patch("/invoices/:id", requireRole("manager"), async (c) => {
   }
   const db = c.get("db");
   const id = c.req.param("id");
-  const rest = parsed.data;
-  let data: Record<string, any> = rest;
+  const { paidAt, ...rest } = parsed.data;
+  // `paidAt` is a `timestamp_ms`-mode Drizzle column, so it must be converted
+  // to a Date before being written (a raw ISO string throws at the DB layer),
+  // mirroring how routes/quotes.ts handles `sentAt`.
+  let data: Record<string, any> = {
+    ...rest,
+    ...(paidAt !== undefined && { paidAt: new Date(paidAt) }),
+  };
   // Only recompute VAT/total/CIS if something that affects them changed;
   // otherwise this is a partial update (e.g. just `status`) and we leave the
   // existing financial fields untouched.
@@ -140,6 +146,7 @@ router.patch("/invoices/:id", requireRole("manager"), async (c) => {
           ? rest.subcontractorId
           : existing.subcontractorId,
       ...rest,
+      ...(paidAt !== undefined && { paidAt: new Date(paidAt) }),
     });
   }
   const [inv] = await db

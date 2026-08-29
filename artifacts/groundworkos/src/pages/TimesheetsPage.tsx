@@ -151,14 +151,14 @@ export function TimesheetsPage() {
     setSaving(true);
     try {
       const hoursWorked = parseFloat(form.hours_worked);
-      const dayRate = form.day_rate ? parseFloat(form.day_rate) : null;
+      const dayRate = form.day_rate ? parseFloat(form.day_rate) : undefined;
       const result = await apiPost("/api/timesheets", {
         workerName: form.worker_name.trim(),
-        jobId: form.job_id || null,
+        jobId: form.job_id || undefined,
         workDate: form.work_date,
         hoursWorked,
         dayRate,
-        description: form.description || null,
+        description: form.description || undefined,
       });
       dispatch({ type: "ADD_TIMESHEET", timesheet: toTimesheet(result) });
       setShowModal(false);

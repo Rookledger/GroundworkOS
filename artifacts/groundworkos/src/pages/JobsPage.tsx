@@ -76,6 +76,7 @@ export function JobsPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -97,7 +98,29 @@ export function JobsPage() {
   });
 
   function openNew() {
+    setEditingId(null);
     setForm(emptyForm);
+    setErrors({});
+    setShowModal(true);
+  }
+
+  function openEdit(job: (typeof jobs)[number]) {
+    setEditingId(job.id);
+    setForm({
+      title: job.title,
+      client_id: job.client_id ?? "",
+      type: (job.type as JobType) ?? "",
+      site_address: job.site_address ?? "",
+      value: job.value ? String(job.value) : "",
+      start_date: job.start_date ?? "",
+      end_date: job.end_date ?? "",
+      foreman: job.foreman ?? "",
+      crew_count: job.crew_count ? String(job.crew_count) : "",
+      nrswa_required: job.nrswa_required ?? false,
+      permit_number: job.permit_number ?? "",
+      description: job.description ?? "",
+      status: job.status,
+    });
     setErrors({});
     setShowModal(true);
   }
@@ -116,27 +139,48 @@ export function JobsPage() {
     }
     setSaving(true);
     try {
-      const result = await createJob({
-        title: form.title.trim(),
-        clientId: form.client_id || undefined,
-        type: (form.type as JobType) || undefined,
-        siteAddress: form.site_address || undefined,
-        value: form.value ? parseFloat(form.value) : undefined,
-        startDate: form.start_date || undefined,
-        endDate: form.end_date || undefined,
-        status: form.status,
-        progressPercent: 0,
-        description: form.description || undefined,
-        foreman: form.foreman || undefined,
-        crewCount: form.crew_count ? parseInt(form.crew_count) : undefined,
-        nrswaRequired: form.nrswa_required,
-        permitNumber: form.permit_number || undefined,
-      } as any);
-      dispatch({ type: "ADD_JOB", job: toJob(result) });
-      setShowModal(false);
-      toast.success(`Job ${result.jobNumber} created`);
+      if (editingId) {
+        const result = await updateJob(editingId, {
+          title: form.title.trim(),
+          clientId: form.client_id || undefined,
+          type: (form.type as JobType) || undefined,
+          siteAddress: form.site_address || undefined,
+          value: form.value ? parseFloat(form.value) : undefined,
+          startDate: form.start_date || undefined,
+          endDate: form.end_date || undefined,
+          status: form.status,
+          description: form.description || undefined,
+          foreman: form.foreman || undefined,
+          crewCount: form.crew_count ? parseInt(form.crew_count) : undefined,
+          nrswaRequired: form.nrswa_required,
+          permitNumber: form.permit_number || undefined,
+        } as any);
+        dispatch({ type: "UPDATE_JOB", id: editingId, updates: toJob(result) });
+        setShowModal(false);
+        toast.success(`Job ${result.jobNumber} updated`);
+      } else {
+        const result = await createJob({
+          title: form.title.trim(),
+          clientId: form.client_id || undefined,
+          type: (form.type as JobType) || undefined,
+          siteAddress: form.site_address || undefined,
+          value: form.value ? parseFloat(form.value) : undefined,
+          startDate: form.start_date || undefined,
+          endDate: form.end_date || undefined,
+          status: form.status,
+          progressPercent: 0,
+          description: form.description || undefined,
+          foreman: form.foreman || undefined,
+          crewCount: form.crew_count ? parseInt(form.crew_count) : undefined,
+          nrswaRequired: form.nrswa_required,
+          permitNumber: form.permit_number || undefined,
+        } as any);
+        dispatch({ type: "ADD_JOB", job: toJob(result) });
+        setShowModal(false);
+        toast.success(`Job ${result.jobNumber} created`);
+      }
     } catch {
-      toast.error("Failed to create job");
+      toast.error(editingId ? "Failed to update job" : "Failed to create job");
     } finally {
       setSaving(false);
     }
@@ -584,6 +628,14 @@ export function JobsPage() {
               actions={
                 <div className="flex items-center gap-1">
                   <button
+                    onClick={() => openEdit(selectedJob)}
+                    className="px-2 py-1 rounded-md hover:bg-[#e8e4dd] transition-colors text-xs font-medium"
+                    style={{ color: "#1b5e78" }}
+                    title="Edit job"
+                  >
+                    Edit
+                  </button>
+                  <button
                     onClick={() =>
                       handleDelete(selectedJob.id, selectedJob.job_number)
                     }
@@ -847,7 +899,7 @@ export function JobsPage() {
       <Modal
         open={showModal}
         onClose={() => setShowModal(false)}
-        title="New Job"
+        title={editingId ? "Edit Job" : "New Job"}
       >
         <div className="space-y-4">
           <Field label="Job Title" required>
@@ -1017,7 +1069,13 @@ export function JobsPage() {
               onClick={handleSubmit}
               disabled={saving}
             >
-              {saving ? "Creating…" : "Create Job"}
+              {saving
+                ? editingId
+                  ? "Saving…"
+                  : "Creating…"
+                : editingId
+                  ? "Save Changes"
+                  : "Create Job"}
             </Btn>
             <Btn variant="ghost" onClick={() => setShowModal(false)}>
               Cancel
