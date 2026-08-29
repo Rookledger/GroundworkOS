@@ -35,6 +35,17 @@ export const userTable = sqliteTable("user", {
     .default(false),
   image: text("image"),
   role: text("role").notNull().default("foreman"),
+  /**
+   * Deactivation switch for the Settings > Users "Deactivate" action
+   * (routes/admin.ts's PATCH /admin/users/:id/active) - false blocks sign-in
+   * and every authenticated request (see app.ts's session middleware) while
+   * leaving the account and its historical records (jobs, timesheets, audit
+   * log entries referencing their name) intact. Exposed as a Better Auth
+   * `user.additionalFields` entry the same way `role` is, with the same
+   * `input: false` (see lib/betterAuth.ts) so a caller can never flip their
+   * own switch back on through the public API.
+   */
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
 });

@@ -11,6 +11,7 @@ interface AppUser {
   email: string | null;
   role: Role;
   image: string | null;
+  active: boolean;
   createdAt: string;
 }
 
@@ -35,6 +36,7 @@ export function UsersPage() {
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [togglingActive, setTogglingActive] = useState<string | null>(null);
   const [bootstrapping, setBootstrapping] = useState(false);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -188,6 +190,31 @@ export function UsersPage() {
       toast.error("Failed to update role");
     } finally {
       setUpdating(null);
+    }
+  }
+
+  async function handleToggleActive(userId: string, nextActive: boolean) {
+    if (userId === currentUser?.id) {
+      toast.error("You can't deactivate your own account");
+      return;
+    }
+    setTogglingActive(userId);
+    try {
+      const r = await fetch(`${BASE}/api/admin/users/${userId}/active`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active: nextActive }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || "Failed to update account");
+      setUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, active: nextActive } : u)),
+      );
+      toast.success(nextActive ? "Account reactivated" : "Account deactivated");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update account");
+    } finally {
+      setTogglingActive(null);
     }
   }
 
@@ -514,6 +541,7 @@ export function UsersPage() {
                   gap: 12,
                   borderBottom:
                     idx < users.length - 1 ? "1px solid #ece8e3" : "none",
+                  opacity: u.active ? 1 : 0.55,
                 }}
               >
                 <div
@@ -564,6 +592,22 @@ export function UsersPage() {
                         you
                       </span>
                     )}
+                    {!u.active && (
+                      <span
+                        style={{
+                          padding: "2px 8px",
+                          borderRadius: 99,
+                          fontSize: 10,
+                          fontWeight: 600,
+                          fontFamily: "'Space Grotesk', sans-serif",
+                          backgroundColor: "#f3e8e8",
+                          color: "#c13a2a",
+                          border: "1px solid rgba(193,58,42,0.2)",
+                        }}
+                      >
+                        Deactivated
+                      </span>
+                    )}
                   </div>
                   <span
                     style={{
@@ -612,6 +656,36 @@ export function UsersPage() {
                     <option value="manager">Manager</option>
                     <option value="admin">Admin</option>
                   </select>
+                  {!isSelf && (
+                    <button
+                      onClick={() => handleToggleActive(u.id, !u.active)}
+                      disabled={togglingActive === u.id}
+                      style={{
+                        padding: "5px 12px",
+                        borderRadius: 6,
+                        backgroundColor: "transparent",
+                        color: u.active ? "#c13a2a" : "#1b5e78",
+                        fontFamily: "'Space Grotesk', sans-serif",
+                        fontWeight: 600,
+                        fontSize: 11,
+                        border: `1px solid ${
+                          u.active
+                            ? "rgba(193,58,42,0.3)"
+                            : "rgba(27,94,120,0.3)"
+                        }`,
+                        cursor:
+                          togglingActive === u.id ? "default" : "pointer",
+                        opacity: togglingActive === u.id ? 0.5 : 1,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {togglingActive === u.id
+                        ? "Working..."
+                        : u.active
+                          ? "Deactivate"
+                          : "Reactivate"}
+                    </button>
+                  )}
                 </div>
               </div>
             );
