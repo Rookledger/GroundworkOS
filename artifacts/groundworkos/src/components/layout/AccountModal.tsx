@@ -70,7 +70,7 @@ export function AccountModal({
       >
         <h2
           style={{
-            fontFamily: "'Space Grotesk', sans-serif",
+            fontFamily: "var(--font-heading)",
             fontWeight: 700,
             fontSize: 16,
             color: "var(--ink)",
@@ -81,7 +81,7 @@ export function AccountModal({
         </h2>
         <p
           style={{
-            fontFamily: "'JetBrains Mono', monospace",
+            fontFamily: "var(--font-body)",
             fontSize: 12,
             color: "var(--muted)",
             marginBottom: 20,
@@ -94,7 +94,7 @@ export function AccountModal({
           <div style={{ display: "grid", gap: 4 }}>
             <label
               style={{
-                fontFamily: "'Space Grotesk', sans-serif",
+                fontFamily: "var(--font-heading)",
                 fontWeight: 600,
                 fontSize: 11,
                 color: "var(--muted)",
@@ -124,7 +124,7 @@ export function AccountModal({
           <div style={{ display: "grid", gap: 4 }}>
             <label
               style={{
-                fontFamily: "'Space Grotesk', sans-serif",
+                fontFamily: "var(--font-heading)",
                 fontWeight: 600,
                 fontSize: 11,
                 color: "var(--muted)",
@@ -162,7 +162,7 @@ export function AccountModal({
                 borderRadius: 6,
                 backgroundColor: "transparent",
                 color: "var(--ink-2)",
-                fontFamily: "'Space Grotesk', sans-serif",
+                fontFamily: "var(--font-heading)",
                 fontWeight: 600,
                 fontSize: 12,
                 border: "1px solid var(--border)",
@@ -180,7 +180,7 @@ export function AccountModal({
                 borderRadius: 6,
                 backgroundColor: "var(--accent)",
                 color: "#fff",
-                fontFamily: "'Space Grotesk', sans-serif",
+                fontFamily: "var(--font-heading)",
                 fontWeight: 600,
                 fontSize: 12,
                 border: "none",

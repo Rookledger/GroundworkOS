@@ -136,7 +136,7 @@ export function OnboardingWizard({ onComplete }: Props) {
           <div className="inline-flex items-center gap-2.5 mb-4">
             <span
               style={{
-                fontFamily: "'Space Grotesk', sans-serif",
+                fontFamily: "var(--font-heading)",
                 fontWeight: 700,
                 fontSize: "15px",
                 color: "var(--ink)",
@@ -148,7 +148,7 @@ export function OnboardingWizard({ onComplete }: Props) {
           </div>
           <h1
             style={{
-              fontFamily: "'Space Grotesk', sans-serif",
+              fontFamily: "var(--font-heading)",
               fontWeight: 700,
               fontSize: "24px",
               color: "var(--ink)",
@@ -198,7 +198,7 @@ export function OnboardingWizard({ onComplete }: Props) {
 
         {/* Card */}
         <div
-          className="rounded-xl overflow-hidden"
+          className="overflow-hidden"
           style={{
             backgroundColor: "var(--surface)",
             border: "1px solid var(--border)",
@@ -222,7 +222,7 @@ export function OnboardingWizard({ onComplete }: Props) {
               <div>
                 <h2
                   style={{
-                    fontFamily: "'Space Grotesk', sans-serif",
+                    fontFamily: "var(--font-heading)",
                     fontWeight: 600,
                     fontSize: "16px",
                     color: "var(--ink)",

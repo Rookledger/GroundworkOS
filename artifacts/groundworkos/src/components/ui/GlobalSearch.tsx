@@ -205,7 +205,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
         }}
       />
       <div
-        className="relative w-full max-w-xl mx-4 rounded-xl overflow-hidden"
+        className="relative w-full max-w-xl mx-4 overflow-hidden"
         style={{
           backgroundColor: "var(--surface)",
           border: "1px solid var(--border)",
@@ -242,7 +242,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
               backgroundColor: "var(--surface-2)",
               color: "var(--muted)",
               border: "1px solid var(--border)",
-              fontFamily: "'JetBrains Mono', monospace",
+              fontFamily: "var(--font-body)",
             }}
           >
             Esc
@@ -292,7 +292,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                       className="text-xs truncate mt-0.5"
                       style={{
                         color: "var(--muted)",
-                        fontFamily: "'JetBrains Mono', monospace",
+                        fontFamily: "var(--font-body)",
                       }}
                     >
                       {r.subtitle}
@@ -305,7 +305,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                         style={{
                           color: r.badgeColor,
                           backgroundColor: `${r.badgeColor}1f`,
-                          fontFamily: "'JetBrains Mono', monospace",
+                          fontFamily: "var(--font-body)",
                         }}
                       >
                         {r.badge}
@@ -315,7 +315,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                       className="text-xs uppercase tracking-wider"
                       style={{
                         color: "var(--muted-2)",
-                        fontFamily: "'Space Grotesk', sans-serif",
+                        fontFamily: "var(--font-heading)",
                       }}
                     >
                       {TYPE_LABEL[r.type]}
@@ -333,7 +333,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
               className="text-sm"
               style={{
                 color: "var(--muted-2)",
-                fontFamily: "'JetBrains Mono', monospace",
+                fontFamily: "var(--font-body)",
               }}
             >
               No results for "{query}"
@@ -355,7 +355,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                   style={{
                     color: "var(--muted)",
                     border: "1px solid var(--border)",
-                    fontFamily: "'Space Grotesk', sans-serif",
+                    fontFamily: "var(--font-heading)",
                   }}
                 >
                   {page}

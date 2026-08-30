@@ -39,7 +39,7 @@ export function Modal({ open, onClose, title, children, wide }: ModalProps) {
     >
       <div
         className={cn(
-          "w-full max-h-[90vh] overflow-y-auto rounded-xl",
+          "w-full max-h-[90vh] overflow-y-auto",
           wide ? "max-w-2xl" : "max-w-lg",
         )}
         style={{
@@ -60,7 +60,7 @@ export function Modal({ open, onClose, title, children, wide }: ModalProps) {
             className="text-base font-semibold"
             style={{
               color: "var(--ink)",
-              fontFamily: "'Space Grotesk', sans-serif",
+              fontFamily: "var(--font-heading)",
               letterSpacing: "-0.01em",
             }}
           >
