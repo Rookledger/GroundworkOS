@@ -52,6 +52,7 @@ export function SubcontractorsPage() {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
   const [tab, setTab] = useState<"all" | "active" | "inactive">("all");
+  const [actionNeededOnly, setActionNeededOnly] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -61,6 +62,7 @@ export function SubcontractorsPage() {
   const filtered = subcontractors.filter((s) => {
     if (tab === "active" && !s.active) return false;
     if (tab === "inactive" && s.active) return false;
+    if (actionNeededOnly && getDocWarnings(s).length === 0) return false;
     if (!search) return true;
     const q = search.toLowerCase();
     return (
@@ -229,72 +231,112 @@ export function SubcontractorsPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           accent
-          label="Active"
-          value={subcontractors.filter((s) => s.active).length}
-          sub="Registered subbies"
+          label="On The Books"
+          value={subcontractors.length}
+          sub={`${subcontractors.filter((s) => s.active).length} active`}
         />
         <StatCard
-          label="Gross"
-          value={subcontractors.filter((s) => s.cis_status === "gross").length}
-          sub="0% deduction"
+          danger={
+            subcontractors.filter((s) => getDocWarnings(s).length > 0).length > 0
+          }
+          label="Action Needed"
+          value={subcontractors.filter((s) => getDocWarnings(s).length > 0).length}
+          sub="Compliance docs expiring"
+          actionLabel={
+            subcontractors.filter((s) => getDocWarnings(s).length > 0).length > 0
+              ? "Verify"
+              : undefined
+          }
+          onAction={() => setActionNeededOnly(true)}
+        />
+        <StatCard
+          label="CIS Due"
+          value={
+            subcontractors.filter((s) => s.cis_status === "unverified").length
+          }
+          sub="Awaiting verification"
         />
         <StatCard
           label="Net 20%"
           value={subcontractors.filter((s) => s.cis_status === "net").length}
           sub="Standard deduction"
         />
-        <StatCard
-          danger={
-            subcontractors.filter((s) => s.cis_status === "unverified").length >
-            0
-          }
-          label="Unverified"
-          value={
-            subcontractors.filter((s) => s.cis_status === "unverified").length
-          }
-          sub="Higher 30% rate"
-        />
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2">
         <div
-          className="flex items-center gap-1"
+          className="flex items-center gap-1 overflow-x-auto"
           style={{ borderBottom: "1px solid var(--border)" }}
         >
-          {(["all", "active", "inactive"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className="px-4 py-2.5 text-sm capitalize transition-colors"
-              style={
-                tab === t
-                  ? {
-                      color: "var(--ink)",
-                      fontWeight: 600,
-                      borderBottom: "2px solid var(--accent)",
-                      marginBottom: "-1px",
-                    }
-                  : { color: "var(--muted)", fontWeight: 500 }
-              }
-            >
-              {t}
-            </button>
-          ))}
+          {(["all", "active", "inactive"] as const).map((t) => {
+            const count =
+              t === "all"
+                ? subcontractors.length
+                : subcontractors.filter((s) => (t === "active" ? s.active : !s.active))
+                    .length;
+            return (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className="px-4 py-2.5 text-sm capitalize transition-colors whitespace-nowrap flex items-center gap-1.5"
+                style={
+                  tab === t
+                    ? {
+                        color: "var(--ink)",
+                        fontWeight: 600,
+                        borderBottom: "2px solid var(--accent)",
+                        marginBottom: "-1px",
+                      }
+                    : { color: "var(--muted)", fontWeight: 500 }
+                }
+              >
+                {t}
+                <span
+                  className="inline-flex items-center justify-center px-1.5 text-[11px] font-bold"
+                  style={{
+                    fontFamily: "var(--font-heading)",
+                    backgroundColor:
+                      tab === t ? "var(--accent-bg)" : "var(--surface-3)",
+                    color: tab === t ? "var(--accent)" : "var(--muted-2)",
+                    minWidth: "18px",
+                  }}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
-        <div className="relative">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
-            style={{ color: "var(--muted-2)" }}
-          />
-          <input
-            type="text"
-            placeholder="Search subcontractors..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 pr-4 py-2 rounded-lg text-sm w-full sm:w-64 focus:outline-none transition-colors"
-            style={{
-              backgroundColor: "var(--surface)",
-              border: "1px solid var(--border)",
+        <div className="flex items-center gap-2">
+          {actionNeededOnly && (
+            <button
+              onClick={() => setActionNeededOnly(false)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold uppercase tracking-wider"
+              style={{
+                backgroundColor: "var(--danger-bg)",
+                color: "var(--danger)",
+                border: "1px solid rgba(178,58,38,0.3)",
+              }}
+            >
+              Action needed only
+              <X className="w-3 h-3" strokeWidth={1.5} />
+            </button>
+          )}
+          <div className="relative">
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
+              strokeWidth={1.5}
+              style={{ color: "var(--muted-2)" }}
+            />
+            <input
+              type="text"
+              placeholder="Search subcontractors..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 pr-4 py-2 text-sm w-full sm:w-64 focus:outline-none transition-colors"
+              style={{
+                backgroundColor: "var(--surface)",
+                border: "1px solid var(--border)",
               color: "var(--ink)",
             }}
             onFocus={(e) => (e.target.style.borderColor = "var(--accent)")}

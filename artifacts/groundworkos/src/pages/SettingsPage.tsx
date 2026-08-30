@@ -704,7 +704,7 @@ export function SettingsPage() {
           className="text-2xl font-semibold"
           style={{
             color: "var(--ink)",
-            fontFamily: "'Space Grotesk', sans-serif",
+            fontFamily: "var(--font-heading)",
             letterSpacing: "-0.01em",
           }}
         >
@@ -715,7 +715,12 @@ export function SettingsPage() {
         </p>
       </div>
 
-      <Panel title="Company Details" noPad>
+      <Panel title={<CardTitle icon={Building2} label="Company details" />} noPad>
+        <CardDescription>
+          Core company information used across quotes, invoices, and the
+          client portal.
+        </CardDescription>
+        <div className="grid grid-cols-1 sm:grid-cols-2 sm:gap-x-2">
         <SettingsRow
           label="Company Logo"
           description="Shown in the sidebar and on quotes, invoices, and purchase orders. PNG or SVG, up to 1MB."
@@ -725,14 +730,20 @@ export function SettingsPage() {
             onChange={(v) => setCompany((c) => ({ ...c, companyLogo: v }))}
           />
         </SettingsRow>
-        <SettingsRow label="Company Name">
+        <SettingsRow
+          label="Company Name"
+          description="The legal or trading name shown on all documents."
+        >
           <Inp
             value={company.companyName}
             onChange={(v) => setCompany((c) => ({ ...c, companyName: v }))}
             placeholder="Company name"
           />
         </SettingsRow>
-        <SettingsRow label="Company Number">
+        <SettingsRow
+          label="Company Number"
+          description="Companies House registration number."
+        >
           <Inp
             value={company.companyNumber}
             onChange={(v) => setCompany((c) => ({ ...c, companyNumber: v }))}
@@ -740,7 +751,10 @@ export function SettingsPage() {
             isMono
           />
         </SettingsRow>
-        <SettingsRow label="VAT Number">
+        <SettingsRow
+          label="VAT Number"
+          description="Printed on invoices when VAT registered."
+        >
           <Inp
             value={company.vatNumber}
             onChange={(v) => setCompany((c) => ({ ...c, vatNumber: v }))}
@@ -748,7 +762,7 @@ export function SettingsPage() {
             isMono
           />
         </SettingsRow>
-        <SettingsRow label="UTR Number" description="Unique Taxpayer Reference">
+        <SettingsRow label="UTR Number" description="Unique Taxpayer Reference, used for CIS filings.">
           <Inp
             value={company.utrNumber}
             onChange={(v) => setCompany((c) => ({ ...c, utrNumber: v }))}
@@ -756,7 +770,7 @@ export function SettingsPage() {
             isMono
           />
         </SettingsRow>
-        <SettingsRow label="CIS Reference" description="Contractor reference">
+        <SettingsRow label="CIS Reference" description="Your HMRC contractor reference.">
           <Inp
             value={company.cisReference}
             onChange={(v) => setCompany((c) => ({ ...c, cisReference: v }))}
@@ -764,21 +778,34 @@ export function SettingsPage() {
             isMono
           />
         </SettingsRow>
-        <SettingsRow label="Registered Address" isLast>
+        <SettingsRow
+          label="Registered Address"
+          description="Shown on the footer of PDF documents."
+          isLast
+        >
           <Inp
             value={company.address}
             onChange={(v) => setCompany((c) => ({ ...c, address: v }))}
             placeholder="Address"
           />
         </SettingsRow>
+        </div>
         <SaveBar
           onSave={() => save("company", company)}
+          onDiscard={() => setCompany(companyFromSettings(s))}
           saving={savingSection === "company"}
+          dirty={companyDirty}
+          lastSavedAt={lastSaved.company}
         />
       </Panel>
 
-      <Panel title="Invoice & Numbering" noPad>
-        <SettingsRow label="Invoice Prefix">
+      <Panel title={<CardTitle icon={Receipt} label="Invoicing defaults" />} noPad>
+        <CardDescription>
+          Numbering prefixes and default terms applied to new quotes,
+          invoices, and jobs.
+        </CardDescription>
+        <div className="grid grid-cols-1 sm:grid-cols-2 sm:gap-x-2">
+        <SettingsRow label="Invoice Prefix" description="Prepended to every new invoice number.">
           <Inp
             value={invoiceSettings.invoicePrefix}
             onChange={(v) =>
@@ -788,7 +815,7 @@ export function SettingsPage() {
             isMono
           />
         </SettingsRow>
-        <SettingsRow label="Quote Prefix">
+        <SettingsRow label="Quote Prefix" description="Prepended to every new quote number.">
           <Inp
             value={invoiceSettings.quotePrefix}
             onChange={(v) =>
@@ -798,7 +825,7 @@ export function SettingsPage() {
             isMono
           />
         </SettingsRow>
-        <SettingsRow label="Job Number Prefix">
+        <SettingsRow label="Job Number Prefix" description="Prepended to every new job reference.">
           <Inp
             value={invoiceSettings.jobPrefix}
             onChange={(v) =>
@@ -808,7 +835,11 @@ export function SettingsPage() {
             isMono
           />
         </SettingsRow>
-        <SettingsRow label="Default Payment Terms" isLast>
+        <SettingsRow
+          label="Default Payment Terms"
+          description="Shown on invoices unless overridden per client."
+          isLast
+        >
           <Inp
             value={invoiceSettings.paymentTerms}
             onChange={(v) =>
@@ -817,13 +848,17 @@ export function SettingsPage() {
             placeholder="e.g. 30 days"
           />
         </SettingsRow>
+        </div>
         <SaveBar
           onSave={() => save("invoiceSettings", invoiceSettings)}
+          onDiscard={() => setInvoiceSettings(invoiceFromSettings(s))}
           saving={savingSection === "invoiceSettings"}
+          dirty={invoiceDirty}
+          lastSavedAt={lastSaved.invoiceSettings}
         />
       </Panel>
 
-      <Panel title="Bank Details" noPad>
+      <Panel title={<CardTitle icon={Landmark} label="Bank details" />} noPad>
         <div
           className="px-5 py-3"
           style={{
