@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { useSession } from "../lib/authClient";
 import { useRole, isAtLeast, ROLE_LABELS, type Role } from "../hooks/useRole";
+import { Panel } from "../components/ui/Panel";
+import { Btn } from "../components/ui/Btn";
+import { CornerMarks } from "../components/ui/Blueprint";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -246,24 +249,9 @@ export function UsersPage() {
             No admin has been set up yet for this workspace. Since you're the
             first person here, you can make yourself the admin now.
           </p>
-          <button
-            onClick={handleBootstrap}
-            disabled={bootstrapping}
-            style={{
-              padding: "10px 20px",
-              borderRadius: 8,
-              backgroundColor: "var(--accent)",
-              color: "#fff",
-              fontFamily: "var(--font-heading)",
-              fontWeight: 600,
-              fontSize: 13,
-              border: "none",
-              cursor: bootstrapping ? "default" : "pointer",
-              opacity: bootstrapping ? 0.6 : 1,
-            }}
-          >
+          <Btn onClick={handleBootstrap} disabled={bootstrapping}>
             {bootstrapping ? "Setting up..." : "Make me admin"}
-          </button>
+          </Btn>
         </div>
       );
     }
@@ -311,9 +299,8 @@ export function UsersPage() {
 
       <form
         onSubmit={handleInvite}
+        className="blueprint relative gw-shadow"
         style={{
-          border: "1px solid var(--border)",
-          borderRadius: 10,
           backgroundColor: "var(--surface)",
           padding: 16,
           marginBottom: 20,
@@ -323,6 +310,7 @@ export function UsersPage() {
           alignItems: "flex-end",
         }}
       >
+        <CornerMarks />
         <div style={{ flex: "1 1 220px", display: "grid", gap: 4 }}>
           <label
             style={{
@@ -346,7 +334,6 @@ export function UsersPage() {
               fontFamily: "var(--font-body)",
               fontSize: 13,
               padding: "8px 10px",
-              borderRadius: 6,
               border: "1px solid var(--border)",
               backgroundColor: "#ffffff",
               color: "var(--ink)",
@@ -360,7 +347,6 @@ export function UsersPage() {
             fontFamily: "var(--font-heading)",
             fontSize: 12,
             padding: "9px 8px",
-            borderRadius: 6,
             border: "1px solid var(--border)",
             backgroundColor: "#ffffff",
             color: "var(--ink)",
@@ -371,112 +357,106 @@ export function UsersPage() {
           <option value="manager">Manager</option>
           <option value="admin">Admin</option>
         </select>
-        <button
-          type="submit"
-          disabled={inviting}
-          style={{
-            padding: "9px 18px",
-            borderRadius: 6,
-            backgroundColor: "var(--accent)",
-            color: "#fff",
-            fontFamily: "var(--font-heading)",
-            fontWeight: 600,
-            fontSize: 12,
-            border: "none",
-            cursor: inviting ? "default" : "pointer",
-            opacity: inviting ? 0.6 : 1,
-          }}
-        >
+        <Btn type="submit" disabled={inviting} size="sm">
           {inviting ? "Sending..." : "Send invite"}
-        </button>
+        </Btn>
       </form>
 
       {invitations.length > 0 && (
-        <div
-          style={{
-            border: "1px solid var(--border)",
-            borderRadius: 10,
-            backgroundColor: "var(--surface)",
-            overflow: "hidden",
-            marginBottom: 20,
-          }}
-        >
-          <div
-            style={{
-              padding: "10px 16px",
-              borderBottom: "1px solid var(--surface-3)",
-            }}
+        <div className="mb-5">
+          <Panel
+            title="Pending Invitations"
+            badge={invitations.length}
+            noPad
           >
-            <span
-              style={{
-                fontFamily: "var(--font-heading)",
-                fontWeight: 600,
-                fontSize: 11,
-                color: "var(--muted)",
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
-              }}
-            >
-              Pending invitations
-            </span>
-          </div>
-          {invitations.map((inv, idx) => (
-            <div
-              key={inv.id}
-              style={{
-                padding: "12px 16px",
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                borderBottom:
-                  idx < invitations.length - 1 ? "1px solid var(--surface-3)" : "none",
-              }}
-            >
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <span
-                  style={{
-                    fontFamily: "var(--font-body)",
-                    fontSize: 12,
-                    color: "var(--ink)",
-                  }}
-                >
-                  {inv.email}
-                </span>
+            {invitations.map((inv, idx) => (
+              <div
+                key={inv.id}
+                className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3"
+                style={{
+                  padding: "12px 16px",
+                  borderBottom:
+                    idx < invitations.length - 1
+                      ? "1px solid var(--surface-3)"
+                      : "none",
+                  backgroundColor: "var(--warning-bg)",
+                }}
+              >
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div
+                    className="flex items-center justify-center flex-shrink-0"
+                    style={{
+                      width: 32,
+                      height: 32,
+                      border: "1.5px dashed var(--warning-sub)",
+                      color: "var(--warning-sub)",
+                      fontFamily: "var(--font-heading)",
+                      fontWeight: 700,
+                      fontSize: 13,
+                    }}
+                  >
+                    ?
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div
+                      className="truncate"
+                      style={{
+                        fontFamily: "var(--font-body)",
+                        fontSize: 12,
+                        color: "var(--ink)",
+                      }}
+                    >
+                      {inv.email}
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: "var(--font-heading)",
+                        fontSize: 10,
+                        fontWeight: 700,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.06em",
+                        color: "var(--warning-sub)",
+                      }}
+                    >
+                      Invite pending
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0 pl-11 sm:pl-0">
+                  <span
+                    style={{
+                      padding: "3px 10px",
+                      fontSize: 11,
+                      fontWeight: 600,
+                      fontFamily: "var(--font-heading)",
+                      backgroundColor: ROLE_COLORS[inv.role].bg,
+                      color: ROLE_COLORS[inv.role].text,
+                      border: `1px solid ${ROLE_COLORS[inv.role].border}`,
+                    }}
+                  >
+                    {ROLE_LABELS[inv.role]}
+                  </span>
+                  <button
+                    onClick={() => handleRevoke(inv.id)}
+                    disabled={revokingId === inv.id}
+                    style={{
+                      padding: "5px 12px",
+                      backgroundColor: "transparent",
+                      color: "var(--danger)",
+                      fontFamily: "var(--font-heading)",
+                      fontWeight: 600,
+                      fontSize: 11,
+                      border: "1px solid rgba(178,58,38,0.3)",
+                      cursor: revokingId === inv.id ? "default" : "pointer",
+                      opacity: revokingId === inv.id ? 0.5 : 1,
+                    }}
+                  >
+                    {revokingId === inv.id ? "Revoking..." : "Revoke"}
+                  </button>
+                </div>
               </div>
-              <span
-                style={{
-                  padding: "3px 10px",
-                  borderRadius: 99,
-                  fontSize: 11,
-                  fontWeight: 600,
-                  fontFamily: "var(--font-heading)",
-                  backgroundColor: ROLE_COLORS[inv.role].bg,
-                  color: ROLE_COLORS[inv.role].text,
-                  border: `1px solid ${ROLE_COLORS[inv.role].border}`,
-                }}
-              >
-                {ROLE_LABELS[inv.role]}
-              </span>
-              <button
-                onClick={() => handleRevoke(inv.id)}
-                disabled={revokingId === inv.id}
-                style={{
-                  padding: "5px 12px",
-                  borderRadius: 6,
-                  backgroundColor: "transparent",
-                  color: "var(--danger)",
-                  fontFamily: "var(--font-heading)",
-                  fontWeight: 600,
-                  fontSize: 11,
-                  border: "1px solid rgba(178,58,38,0.3)",
-                  cursor: revokingId === inv.id ? "default" : "pointer",
-                  opacity: revokingId === inv.id ? 0.5 : 1,
-                }}
-              >
-                {revokingId === inv.id ? "Revoking..." : "Revoke"}
-              </button>
-            </div>
-          ))}
+            ))}
+          </Panel>
         </div>
       )}
 
@@ -487,7 +467,6 @@ export function UsersPage() {
               key={i}
               style={{
                 height: 72,
-                borderRadius: 8,
                 backgroundColor: "var(--surface-2)",
                 animation: "pulse 1.5s ease-in-out infinite",
               }}
@@ -495,37 +474,10 @@ export function UsersPage() {
           ))}
         </div>
       ) : (
-        <div
-          style={{
-            border: "1px solid var(--border)",
-            borderRadius: 10,
-            backgroundColor: "var(--surface)",
-            overflow: "hidden",
-          }}
+        <Panel
+          title={`${users.length} member${users.length !== 1 ? "s" : ""}`}
+          noPad
         >
-          <div
-            style={{
-              padding: "10px 16px",
-              borderBottom: "1px solid var(--surface-3)",
-              display: "grid",
-              gridTemplateColumns: "1fr auto",
-              gap: 12,
-              alignItems: "center",
-            }}
-          >
-            <span
-              style={{
-                fontFamily: "var(--font-heading)",
-                fontWeight: 600,
-                fontSize: 11,
-                color: "var(--muted)",
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
-              }}
-            >
-              {users.length} member{users.length !== 1 ? "s" : ""}
-            </span>
-          </div>
           {users.map((u, idx) => {
             const name = u.name || u.email || "Unknown";
             const initials = (u.name?.[0] ?? u.email?.[0] ?? "?").toUpperCase();
@@ -534,96 +486,111 @@ export function UsersPage() {
             return (
               <div
                 key={u.id}
+                className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3"
                 style={{
                   padding: "14px 16px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
                   borderBottom:
                     idx < users.length - 1 ? "1px solid var(--surface-3)" : "none",
                   opacity: u.active ? 1 : 0.55,
                 }}
               >
-                <div
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: "50%",
-                    backgroundColor: "var(--accent)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  <span
-                    style={{
-                      color: "#fff",
-                      fontWeight: 700,
-                      fontSize: 14,
-                      fontFamily: "var(--font-heading)",
-                    }}
-                  >
-                    {initials}
-                  </span>
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="flex items-center gap-3 flex-1 min-w-0">
                   <div
-                    style={{ display: "flex", alignItems: "center", gap: 8 }}
+                    style={{
+                      width: 36,
+                      height: 36,
+                      backgroundColor: "var(--accent)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
                   >
                     <span
                       style={{
+                        color: "#fff",
+                        fontWeight: 700,
+                        fontSize: 14,
                         fontFamily: "var(--font-heading)",
-                        fontWeight: 600,
-                        fontSize: 13,
-                        color: "var(--ink)",
                       }}
                     >
-                      {name}
+                      {initials}
                     </span>
-                    {isSelf && (
-                      <span
-                        style={{
-                          fontFamily: "var(--font-body)",
-                          fontSize: 10,
-                          color: "var(--muted-2)",
-                        }}
-                      >
-                        you
-                      </span>
-                    )}
-                    {!u.active && (
-                      <span
-                        style={{
-                          padding: "2px 8px",
-                          borderRadius: 99,
-                          fontSize: 10,
-                          fontWeight: 600,
-                          fontFamily: "var(--font-heading)",
-                          backgroundColor: "#f3e8e8",
-                          color: "var(--danger)",
-                          border: "1px solid rgba(178,58,38,0.2)",
-                        }}
-                      >
-                        Deactivated
-                      </span>
-                    )}
                   </div>
-                  <span
-                    style={{
-                      fontFamily: "var(--font-body)",
-                      fontSize: 11,
-                      color: "var(--muted)",
-                    }}
-                  >
-                    {u.email}
-                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 8 }}
+                    >
+                      <span
+                        className="truncate"
+                        style={{
+                          fontFamily: "var(--font-heading)",
+                          fontWeight: 600,
+                          fontSize: 13,
+                          color: "var(--ink)",
+                        }}
+                      >
+                        {name}
+                      </span>
+                      {isSelf && (
+                        <span
+                          style={{
+                            fontFamily: "var(--font-body)",
+                            fontSize: 10,
+                            color: "var(--muted-2)",
+                            flexShrink: 0,
+                          }}
+                        >
+                          you
+                        </span>
+                      )}
+                      {!u.active && (
+                        <span
+                          className="flex-shrink-0"
+                          style={{
+                            padding: "2px 8px",
+                            fontSize: 10,
+                            fontWeight: 600,
+                            fontFamily: "var(--font-heading)",
+                            backgroundColor: "var(--danger-bg)",
+                            color: "var(--danger)",
+                            border: "1px solid rgba(178,58,38,0.2)",
+                          }}
+                        >
+                          Deactivated
+                        </span>
+                      )}
+                    </div>
+                    <div
+                      className="truncate"
+                      style={{
+                        fontFamily: "var(--font-body)",
+                        fontSize: 11,
+                        color: "var(--muted)",
+                      }}
+                    >
+                      {u.email}
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: "var(--font-body)",
+                        fontSize: 10,
+                        color: "var(--muted-2)",
+                      }}
+                    >
+                      Joined{" "}
+                      {new Date(u.createdAt).toLocaleDateString("en-GB", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </div>
+                  </div>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div className="flex items-center gap-2 flex-wrap flex-shrink-0 pl-12 sm:pl-0">
                   <span
                     style={{
                       padding: "3px 10px",
-                      borderRadius: 99,
                       fontSize: 11,
                       fontWeight: 600,
                       fontFamily: "var(--font-heading)",
@@ -644,7 +611,6 @@ export function UsersPage() {
                       fontFamily: "var(--font-heading)",
                       fontSize: 12,
                       padding: "5px 8px",
-                      borderRadius: 6,
                       border: "1px solid var(--border)",
                       backgroundColor: "#ffffff",
                       color: "var(--ink)",
@@ -662,7 +628,6 @@ export function UsersPage() {
                       disabled={togglingActive === u.id}
                       style={{
                         padding: "5px 12px",
-                        borderRadius: 6,
                         backgroundColor: "transparent",
                         color: u.active ? "var(--danger)" : "var(--accent)",
                         fontFamily: "var(--font-heading)",
@@ -690,29 +655,11 @@ export function UsersPage() {
               </div>
             );
           })}
-        </div>
+        </Panel>
       )}
 
-      <div
-        style={{
-          marginTop: 24,
-          padding: 16,
-          borderRadius: 8,
-          backgroundColor: "var(--surface)",
-          border: "1px solid var(--border)",
-        }}
-      >
-        <p
-          style={{
-            fontFamily: "var(--font-heading)",
-            fontWeight: 600,
-            fontSize: 12,
-            color: "var(--ink)",
-            marginBottom: 8,
-          }}
-        >
-          Role permissions
-        </p>
+      <div style={{ marginTop: 20 }}>
+        <Panel title="Role Permissions">
         <div style={{ display: "grid", gap: 6 }}>
           {(
             [
@@ -752,6 +699,7 @@ export function UsersPage() {
             </div>
           ))}
         </div>
+        </Panel>
       </div>
     </div>
   );

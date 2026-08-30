@@ -99,35 +99,31 @@ function SettingsRow({
   label,
   description,
   children,
-  isLast,
+  wide,
 }: {
   label: string;
   description?: string;
   children: React.ReactNode;
-  isLast?: boolean;
+  /** Span both columns of the form grid — use for fields that need the extra width. */
+  wide?: boolean;
 }) {
   return (
-    <div
-      className="flex flex-col sm:flex-row sm:items-center gap-4 px-5 py-4 transition-colors hover:bg-[var(--surface)]"
-      style={{ borderBottom: isLast ? "none" : "1px solid var(--border)" }}
-    >
-      <div className="sm:w-1/3 flex-shrink-0">
-        <label
-          className="block text-[11px] font-bold uppercase tracking-widest"
-          style={{
-            color: "var(--ink-2)",
-            fontFamily: "var(--font-heading)",
-          }}
-        >
-          {label}
-        </label>
-        {description && (
-          <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
-            {description}
-          </p>
-        )}
-      </div>
-      <div className="sm:w-2/3">{children}</div>
+    <div className={wide ? "sm:col-span-2" : undefined}>
+      <label
+        className="block text-[11px] font-bold uppercase tracking-widest mb-1.5"
+        style={{
+          color: "var(--ink-2)",
+          fontFamily: "var(--font-heading)",
+        }}
+      >
+        {label}
+      </label>
+      {children}
+      {description && (
+        <p className="text-xs mt-1.5" style={{ color: "var(--muted)" }}>
+          {description}
+        </p>
+      )}
     </div>
   );
 }
@@ -720,10 +716,11 @@ export function SettingsPage() {
           Core company information used across quotes, invoices, and the
           client portal.
         </CardDescription>
-        <div className="grid grid-cols-1 sm:grid-cols-2 sm:gap-x-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-5 px-5 py-4">
         <SettingsRow
           label="Company Logo"
           description="Shown in the sidebar and on quotes, invoices, and purchase orders. PNG or SVG, up to 1MB."
+          wide
         >
           <LogoUpload
             value={company.companyLogo}
@@ -781,7 +778,7 @@ export function SettingsPage() {
         <SettingsRow
           label="Registered Address"
           description="Shown on the footer of PDF documents."
-          isLast
+          wide
         >
           <Inp
             value={company.address}
@@ -804,7 +801,7 @@ export function SettingsPage() {
           Numbering prefixes and default terms applied to new quotes,
           invoices, and jobs.
         </CardDescription>
-        <div className="grid grid-cols-1 sm:grid-cols-2 sm:gap-x-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-5 px-5 py-4">
         <SettingsRow label="Invoice Prefix" description="Prepended to every new invoice number.">
           <Inp
             value={invoiceSettings.invoicePrefix}
@@ -838,7 +835,6 @@ export function SettingsPage() {
         <SettingsRow
           label="Default Payment Terms"
           description="Shown on invoices unless overridden per client."
-          isLast
         >
           <Inp
             value={invoiceSettings.paymentTerms}
@@ -870,14 +866,15 @@ export function SettingsPage() {
             Bank details are printed on PDF invoices. Keep these accurate.
           </p>
         </div>
-        <SettingsRow label="Bank Name">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-5 px-5 py-4">
+        <SettingsRow label="Bank Name" description="The account holder's bank.">
           <Inp
             value={bankDetails.bankName}
             onChange={(v) => setBankDetails((b) => ({ ...b, bankName: v }))}
             placeholder="e.g. Lloyds Bank"
           />
         </SettingsRow>
-        <SettingsRow label="Sort Code">
+        <SettingsRow label="Sort Code" description="Six digits, e.g. 00-00-00.">
           <Inp
             value={bankDetails.sortCode}
             onChange={(v) => setBankDetails((b) => ({ ...b, sortCode: v }))}
@@ -885,7 +882,7 @@ export function SettingsPage() {
             isMono
           />
         </SettingsRow>
-        <SettingsRow label="Account Number" isLast>
+        <SettingsRow label="Account Number" description="Eight-digit account number.">
           <Inp
             value={bankDetails.accountNumber}
             onChange={(v) =>
@@ -895,13 +892,17 @@ export function SettingsPage() {
             isMono
           />
         </SettingsRow>
+        </div>
         <SaveBar
           onSave={() => save("bankDetails", bankDetails)}
+          onDiscard={() => setBankDetails(bankFromSettings(s))}
           saving={savingSection === "bankDetails"}
+          dirty={bankDirty}
+          lastSavedAt={lastSaved.bankDetails}
         />
       </Panel>
 
-      <Panel title="CIS Settings" noPad>
+      <Panel title={<CardTitle icon={ShieldCheck} label="CIS settings" />} noPad>
         <div
           className="px-5 py-4"
           style={{
@@ -913,6 +914,7 @@ export function SettingsPage() {
             <ShieldCheck
               className="w-5 h-5 flex-shrink-0 mt-0.5"
               style={{ color: "var(--accent)" }}
+              strokeWidth={1.5}
             />
             <div
               className="text-sm leading-relaxed"
@@ -926,7 +928,8 @@ export function SettingsPage() {
             </div>
           </div>
         </div>
-        <SettingsRow label="Tax Year Start">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-5 px-5 py-4">
+        <SettingsRow label="Tax Year Start" description="Start of the UK tax year for CIS reporting.">
           <Inp
             value={cisSettings.taxYearStart}
             onChange={(v) => setCisSettings((c) => ({ ...c, taxYearStart: v }))}
@@ -935,8 +938,7 @@ export function SettingsPage() {
         </SettingsRow>
         <SettingsRow
           label="Filing Reminder"
-          description="Days before the 19th"
-          isLast
+          description="Days before the 19th to notify you of upcoming CIS returns."
         >
           <Inp
             value={cisSettings.filingReminderDays}
@@ -948,13 +950,17 @@ export function SettingsPage() {
             isMono
           />
         </SettingsRow>
+        </div>
         <SaveBar
           onSave={() => save("cisSettings", cisSettings)}
+          onDiscard={() => setCisSettings(cisFromSettings(s))}
           saving={savingSection === "cisSettings"}
+          dirty={cisDirty}
+          lastSavedAt={lastSaved.cisSettings}
         />
       </Panel>
 
-      <Panel title="NRSWA / Street Works" noPad>
+      <Panel title={<CardTitle icon={Signpost} label="NRSWA / street works" />} noPad>
         <div
           className="px-5 py-4"
           style={{
@@ -966,6 +972,7 @@ export function SettingsPage() {
             <Info
               className="w-5 h-5 flex-shrink-0 mt-0.5"
               style={{ color: "var(--muted)" }}
+              strokeWidth={1.5}
             />
             <div
               className="text-sm leading-relaxed"
@@ -980,7 +987,11 @@ export function SettingsPage() {
             </div>
           </div>
         </div>
-        <SettingsRow label="Street Works Licence Ref">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-5 px-5 py-4">
+        <SettingsRow
+          label="Street Works Licence Ref"
+          description="Issued by your registering Highway Authority."
+        >
           <Inp
             value={nrswa.streetWorksLicenceRef}
             onChange={(v) =>
@@ -990,7 +1001,10 @@ export function SettingsPage() {
             isMono
           />
         </SettingsRow>
-        <SettingsRow label="Default Permit Authority" isLast>
+        <SettingsRow
+          label="Default Permit Authority"
+          description="Pre-filled when raising new permit applications."
+        >
           <Inp
             value={nrswa.defaultPermitAuthority}
             onChange={(v) =>
@@ -999,9 +1013,13 @@ export function SettingsPage() {
             placeholder="e.g. Transport for West Midlands"
           />
         </SettingsRow>
+        </div>
         <SaveBar
           onSave={() => save("nrswa", nrswa)}
+          onDiscard={() => setNrswa(nrswaFromSettings(s))}
           saving={savingSection === "nrswa"}
+          dirty={nrswaDirty}
+          lastSavedAt={lastSaved.nrswa}
         />
       </Panel>
 

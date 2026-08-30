@@ -98,9 +98,9 @@ export function SchedulePage() {
 
   const weekLabel = `${start.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} – ${end.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`;
 
-  function openNew() {
+  function openNew(presetDate?: string) {
     setEditingId(null);
-    setForm(emptyForm);
+    setForm(presetDate ? { ...emptyForm, date: presetDate } : emptyForm);
     setErrors({});
     setShowModal(true);
   }
@@ -202,7 +202,7 @@ export function SchedulePage() {
             className="text-xl font-semibold"
             style={{
               color: "var(--ink)",
-              fontFamily: "'Space Grotesk', sans-serif",
+              fontFamily: "var(--font-heading)",
             }}
           >
             Schedule
@@ -211,8 +211,8 @@ export function SchedulePage() {
             Crew & plant allocation
           </p>
         </div>
-        <Btn onClick={openNew}>
-          <Plus className="w-4 h-4" /> Add Entry
+        <Btn onClick={() => openNew()}>
+          <Plus className="w-4 h-4" strokeWidth={1.5} /> Add Entry
         </Btn>
       </div>
 
@@ -242,10 +242,10 @@ export function SchedulePage() {
           <div className="flex items-center gap-2">
             <button
               onClick={prevWeek}
-              className="p-2 sm:p-1.5 rounded-md hover:bg-[var(--surface-3)] transition-colors"
+              className="p-2 sm:p-1.5 hover:bg-[var(--surface-3)] transition-colors"
               style={{ color: "var(--muted)" }}
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="w-4 h-4" strokeWidth={1.5} />
             </button>
             <span
               className="text-sm font-medium font-mono tnum"
@@ -255,19 +255,19 @@ export function SchedulePage() {
             </span>
             <button
               onClick={nextWeek}
-              className="p-2 sm:p-1.5 rounded-md hover:bg-[var(--surface-3)] transition-colors"
+              className="p-2 sm:p-1.5 hover:bg-[var(--surface-3)] transition-colors"
               style={{ color: "var(--muted)" }}
             >
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-4 h-4" strokeWidth={1.5} />
             </button>
             <button
               onClick={() => setCurrentDate(new Date())}
-              className="ml-1 px-2.5 py-1 text-xs rounded-md transition-colors hover:bg-[var(--surface-2)]"
+              className="ml-1 px-2.5 py-1 text-xs transition-colors hover:bg-[var(--surface-2)]"
               style={{
-                backgroundColor: "#f5f1ec",
+                backgroundColor: "var(--surface-2)",
                 color: "var(--muted-2)",
                 border: "1px solid var(--border)",
-                fontFamily: "'Space Grotesk', sans-serif",
+                fontFamily: "var(--font-heading)",
                 fontWeight: 600,
               }}
             >
@@ -307,7 +307,7 @@ export function SchedulePage() {
                       className="text-xs uppercase font-bold"
                       style={{
                         color: isToday ? "var(--accent)" : "var(--muted)",
-                        fontFamily: "'Space Grotesk', sans-serif",
+                        fontFamily: "var(--font-heading)",
                       }}
                     >
                       {DAY_LABELS[i]}
@@ -321,7 +321,7 @@ export function SchedulePage() {
                     {dayEntries.length > 0 && (
                       <div className="flex justify-center mt-1">
                         <span
-                          className="w-1.5 h-1.5 rounded-full"
+                          className="w-1.5 h-1.5"
                           style={{
                             backgroundColor: isToday ? "var(--accent)" : "var(--muted)",
                           }}
@@ -340,7 +340,6 @@ export function SchedulePage() {
               const dayEntries = weekEntries.filter((e) =>
                 e.start_datetime.startsWith(dateStr),
               );
-              if (dayEntries.length === 0 && dateStr !== today) return null;
 
               return (
                 <div
@@ -359,7 +358,7 @@ export function SchedulePage() {
                       className="text-xs font-bold uppercase"
                       style={{
                         color: dateStr === today ? "var(--accent)" : "var(--muted)",
-                        fontFamily: "'Space Grotesk', sans-serif",
+                        fontFamily: "var(--font-heading)",
                       }}
                     >
                       {DAY_LABELS[dayIdx % 7]}
@@ -376,16 +375,34 @@ export function SchedulePage() {
                   <div className="p-3 space-y-2 bg-white">
                     {dayEntries.length === 0 ? (
                       <div
-                        className="text-xs py-3 text-center italic"
-                        style={{ color: "var(--muted-2)" }}
+                        className="flex items-center justify-between gap-3 py-3 px-3.5"
+                        style={{
+                          border: "1px dashed var(--border-2)",
+                          backgroundColor: "var(--surface-2)",
+                        }}
                       >
-                        No scheduled entries
+                        <span
+                          className="text-xs italic"
+                          style={{ color: "var(--muted-2)" }}
+                        >
+                          Nothing booked
+                        </span>
+                        <button
+                          onClick={() => openNew(dateStr)}
+                          className="inline-flex items-center gap-1 text-xs font-semibold flex-shrink-0"
+                          style={{
+                            fontFamily: "var(--font-heading)",
+                            color: "var(--accent)",
+                          }}
+                        >
+                          <Plus className="w-3 h-3" strokeWidth={1.5} /> Add entry
+                        </button>
                       </div>
                     ) : (
                       dayEntries.map((entry) => (
                         <div
                           key={entry.id}
-                          className="flex items-start gap-3 sm:gap-4 p-4 sm:p-3.5 rounded-lg transition-colors hover:bg-[var(--surface)] group"
+                          className="flex items-start gap-3 sm:gap-4 p-4 sm:p-3.5 transition-colors hover:bg-[var(--surface)] group"
                           style={{
                             border: "1px solid var(--border)",
                             borderLeft: `3px solid ${TYPE_COLORS[entry.type] ?? "var(--muted)"}`,
@@ -409,9 +426,9 @@ export function SchedulePage() {
                                 {entry.title}
                               </div>
                               <span
-                                className="text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded hidden sm:inline"
+                                className="text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 hidden sm:inline"
                                 style={{
-                                  backgroundColor: "rgba(27,94,120,0.1)",
+                                  backgroundColor: "var(--accent-bg)",
                                   color: "var(--accent)",
                                 }}
                               >
@@ -432,7 +449,7 @@ export function SchedulePage() {
                                   </span>
                                   {entry.job.client?.company_name && (
                                     <span
-                                      className="px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider hidden sm:inline"
+                                      className="px-1.5 py-0.5 text-[10px] uppercase font-bold tracking-wider hidden sm:inline"
                                       style={{
                                         backgroundColor: "var(--surface-3)",
                                         color: "var(--ink-2)",
@@ -484,20 +501,20 @@ export function SchedulePage() {
                               e.stopPropagation();
                               openEdit(entry);
                             }}
-                            className="flex-shrink-0 p-2 sm:p-1 rounded sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:bg-[var(--surface-2)]"
+                            className="flex-shrink-0 p-2 sm:p-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:bg-[var(--surface-2)]"
                             style={{ color: "var(--muted)" }}
                           >
-                            <Pencil className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                            <Pencil className="w-4 h-4 sm:w-3.5 sm:h-3.5" strokeWidth={1.5} />
                           </button>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleDelete(entry.id, entry.title);
                             }}
-                            className="flex-shrink-0 p-2 sm:p-1 rounded sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:bg-red-50"
+                            className="flex-shrink-0 p-2 sm:p-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:bg-red-50"
                             style={{ color: "var(--danger)" }}
                           >
-                            <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                            <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" strokeWidth={1.5} />
                           </button>
                         </div>
                       ))
@@ -515,10 +532,10 @@ export function SchedulePage() {
           <div
             key={type}
             className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider"
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            style={{ fontFamily: "var(--font-heading)" }}
           >
             <span
-              className="w-2.5 h-2.5 rounded-sm"
+              className="w-2.5 h-2.5"
               style={{ backgroundColor: color }}
             />
             <span style={{ color: "var(--muted)" }}>{type.replace("_", " ")}</span>

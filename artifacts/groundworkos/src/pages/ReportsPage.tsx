@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { Download, ChevronRight, FileDown } from "lucide-react";
+import {
+  Download,
+  ChevronRight,
+  FileDown,
+  TrendingDown,
+  PieChart as PieChartIcon,
+  BarChart2,
+} from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -17,6 +24,7 @@ import {
 import { Panel } from "../components/ui/Panel";
 import { StatCard } from "../components/ui/StatCard";
 import { Btn } from "../components/ui/Btn";
+import { ChartEmptyState } from "../components/ui/EmptyState";
 import { formatCurrency } from "../lib/utils";
 import { useApp } from "../store/AppContext";
 
@@ -506,14 +514,14 @@ export function ReportsPage() {
                         dataKey="invoiced"
                         name="Invoiced"
                         fill="#e0dbd5"
-                        radius={[4, 4, 0, 0]}
+                        radius={[0, 0, 0, 0]}
                         maxBarSize={44}
                       />
                       <Bar
                         dataKey="collected"
                         name="Collected"
                         fill="#2a6e45"
-                        radius={[4, 4, 0, 0]}
+                        radius={[0, 0, 0, 0]}
                         maxBarSize={44}
                       />
                     </BarChart>
@@ -548,55 +556,64 @@ export function ReportsPage() {
             </div>
 
             <Panel title="Jobs by Type">
-              <div style={{ height: 240 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={jobTypeData}
-                      cx="50%"
-                      cy="45%"
-                      outerRadius={75}
-                      innerRadius={45}
-                      paddingAngle={2}
-                      dataKey="value"
-                      labelLine={false}
-                    >
-                      {jobTypeData.map((_, i) => (
-                        <Cell
-                          key={i}
-                          fill={TYPE_COLORS[i % TYPE_COLORS.length]}
-                          stroke="none"
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip content={<CustomTooltip />} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="flex flex-wrap gap-x-4 gap-y-2 mt-2">
-                {jobTypeData.map((d, i) => (
-                  <div
-                    key={d.name}
-                    className="flex items-center gap-2 text-[11px] uppercase tracking-widest font-medium"
-                  >
-                    <span
-                      className="w-2 h-2 flex-shrink-0"
-                      style={{
-                        backgroundColor: TYPE_COLORS[i % TYPE_COLORS.length],
-                      }}
-                    />
-                    <span style={{ color: "var(--muted)" }}>
-                      {d.name}{" "}
-                      <span
-                        className="font-mono ml-0.5"
-                        style={{ color: "var(--ink)" }}
-                      >
-                        ({d.value})
-                      </span>
-                    </span>
+              {jobTypeData.length === 0 ? (
+                <ChartEmptyState
+                  icon={PieChartIcon}
+                  description="Job types appear here once jobs are tagged with a type."
+                />
+              ) : (
+                <>
+                  <div style={{ height: 240 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={jobTypeData}
+                          cx="50%"
+                          cy="45%"
+                          outerRadius={75}
+                          innerRadius={45}
+                          paddingAngle={2}
+                          dataKey="value"
+                          labelLine={false}
+                        >
+                          {jobTypeData.map((_, i) => (
+                            <Cell
+                              key={i}
+                              fill={TYPE_COLORS[i % TYPE_COLORS.length]}
+                              stroke="none"
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<CustomTooltip />} />
+                      </PieChart>
+                    </ResponsiveContainer>
                   </div>
-                ))}
-              </div>
+                  <div className="flex flex-wrap gap-x-4 gap-y-2 mt-2">
+                    {jobTypeData.map((d, i) => (
+                      <div
+                        key={d.name}
+                        className="flex items-center gap-2 text-[11px] uppercase tracking-widest font-medium"
+                      >
+                        <span
+                          className="w-2 h-2 flex-shrink-0"
+                          style={{
+                            backgroundColor: TYPE_COLORS[i % TYPE_COLORS.length],
+                          }}
+                        />
+                        <span style={{ color: "var(--muted)" }}>
+                          {d.name}{" "}
+                          <span
+                            className="font-mono ml-0.5"
+                            style={{ color: "var(--ink)" }}
+                          >
+                            ({d.value})
+                          </span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </Panel>
           </div>
 
@@ -711,7 +728,7 @@ export function ReportsPage() {
                     <Bar
                       dataKey="value"
                       name="Outstanding"
-                      radius={[4, 4, 0, 0]}
+                      radius={[0, 0, 0, 0]}
                       maxBarSize={44}
                     >
                       {agingBuckets.map((_, i) => (
@@ -872,6 +889,17 @@ export function ReportsPage() {
             Materials: r.materials,
           }));
 
+          // Margin by job: horizontal bars, worst margin first, loss-making
+          // jobs (margin < 0) drawn in the danger color instead of accent.
+          const marginChartData = jobRows
+            .filter((r) => r.margin !== null)
+            .map((r) => ({
+              name: r.job.job_number ?? r.job.title.slice(0, 14),
+              margin: Math.round((r.margin ?? 0) * 10) / 10,
+            }))
+            .sort((a, b) => a.margin - b.margin)
+            .slice(0, 10);
+
           return (
             <div className="space-y-6">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -900,7 +928,14 @@ export function ReportsPage() {
                 />
               </div>
 
-              {plChartData.length > 0 && (
+              {plChartData.length === 0 ? (
+                <Panel title="Revenue vs Cost by Job">
+                  <ChartEmptyState
+                    icon={BarChart2}
+                    description="Revenue and cost breakdown appears here once a job has invoices or logged costs."
+                  />
+                </Panel>
+              ) : (
                 <Panel title="Revenue vs Cost by Job (top 8)">
                   <div style={{ height: 260 }} className="mt-1">
                     <ResponsiveContainer width="100%" height="100%">
@@ -946,19 +981,19 @@ export function ReportsPage() {
                         <Bar
                           dataKey="Revenue"
                           fill="var(--accent)"
-                          radius={[3, 3, 0, 0]}
+                          radius={[0, 0, 0, 0]}
                           maxBarSize={36}
                         />
                         <Bar
                           dataKey="Labour"
                           fill="var(--warning)"
-                          radius={[3, 3, 0, 0]}
+                          radius={[0, 0, 0, 0]}
                           maxBarSize={36}
                         />
                         <Bar
                           dataKey="Materials"
                           fill="var(--ink-2)"
-                          radius={[3, 3, 0, 0]}
+                          radius={[0, 0, 0, 0]}
                           maxBarSize={36}
                         />
                       </BarChart>
@@ -985,6 +1020,102 @@ export function ReportsPage() {
                         {label}
                       </div>
                     ))}
+                  </div>
+                </Panel>
+              )}
+
+              {marginChartData.length === 0 ? (
+                <Panel title="Margin by Job">
+                  <ChartEmptyState
+                    icon={TrendingDown}
+                    description="Margin per job appears here once a job has a contract value and logged costs."
+                  />
+                </Panel>
+              ) : (
+                <Panel title="Margin by Job">
+                  <div
+                    style={{ height: Math.max(160, marginChartData.length * 32) }}
+                    className="mt-1"
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={marginChartData}
+                        layout="vertical"
+                        barCategoryGap="25%"
+                        margin={{ top: 4, right: 24, left: 0, bottom: 0 }}
+                      >
+                        <CartesianGrid
+                          horizontal={false}
+                          stroke="var(--surface-3)"
+                          strokeDasharray="3 3"
+                        />
+                        <XAxis
+                          type="number"
+                          tick={{
+                            fill: "var(--muted)",
+                            fontSize: 10,
+                            fontFamily: "var(--font-body)",
+                          }}
+                          axisLine={false}
+                          tickLine={false}
+                          tickFormatter={(v) => `${v}%`}
+                        />
+                        <YAxis
+                          type="category"
+                          dataKey="name"
+                          tick={{
+                            fill: "var(--muted)",
+                            fontSize: 10,
+                            fontFamily: "var(--font-body)",
+                          }}
+                          axisLine={false}
+                          tickLine={false}
+                          width={70}
+                        />
+                        <Tooltip
+                          content={<CustomTooltip />}
+                          cursor={{ fill: "var(--surface-2)", opacity: 0.5 }}
+                        />
+                        <Bar
+                          dataKey="margin"
+                          name="Margin"
+                          radius={[0, 0, 0, 0]}
+                          maxBarSize={18}
+                        >
+                          {marginChartData.map((d, i) => (
+                            <Cell
+                              key={i}
+                              fill={d.margin < 0 ? RED : "var(--accent)"}
+                            />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div
+                    className="flex items-center gap-6 mt-4 pt-4"
+                    style={{ borderTop: "1px solid var(--border)" }}
+                  >
+                    <div
+                      className="flex items-center gap-2 text-xs"
+                      style={{ color: "var(--muted)" }}
+                    >
+                      <span
+                        className="w-3 h-3 inline-block"
+                        style={{ backgroundColor: "var(--accent)" }}
+                      />{" "}
+                      Margin
+                    </div>
+                    <div
+                      className="flex items-center gap-2 text-xs"
+                      style={{ color: "var(--muted)" }}
+                    >
+                      <span
+                        className="w-3 h-3 inline-block"
+                        style={{ backgroundColor: RED }}
+                      />{" "}
+                      Loss-making
+                    </div>
                   </div>
                 </Panel>
               )}

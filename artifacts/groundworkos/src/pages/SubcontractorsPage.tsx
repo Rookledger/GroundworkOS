@@ -213,7 +213,7 @@ export function SubcontractorsPage() {
             className="text-2xl font-semibold"
             style={{
               color: "var(--ink)",
-              fontFamily: "'Space Grotesk', sans-serif",
+              fontFamily: "var(--font-heading)",
               letterSpacing: "-0.02em",
             }}
           >
@@ -224,7 +224,7 @@ export function SubcontractorsPage() {
           </p>
         </div>
         <Btn onClick={openNew}>
-          <Plus className="w-4 h-4" /> Add Subcontractor
+          <Plus className="w-4 h-4" strokeWidth={1.5} /> Add Subcontractor
         </Btn>
       </div>
 
@@ -337,11 +337,12 @@ export function SubcontractorsPage() {
               style={{
                 backgroundColor: "var(--surface)",
                 border: "1px solid var(--border)",
-              color: "var(--ink)",
-            }}
-            onFocus={(e) => (e.target.style.borderColor = "var(--accent)")}
-            onBlur={(e) => (e.target.style.borderColor = "var(--border)")}
-          />
+                color: "var(--ink)",
+              }}
+              onFocus={(e) => (e.target.style.borderColor = "var(--accent)")}
+              onBlur={(e) => (e.target.style.borderColor = "var(--border)")}
+            />
+          </div>
         </div>
       </div>
 
@@ -353,36 +354,69 @@ export function SubcontractorsPage() {
         >
           <Panel noPad>
             {filtered.length === 0 ? (
-              <p
-                className="text-center py-12 text-sm"
-                style={{ color: "var(--muted-2)" }}
-              >
-                No subcontractors found
-              </p>
+              <EmptyState
+                icon={HardHat}
+                title={
+                  subcontractors.length === 0
+                    ? "No subcontractors yet"
+                    : "No subcontractors match this filter"
+                }
+                description={
+                  subcontractors.length === 0
+                    ? "Track CIS status, trades and compliance documents for every subbie you work with."
+                    : "Try a different tab, filter or search term."
+                }
+                primaryLabel={
+                  subcontractors.length === 0 ? "Add your first subcontractor" : undefined
+                }
+                onPrimary={subcontractors.length === 0 ? openNew : undefined}
+                secondaryLabel="Import from spreadsheet"
+                onSecondary={() => setLocation("/import")}
+              />
             ) : (
               filtered.map((sub, i) => {
                 const warnings = getDocWarnings(sub);
+                const isOverdue = [
+                  sub.public_liability_expiry,
+                  sub.nrswa_card_number ? sub.nrswa_expiry : null,
+                  sub.cscs_card_expiry,
+                ].some((d) => {
+                  const days = daysUntil(d);
+                  return days !== null && days <= 0;
+                });
+                const needsAttention = warnings.length > 0;
+                const rowTint = isOverdue
+                  ? "var(--danger-bg)"
+                  : needsAttention
+                    ? "var(--warning-bg)"
+                    : undefined;
+                const rowBorderColor = isOverdue
+                  ? "var(--danger)"
+                  : needsAttention
+                    ? "var(--warning)"
+                    : "transparent";
                 return (
                   <div
                     key={sub.id}
                     onClick={() =>
                       setSelected(selected === sub.id ? null : sub.id)
                     }
-                    className="flex items-center gap-4 px-5 py-4 cursor-pointer group transition-colors hover:bg-[var(--surface-2)]"
+                    className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 px-5 py-4 cursor-pointer group transition-colors hover:bg-[var(--surface-2)]"
                     style={{
                       borderBottom:
                         i < filtered.length - 1 ? "1px solid var(--border)" : "none",
                       backgroundColor:
-                        selected === sub.id ? "var(--surface-2)" : undefined,
+                        selected === sub.id ? "var(--surface-2)" : rowTint,
+                      borderLeft: `3px solid ${rowBorderColor}`,
                     }}
                   >
                     <div
-                      className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 transition-colors"
+                      className="w-9 h-9 flex items-center justify-center text-sm font-bold flex-shrink-0 transition-colors"
                       style={{
                         backgroundColor:
                           selected === sub.id ? "var(--accent)" : "var(--surface-3)",
                         color: selected === sub.id ? "#ffffff" : "var(--muted-2)",
-                        fontFamily: "'Space Grotesk', sans-serif",
+                        fontFamily: "var(--font-heading)",
                       }}
                     >
                       {sub.company_name[0]}
@@ -398,7 +432,8 @@ export function SubcontractorsPage() {
                         {warnings.length > 0 && (
                           <AlertTriangle
                             className="w-3.5 h-3.5 flex-shrink-0"
-                            style={{ color: "var(--warning)" }}
+                            strokeWidth={1.5}
+                            style={{ color: isOverdue ? "var(--danger)" : "var(--warning)" }}
                           />
                         )}
                       </div>
@@ -408,7 +443,7 @@ export function SubcontractorsPage() {
                       >
                         <span className="truncate">{sub.trade ?? "—"}</span>
                         <span
-                          className="w-1 h-1 rounded-full"
+                          className="w-1 h-1"
                           style={{ backgroundColor: "var(--border)" }}
                         />
                         <span className="truncate">
@@ -420,10 +455,10 @@ export function SubcontractorsPage() {
                       <Badge status={sub.cis_status} />
                       {sub.nrswa_card_number && (
                         <span
-                          className="text-[10px] px-2 py-0.5 rounded hidden md:block font-bold uppercase tracking-wider"
+                          className="text-[10px] px-2 py-0.5 hidden md:block font-bold uppercase tracking-wider"
                           style={{
                             color: "var(--accent)",
-                            backgroundColor: "rgba(27,94,120,0.1)",
+                            backgroundColor: "var(--accent-bg)",
                           }}
                         >
                           NRSWA
@@ -442,6 +477,7 @@ export function SubcontractorsPage() {
                             ? "opacity-100"
                             : "opacity-0 group-hover:opacity-100",
                         )}
+                        strokeWidth={1.5}
                         style={{ color: "var(--muted)" }}
                       />
                     </div>
@@ -459,27 +495,27 @@ export function SubcontractorsPage() {
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => openEdit(selectedSub)}
-                    className="p-1 rounded hover:bg-[var(--surface-3)] transition-colors"
+                    className="p-1 hover:bg-[var(--surface-3)] transition-colors"
                     style={{ color: "var(--muted)" }}
                     title="Edit subcontractor"
                   >
-                    <Pencil className="w-4 h-4" />
+                    <Pencil className="w-4 h-4" strokeWidth={1.5} />
                   </button>
                   <button
                     onClick={() =>
                       handleDelete(selectedSub.id, selectedSub.company_name)
                     }
-                    className="p-1 rounded hover:bg-red-50 transition-colors"
+                    className="p-1 hover:bg-red-50 transition-colors"
                     style={{ color: "var(--danger)" }}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4" strokeWidth={1.5} />
                   </button>
                   <button
                     onClick={() => setSelected(null)}
-                    className="p-1 rounded hover:bg-[var(--surface-3)] transition-colors"
+                    className="p-1 hover:bg-[var(--surface-3)] transition-colors"
                     style={{ color: "var(--muted)" }}
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-4 h-4" strokeWidth={1.5} />
                   </button>
                 </div>
               }
@@ -501,7 +537,7 @@ export function SubcontractorsPage() {
                     className="text-lg font-semibold"
                     style={{
                       color: "var(--ink)",
-                      fontFamily: "'Space Grotesk', sans-serif",
+                      fontFamily: "var(--font-heading)",
                     }}
                   >
                     {selectedSub.company_name}
@@ -562,7 +598,7 @@ export function SubcontractorsPage() {
                 </div>
 
                 <div
-                  className="p-4 rounded-xl"
+                  className="p-4"
                   style={{
                     backgroundColor: "var(--surface-2)",
                     border: "1px solid var(--border)",
@@ -652,7 +688,7 @@ export function SubcontractorsPage() {
 
                 {getDocWarnings(selectedSub).length > 0 && (
                   <div
-                    className="p-3 rounded-lg space-y-2 mt-2"
+                    className="p-3 space-y-2 mt-2"
                     style={{
                       backgroundColor: "rgba(178,58,38,0.05)",
                       border: "1px solid rgba(178,58,38,0.2)",
@@ -664,7 +700,7 @@ export function SubcontractorsPage() {
                         className="flex items-center gap-2 text-[13px] font-medium"
                         style={{ color: "var(--danger)" }}
                       >
-                        <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                        <AlertTriangle className="w-4 h-4 flex-shrink-0" strokeWidth={1.5} />
                         {w}
                       </div>
                     ))}
@@ -743,7 +779,7 @@ export function SubcontractorsPage() {
             </Field>
           </div>
           <div
-            className="p-4 rounded-xl"
+            className="p-4"
             style={{ backgroundColor: "var(--surface-2)", border: "1px solid var(--border)" }}
           >
             <div
