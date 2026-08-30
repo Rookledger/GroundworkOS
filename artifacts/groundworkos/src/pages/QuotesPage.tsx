@@ -9,13 +9,16 @@ import {
   Share2,
   Copy,
   Mail,
+  FileText,
 } from "lucide-react";
+import { useLocation } from "wouter";
 import { pdf } from "@react-pdf/renderer";
 import { QuotePDF } from "../lib/pdf/QuotePDF";
 import { Panel } from "../components/ui/Panel";
 import { StatCard } from "../components/ui/StatCard";
 import { Badge } from "../components/ui/Badge";
 import { Btn } from "../components/ui/Btn";
+import { EmptyState } from "../components/ui/EmptyState";
 import { Modal, Field, Input, Select, Textarea } from "../components/ui/Modal";
 import { cn, formatCurrency, formatDate } from "../lib/utils";
 import { useApp } from "../store/AppContext";
@@ -60,6 +63,7 @@ const makeEmptyForm = () => ({
 export function QuotesPage() {
   const { state, dispatch } = useApp();
   const { quotes, clients, settings } = state;
+  const [, navigate] = useLocation();
 
   const [tab, setTab] = useState("all");
   const [search, setSearch] = useState("");
@@ -312,18 +316,18 @@ export function QuotesPage() {
           <h1
             className="text-2xl font-semibold"
             style={{
-              color: "#181410",
-              fontFamily: "'Space Grotesk', sans-serif",
+              color: "var(--ink)",
+              fontFamily: "var(--font-heading)",
             }}
           >
             Quotes
           </h1>
-          <p className="text-sm mt-1" style={{ color: "#7a7469" }}>
+          <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
             Create and manage quotations
           </p>
         </div>
         <Btn onClick={openNew}>
-          <Plus className="w-4 h-4" /> New Quote
+          <Plus className="w-4 h-4" strokeWidth={1.5} /> New Quote
         </Btn>
       </div>
 
@@ -352,47 +356,64 @@ export function QuotesPage() {
       <div className="flex items-center justify-between gap-4">
         <div
           className="flex items-center gap-1"
-          style={{ borderBottom: "1px solid #d9d4ce" }}
+          style={{ borderBottom: "1px solid var(--border)" }}
         >
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className="px-4 py-2.5 text-sm transition-colors relative"
-              style={
-                tab === t.id
-                  ? { color: "#181410", fontWeight: 600 }
-                  : { color: "#7a7469", fontWeight: 500 }
-              }
-            >
-              {t.label}
-              {tab === t.id && (
-                <div
-                  className="absolute bottom-[-1px] left-0 w-full h-[2px]"
-                  style={{ backgroundColor: "#1b5e78" }}
-                />
-              )}
-            </button>
-          ))}
+          {TABS.map((t) => {
+            const count =
+              t.id === "all"
+                ? quotes.length
+                : quotes.filter((q) => q.status === t.id).length;
+            const isActive = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                className="px-4 py-2.5 text-sm transition-colors relative flex items-center gap-1.5"
+                style={
+                  isActive
+                    ? { color: "var(--ink)", fontWeight: 600 }
+                    : { color: "var(--muted)", fontWeight: 500 }
+                }
+              >
+                {t.label}
+                <span
+                  className="inline-flex items-center justify-center px-1.5 py-0.5 text-[11px] font-bold tnum"
+                  style={{
+                    fontFamily: "var(--font-heading)",
+                    backgroundColor: isActive ? "var(--accent-bg)" : "var(--surface-3)",
+                    color: isActive ? "var(--accent)" : "var(--muted-2)",
+                  }}
+                >
+                  {count}
+                </span>
+                {isActive && (
+                  <div
+                    className="absolute bottom-[-1px] left-0 w-full h-[2px]"
+                    style={{ backgroundColor: "var(--accent)" }}
+                  />
+                )}
+              </button>
+            );
+          })}
         </div>
         <div className="relative">
           <Search
             className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
-            style={{ color: "#a8a099" }}
-          />
+            style={{ color: "var(--muted-2)" }}
+          strokeWidth={1.5} />
           <input
             type="text"
             placeholder="Search quotes..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 pr-4 py-2 rounded-md text-sm w-64 focus:outline-none transition-colors"
+            className="pl-9 pr-4 py-2 text-sm w-64 focus:outline-none transition-colors"
             style={{
-              backgroundColor: "#fafaf8",
-              border: "1px solid #d9d4ce",
-              color: "#181410",
+              backgroundColor: "var(--surface)",
+              border: "1px solid var(--border)",
+              color: "var(--ink)",
             }}
-            onFocus={(e) => (e.target.style.borderColor = "#1b5e78")}
-            onBlur={(e) => (e.target.style.borderColor = "#d9d4ce")}
+            onFocus={(e) => (e.target.style.borderColor = "var(--accent)")}
+            onBlur={(e) => (e.target.style.borderColor = "var(--border)")}
           />
         </div>
       </div>
@@ -401,71 +422,115 @@ export function QuotesPage() {
         <div className={selectedQuote ? "lg:col-span-2" : "lg:col-span-3"}>
           <Panel noPad>
             {filtered.length === 0 ? (
-              <p
-                className="text-center py-12 text-sm"
-                style={{ color: "#a8a099" }}
-              >
-                No quotes found
-              </p>
-            ) : (
-              filtered.map((q, i) => (
-                <div
-                  key={q.id}
-                  onClick={() => setSelected(selected === q.id ? null : q.id)}
-                  className="flex items-center gap-4 px-5 py-4 cursor-pointer transition-colors hover:bg-[#eeeae4] group"
-                  style={{
-                    borderBottom:
-                      i < filtered.length - 1 ? "1px solid #d9d4ce" : "none",
-                    backgroundColor: selected === q.id ? "#eeeae4" : undefined,
-                    borderLeft:
-                      selected === q.id
-                        ? "2px solid #1b5e78"
-                        : "2px solid transparent",
+              quotes.length === 0 ? (
+                <EmptyState
+                  icon={FileText}
+                  title="No quotes yet"
+                  description="Quotes let you price up work and send it to a client for sign-off before it becomes a job."
+                  primaryLabel="Create your first quote"
+                  onPrimary={openNew}
+                  secondaryLabel="Import from spreadsheet"
+                  onSecondary={() => navigate("/import")}
+                  hint="You can also import existing quotes as a CSV."
+                />
+              ) : (
+                <EmptyState
+                  icon={Search}
+                  title="No quotes match your filters"
+                  description="Try a different search term or switch tabs."
+                  primaryLabel="Clear filters"
+                  onPrimary={() => {
+                    setTab("all");
+                    setSearch("");
                   }}
-                >
-                  <span
-                    className="text-xs w-28 flex-shrink-0 font-mono tnum"
-                    style={{ color: "#7a7469" }}
+                />
+              )
+            ) : (
+              filtered.map((q, i) => {
+                const isExpired = q.status === "expired";
+                return (
+                  <div
+                    key={q.id}
+                    onClick={() => setSelected(selected === q.id ? null : q.id)}
+                    className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 px-5 py-4 cursor-pointer transition-colors hover:bg-[var(--surface-2)] group"
+                    style={{
+                      borderBottom:
+                        i < filtered.length - 1 ? "1px solid var(--border)" : "none",
+                      backgroundColor: isExpired
+                        ? "var(--danger-bg)"
+                        : selected === q.id
+                          ? "var(--surface-2)"
+                          : undefined,
+                      borderLeft: isExpired
+                        ? "3px solid var(--danger)"
+                        : selected === q.id
+                          ? "3px solid var(--accent)"
+                          : "3px solid transparent",
+                    }}
                   >
-                    {q.quote_number}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div
-                      className="text-sm font-semibold truncate"
-                      style={{ color: "#181410" }}
-                    >
-                      {q.title ?? "—"}
-                    </div>
-                    <div
-                      className="text-xs mt-0.5"
-                      style={{ color: "#7a7469" }}
-                    >
-                      {q.client?.company_name ?? "—"}
-                    </div>
-                  </div>
-                  <Badge status={q.status} />
-                  <div className="text-right flex-shrink-0 w-28">
-                    <div
-                      className="text-sm font-semibold font-mono tnum"
-                      style={{ color: "#181410" }}
-                    >
-                      {formatCurrency(q.total_amount)}
-                    </div>
-                    {q.valid_until && (
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
                       <div
-                        className="text-[11px] font-mono tnum mt-0.5"
-                        style={{ color: "#7a7469" }}
+                        className="w-9 h-9 flex items-center justify-center flex-shrink-0"
+                        style={{ backgroundColor: "var(--surface-3)" }}
                       >
-                        Until {formatDate(q.valid_until)}
+                        <FileText
+                          className="w-4 h-4"
+                          style={{ color: "var(--muted)" }}
+                          strokeWidth={1.5}
+                        />
                       </div>
-                    )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2.5 mb-1 flex-wrap">
+                          <span
+                            className="text-sm font-semibold truncate"
+                            style={{ color: "var(--ink)" }}
+                          >
+                            {q.title ?? "—"}
+                          </span>
+                          <span className="sm:hidden">
+                            <Badge status={q.status} />
+                          </span>
+                        </div>
+                        <div
+                          className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs"
+                          style={{ color: "var(--muted)" }}
+                        >
+                          <span className="font-mono tnum">{q.quote_number}</span>
+                          <span>{q.client?.company_name ?? "—"}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between sm:justify-end gap-4 pl-12 sm:pl-0 flex-shrink-0">
+                      <span className="hidden sm:block">
+                        <Badge status={q.status} />
+                      </span>
+                      <div className="text-right flex-shrink-0 w-28">
+                        <div
+                          className="text-sm font-semibold tnum"
+                          style={{ color: "var(--ink)" }}
+                        >
+                          {formatCurrency(q.total_amount)}
+                        </div>
+                        {q.valid_until && (
+                          <div
+                            className="text-[11px] tnum mt-0.5"
+                            style={{
+                              color: isExpired ? "var(--danger-ink)" : "var(--muted)",
+                            }}
+                          >
+                            Until {formatDate(q.valid_until)}
+                          </div>
+                        )}
+                      </div>
+                      <ChevronRight
+                        className="w-4 h-4 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block"
+                        style={{ color: "var(--muted)" }}
+                        strokeWidth={1.5}
+                      />
+                    </div>
                   </div>
-                  <ChevronRight
-                    className="w-4 h-4 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                    style={{ color: "#7a7469" }}
-                  />
-                </div>
-              ))
+                );
+              })
             )}
           </Panel>
         </div>
@@ -479,17 +544,17 @@ export function QuotesPage() {
                     onClick={() =>
                       handleDelete(selectedQuote.id, selectedQuote.quote_number)
                     }
-                    className="p-1 rounded hover:bg-red-50 transition-colors"
-                    style={{ color: "#c13a2a" }}
+                    className="p-1 hover:bg-red-50 transition-colors"
+                    style={{ color: "var(--danger)" }}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4" strokeWidth={1.5} />
                   </button>
                   <button
                     onClick={() => setSelected(null)}
-                    className="p-1 rounded hover:bg-[#e8e4dd] transition-colors"
-                    style={{ color: "#7a7469" }}
+                    className="p-1 hover:bg-[var(--surface-3)] transition-colors"
+                    style={{ color: "var(--muted)" }}
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-4 h-4" strokeWidth={1.5} />
                   </button>
                 </div>
               }
@@ -499,7 +564,7 @@ export function QuotesPage() {
                   <div className="flex items-center justify-between mb-2">
                     <span
                       className="text-xs font-mono tnum"
-                      style={{ color: "#7a7469" }}
+                      style={{ color: "var(--muted)" }}
                     >
                       {selectedQuote.quote_number}
                     </span>
@@ -508,8 +573,8 @@ export function QuotesPage() {
                   <h3
                     className="text-lg font-semibold leading-snug"
                     style={{
-                      color: "#181410",
-                      fontFamily: "'Space Grotesk', sans-serif",
+                      color: "var(--ink)",
+                      fontFamily: "var(--font-heading)",
                     }}
                   >
                     {selectedQuote.title}
@@ -518,7 +583,7 @@ export function QuotesPage() {
 
                 <div
                   className="space-y-3 pt-4"
-                  style={{ borderTop: "1px solid #d9d4ce" }}
+                  style={{ borderTop: "1px solid var(--border)" }}
                 >
                   {[
                     {
@@ -534,11 +599,11 @@ export function QuotesPage() {
                     <div
                       key={label}
                       className="flex justify-between items-baseline gap-3 pt-3"
-                      style={{ borderTop: "1px solid #ece8e3" }}
+                      style={{ borderTop: "1px solid var(--surface-3)" }}
                     >
                       <span
                         className="text-[11px] font-bold uppercase tracking-widest flex-shrink-0"
-                        style={{ color: "#7a7469" }}
+                        style={{ color: "var(--muted)" }}
                       >
                         {label}
                       </span>
@@ -547,7 +612,7 @@ export function QuotesPage() {
                           "text-sm text-right",
                           label !== "Client" && "font-mono tnum",
                         )}
-                        style={{ color: "#181410" }}
+                        style={{ color: "var(--ink)" }}
                       >
                         {value}
                       </span>
@@ -560,8 +625,8 @@ export function QuotesPage() {
                     <p
                       className="text-[11px] font-bold uppercase tracking-widest mb-3"
                       style={{
-                        color: "#7a7469",
-                        fontFamily: "'Space Grotesk', sans-serif",
+                        color: "var(--muted)",
+                        fontFamily: "var(--font-heading)",
                       }}
                     >
                       Line Items
@@ -571,18 +636,18 @@ export function QuotesPage() {
                         <div
                           key={li.id}
                           className="flex items-start justify-between gap-3 text-xs pb-3"
-                          style={{ borderBottom: "1px solid #ece8e3" }}
+                          style={{ borderBottom: "1px solid var(--surface-3)" }}
                         >
                           <div className="flex-1">
                             <div
                               className="mb-1 font-medium"
-                              style={{ color: "#181410" }}
+                              style={{ color: "var(--ink)" }}
                             >
                               {li.description}
                             </div>
                             <div
                               className="font-mono tnum"
-                              style={{ color: "#7a7469" }}
+                              style={{ color: "var(--muted)" }}
                             >
                               {li.quantity} {li.unit} ×{" "}
                               {formatCurrency(li.unit_price)}
@@ -590,7 +655,7 @@ export function QuotesPage() {
                           </div>
                           <div
                             className="font-semibold flex-shrink-0 font-mono tnum mt-0.5"
-                            style={{ color: "#181410" }}
+                            style={{ color: "var(--ink)" }}
                           >
                             {formatCurrency(li.total)}
                           </div>
@@ -602,7 +667,7 @@ export function QuotesPage() {
 
                 <div
                   className="pt-4 space-y-2"
-                  style={{ borderTop: "1px solid #d9d4ce" }}
+                  style={{ borderTop: "1px solid var(--border)" }}
                 >
                   {[
                     {
@@ -617,13 +682,13 @@ export function QuotesPage() {
                     <div key={label} className="flex justify-between text-sm">
                       <span
                         className="text-[11px] font-bold uppercase tracking-widest"
-                        style={{ color: "#7a7469" }}
+                        style={{ color: "var(--muted)" }}
                       >
                         {label}
                       </span>
                       <span
                         className="font-mono tnum"
-                        style={{ color: "#8a8377" }}
+                        style={{ color: "var(--muted-2)" }}
                       >
                         {value}
                       </span>
@@ -631,17 +696,17 @@ export function QuotesPage() {
                   ))}
                   <div
                     className="flex justify-between items-center pt-3 mt-1"
-                    style={{ borderTop: "1px solid #d9d4ce" }}
+                    style={{ borderTop: "1px solid var(--border)" }}
                   >
                     <span
                       className="text-[11px] font-bold uppercase tracking-widest"
-                      style={{ color: "#181410" }}
+                      style={{ color: "var(--ink)" }}
                     >
                       Total
                     </span>
                     <span
                       className="font-mono tnum font-bold text-xl"
-                      style={{ color: "#181410" }}
+                      style={{ color: "var(--ink)" }}
                     >
                       {formatCurrency(selectedQuote.total_amount)}
                     </span>
@@ -653,15 +718,15 @@ export function QuotesPage() {
                     <p
                       className="text-[11px] font-bold uppercase tracking-widest mb-2"
                       style={{
-                        color: "#7a7469",
-                        fontFamily: "'Space Grotesk', sans-serif",
+                        color: "var(--muted)",
+                        fontFamily: "var(--font-heading)",
                       }}
                     >
                       Notes
                     </p>
                     <p
                       className="text-sm leading-relaxed"
-                      style={{ color: "#4a4540" }}
+                      style={{ color: "var(--ink-2)" }}
                     >
                       {selectedQuote.notes}
                     </p>
@@ -694,7 +759,7 @@ export function QuotesPage() {
                     disabled={pdfing}
                     onClick={() => downloadQuotePdf(selectedQuote)}
                   >
-                    <Download className="w-3.5 h-3.5" />{" "}
+                    <Download className="w-3.5 h-3.5" strokeWidth={1.5} />{" "}
                     {pdfing ? "Generating…" : "Download PDF"}
                   </Btn>
                   <Btn
@@ -707,7 +772,7 @@ export function QuotesPage() {
                       setShowEmailModal(true);
                     }}
                   >
-                    <Mail className="w-3.5 h-3.5" /> Send by Email
+                    <Mail className="w-3.5 h-3.5" strokeWidth={1.5} /> Send by Email
                   </Btn>
                   <Btn
                     variant="outline"
@@ -717,9 +782,9 @@ export function QuotesPage() {
                     onClick={() => shareQuote(selectedQuote.id)}
                   >
                     {sharing ? (
-                      <Share2 className="w-3.5 h-3.5 animate-pulse" />
+                      <Share2 className="w-3.5 h-3.5 animate-pulse" strokeWidth={1.5} />
                     ) : (
-                      <Copy className="w-3.5 h-3.5" />
+                      <Copy className="w-3.5 h-3.5" strokeWidth={1.5} />
                     )}
                     {sharing ? "Generating link…" : "Copy client portal link"}
                   </Btn>
@@ -753,7 +818,7 @@ export function QuotesPage() {
                 ))}
               </Select>
               {errors.client_id && (
-                <p className="mt-1 text-xs" style={{ color: "#c13a2a" }}>
+                <p className="mt-1 text-xs" style={{ color: "var(--danger)" }}>
                   {errors.client_id}
                 </p>
               )}
@@ -778,7 +843,7 @@ export function QuotesPage() {
               placeholder="e.g. Drainage Installation — New Estate Phase 2"
             />
             {errors.title && (
-              <p className="mt-1 text-xs" style={{ color: "#c13a2a" }}>
+              <p className="mt-1 text-xs" style={{ color: "var(--danger)" }}>
                 {errors.title}
               </p>
             )}
@@ -788,44 +853,44 @@ export function QuotesPage() {
               <span
                 className="text-[11px] font-bold uppercase tracking-widest"
                 style={{
-                  color: "#7a7469",
-                  fontFamily: "'Space Grotesk', sans-serif",
+                  color: "var(--muted)",
+                  fontFamily: "var(--font-heading)",
                 }}
               >
                 Line Items
               </span>
               <button
                 onClick={addLineItem}
-                className="text-xs flex items-center gap-1 font-medium transition-colors hover:text-[#1b5e78]"
-                style={{ color: "#4a4540" }}
+                className="text-xs flex items-center gap-1 font-medium transition-colors hover:text-[var(--accent)]"
+                style={{ color: "var(--ink-2)" }}
               >
-                <Plus className="w-3.5 h-3.5" /> Add Item
+                <Plus className="w-3.5 h-3.5" strokeWidth={1.5} /> Add Item
               </button>
             </div>
             <div className="space-y-3">
               {form.line_items.map((li, idx) => (
                 <div
                   key={li.id}
-                  className="p-4 rounded-lg space-y-3"
+                  className="p-4 space-y-3"
                   style={{
-                    backgroundColor: "#eeeae4",
-                    border: "1px solid #d9d4ce",
+                    backgroundColor: "var(--surface-2)",
+                    border: "1px solid var(--border)",
                   }}
                 >
                   <div className="flex items-center justify-between">
                     <span
                       className="text-[11px] font-bold uppercase tracking-widest"
-                      style={{ color: "#7a7469" }}
+                      style={{ color: "var(--muted)" }}
                     >
                       Item {idx + 1}
                     </span>
                     {form.line_items.length > 1 && (
                       <button
                         onClick={() => removeLineItem(li.id)}
-                        className="transition-colors hover:text-[#c13a2a]"
-                        style={{ color: "#7a7469" }}
+                        className="transition-colors hover:text-[var(--danger)]"
+                        style={{ color: "var(--muted)" }}
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
                       </button>
                     )}
                   </div>
@@ -872,11 +937,11 @@ export function QuotesPage() {
                       className="font-mono tnum"
                     />
                     <div
-                      className="py-2 px-3 rounded-md text-sm text-right font-mono tnum font-medium"
+                      className="py-2 px-3 text-sm text-right font-mono tnum font-medium"
                       style={{
-                        backgroundColor: "#fafaf8",
-                        color: "#181410",
-                        border: "1px solid #d9d4ce",
+                        backgroundColor: "var(--surface)",
+                        color: "var(--ink)",
+                        border: "1px solid var(--border)",
                       }}
                     >
                       {formatCurrency(li.total)}
@@ -888,10 +953,10 @@ export function QuotesPage() {
           </div>
           {subtotal > 0 && (
             <div
-              className="p-4 rounded-lg space-y-2 mt-4"
+              className="p-4 space-y-2 mt-4"
               style={{
-                backgroundColor: "#eeeae4",
-                border: "1px solid #d9d4ce",
+                backgroundColor: "var(--surface-2)",
+                border: "1px solid var(--border)",
               }}
             >
               {[
@@ -902,7 +967,7 @@ export function QuotesPage() {
                 <div key={label} className="flex justify-between text-sm">
                   <span
                     className="text-[11px] font-bold uppercase tracking-widest"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     {label}
                   </span>
@@ -911,7 +976,7 @@ export function QuotesPage() {
                       "font-mono tnum",
                       label === "Total" && "font-bold text-base",
                     )}
-                    style={{ color: label === "Total" ? "#181410" : "#4a4540" }}
+                    style={{ color: label === "Total" ? "var(--ink)" : "var(--ink-2)" }}
                   >
                     {value}
                   </span>
@@ -952,39 +1017,39 @@ export function QuotesPage() {
           style={{ backgroundColor: "rgba(24,20,16,0.5)" }}
         >
           <div
-            className="w-full max-w-md rounded-xl shadow-2xl overflow-hidden"
-            style={{ backgroundColor: "#fafaf8", border: "1px solid #d9d4ce" }}
+            className="w-full max-w-md shadow-2xl overflow-hidden"
+            style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border)" }}
           >
             <div
               className="flex items-center justify-between px-6 py-4"
-              style={{ borderBottom: "1px solid #e8e4dd" }}
+              style={{ borderBottom: "1px solid var(--surface-3)" }}
             >
               <div>
                 <h2
                   className="text-base font-semibold"
                   style={{
-                    color: "#181410",
-                    fontFamily: "'Space Grotesk', sans-serif",
+                    color: "var(--ink)",
+                    fontFamily: "var(--font-heading)",
                   }}
                 >
                   Send Quote by Email
                 </h2>
-                <p className="text-xs mt-0.5" style={{ color: "#7a7469" }}>
+                <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
                   {selectedQuote.quote_number}
                 </p>
               </div>
               <button
                 onClick={() => setShowEmailModal(false)}
-                className="p-1.5 rounded hover:bg-[#eeeae4]"
+                className="p-1.5 hover:bg-[var(--surface-2)]"
               >
-                <X className="w-4 h-4" style={{ color: "#7a7469" }} />
+                <X className="w-4 h-4" style={{ color: "var(--muted)" }} strokeWidth={1.5} />
               </button>
             </div>
             <div className="px-6 py-5 space-y-4">
               <div>
                 <label
                   className="block text-[10px] font-bold uppercase tracking-widest mb-1.5"
-                  style={{ color: "#7a7469" }}
+                  style={{ color: "var(--muted)" }}
                 >
                   Recipient Email *
                 </label>
@@ -993,11 +1058,11 @@ export function QuotesPage() {
                   value={emailTo}
                   onChange={(e) => setEmailTo(e.target.value)}
                   placeholder="client@example.com"
-                  className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+                  className="w-full px-3 py-2 text-sm focus:outline-none"
                   style={{
                     backgroundColor: "#ffffff",
-                    border: "1.5px solid #d9d4ce",
-                    color: "#181410",
+                    border: "1.5px solid var(--border)",
+                    color: "var(--ink)",
                   }}
                   autoFocus
                 />
@@ -1005,7 +1070,7 @@ export function QuotesPage() {
               <div>
                 <label
                   className="block text-[10px] font-bold uppercase tracking-widest mb-1.5"
-                  style={{ color: "#7a7469" }}
+                  style={{ color: "var(--muted)" }}
                 >
                   Subject (optional)
                 </label>
@@ -1013,19 +1078,19 @@ export function QuotesPage() {
                   value={emailSubject}
                   onChange={(e) => setEmailSubject(e.target.value)}
                   placeholder={`Quote ${selectedQuote.quote_number}`}
-                  className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+                  className="w-full px-3 py-2 text-sm focus:outline-none"
                   style={{
                     backgroundColor: "#ffffff",
-                    border: "1.5px solid #d9d4ce",
-                    color: "#181410",
+                    border: "1.5px solid var(--border)",
+                    color: "var(--ink)",
                   }}
                 />
               </div>
               <div
-                className="flex items-start gap-2 p-3 rounded-lg text-xs"
-                style={{ backgroundColor: "#e8f3f7", color: "#1b5e78" }}
+                className="flex items-start gap-2 p-3 text-xs"
+                style={{ backgroundColor: "var(--accent-bg)", color: "var(--accent)" }}
               >
-                <Mail className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                <Mail className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" strokeWidth={1.5} />
                 <span>
                   The full quote breakdown will be included in the email body.
                   The quote will be marked as Sent.
@@ -1034,7 +1099,7 @@ export function QuotesPage() {
             </div>
             <div
               className="flex gap-3 px-6 py-4"
-              style={{ borderTop: "1px solid #e8e4dd" }}
+              style={{ borderTop: "1px solid var(--surface-3)" }}
             >
               <Btn
                 variant="outline"
@@ -1048,7 +1113,7 @@ export function QuotesPage() {
                 onClick={sendByEmail}
                 disabled={emailSending || !emailTo.trim()}
               >
-                <Mail className="w-3.5 h-3.5" />{" "}
+                <Mail className="w-3.5 h-3.5" strokeWidth={1.5} />{" "}
                 {emailSending ? "Sending…" : "Send Quote"}
               </Btn>
             </div>

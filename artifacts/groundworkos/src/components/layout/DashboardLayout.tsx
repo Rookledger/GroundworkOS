@@ -129,9 +129,9 @@ const ALL_NAV = [
 ];
 
 const ROLE_BADGE: Record<Role, { label: string; bg: string; color: string }> = {
-  admin: { label: "Admin", bg: "#fef3c7", color: "#92400e" },
-  manager: { label: "Manager", bg: "#e8f3f7", color: "#1b5e78" },
-  foreman: { label: "Foreman", bg: "#f0ede8", color: "#7a7469" },
+  admin: { label: "Admin", bg: "#f0a11e", color: "#1d2d3d" },
+  manager: { label: "Manager", bg: "rgba(89,128,166,0.18)", color: "#8fb0cc" },
+  foreman: { label: "Foreman", bg: "rgba(255,255,255,0.12)", color: "#c7ced5" },
 };
 
 const ALERT_ICONS = {
@@ -149,13 +149,13 @@ function InitialLoadingState() {
       <div
         className="w-8 h-8 rounded-full animate-spin"
         style={{
-          border: "3px solid #d9d4ce",
-          borderTopColor: "#1b5e78",
+          border: "3px solid var(--border)",
+          borderTopColor: "var(--accent)",
         }}
       />
       <p
         className="mt-4 text-[11px] font-bold uppercase tracking-widest"
-        style={{ color: "#7a7469", fontFamily: "'Space Grotesk', sans-serif" }}
+        style={{ color: "var(--muted)", fontFamily: "var(--font-heading)" }}
       >
         Loading workspace…
       </p>
@@ -221,6 +221,24 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const criticalCount = alerts.filter((a) => a.severity === "critical").length;
   const bellCount = alerts.length;
 
+  const invoicesOverdueCount = state.invoices.filter(
+    (i) => i.status === "overdue",
+  ).length;
+  const documentsAlertCount = alerts.filter(
+    (a) => a.category === "document",
+  ).length;
+  const plantAlertCount = alerts.filter((a) => a.category === "plant").length;
+  const subsUnverifiedCount = state.subcontractors.filter(
+    (s) => s.cis_status === "unverified" || s.cis_status === "unmatched",
+  ).length;
+
+  const NAV_BADGES: Record<string, { count: number; color: string } | undefined> = {
+    "/invoices": { count: invoicesOverdueCount, color: "#b23a26" },
+    "/documents": { count: documentsAlertCount, color: "#b8730c" },
+    "/plant": { count: plantAlertCount, color: "#b23a26" },
+    "/subcontractors": { count: subsUnverifiedCount, color: "#b8730c" },
+  };
+
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
@@ -235,12 +253,12 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <div
       className="min-h-screen flex"
-      style={{ backgroundColor: "#f0ede8", color: "#181410" }}
+      style={{ backgroundColor: "var(--bg)", color: "var(--ink)" }}
     >
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 lg:hidden"
-          style={{ backgroundColor: "rgba(24,20,16,0.4)" }}
+          style={{ backgroundColor: "rgba(29,45,61,0.5)" }}
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -250,11 +268,11 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           "fixed inset-y-0 left-0 z-50 w-56 flex flex-col transition-transform duration-200 lg:translate-x-0 lg:static",
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
-        style={{ backgroundColor: "#fafaf8", borderRight: "1px solid #d9d4ce" }}
+        style={{ backgroundColor: "#1d2d3d", color: "#e9edf1" }}
       >
         <div
           className="h-13 flex items-center justify-between px-4 py-3"
-          style={{ borderBottom: "1px solid #d9d4ce" }}
+          style={{ borderBottom: "1px solid rgba(255,255,255,.14)" }}
         >
           <Link href="/" className="flex items-center gap-2.5 no-underline min-w-0">
             {state.settings.companyLogo ? (
@@ -264,31 +282,43 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 className="h-7 max-w-[9rem] object-contain flex-shrink-0"
               />
             ) : (
-              <span
-                className="truncate"
-                style={{
-                  fontFamily: "'Space Grotesk', sans-serif",
-                  fontWeight: 700,
-                  fontSize: "13px",
-                  color: "#181410",
-                  letterSpacing: "0.04em",
-                }}
-              >
-                {state.settings.companyName &&
-                state.settings.companyName !== "GroundworkOS Ltd" ? (
-                  state.settings.companyName
-                ) : (
-                  <>
-                    GROUNDWORK<span style={{ color: "#1b5e78" }}>OS</span>
-                  </>
-                )}
-              </span>
+              <>
+                <span
+                  className="flex-shrink-0"
+                  style={{
+                    width: 22,
+                    height: 22,
+                    background:
+                      "repeating-linear-gradient(135deg,#f0a11e 0 4px,#1d2d3d 4px 8px)",
+                    border: "1px solid rgba(255,255,255,.35)",
+                  }}
+                />
+                <span
+                  className="truncate"
+                  style={{
+                    fontFamily: "var(--font-heading)",
+                    fontWeight: 600,
+                    fontSize: "15px",
+                    color: "#fff",
+                    letterSpacing: "0.02em",
+                  }}
+                >
+                  {state.settings.companyName &&
+                  state.settings.companyName !== "GroundworkOS Ltd" ? (
+                    state.settings.companyName
+                  ) : (
+                    <>
+                      GROUNDWORK<span style={{ color: "#f0a11e" }}>OS</span>
+                    </>
+                  )}
+                </span>
+              </>
             )}
           </Link>
           <button
-            className="lg:hidden p-1 rounded"
+            className="lg:hidden p-1"
             onClick={() => setSidebarOpen(false)}
-            style={{ color: "#7a7469" }}
+            style={{ color: "rgba(233,237,241,.7)" }}
           >
             <X className="w-4 h-4" />
           </button>
@@ -302,7 +332,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                   key={`g-${index}`}
                   className="my-1"
                   style={{
-                    borderBottom: "1px solid #ece8e3",
+                    borderBottom: "1px solid rgba(255,255,255,.1)",
                     margin: "6px 8px",
                   }}
                 />
@@ -312,21 +342,22 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             const isActive =
               location === item.href ||
               (item.href !== "/" && location.startsWith(item.href));
+            const navBadge = NAV_BADGES[item.href];
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 onClick={() => setSidebarOpen(false)}
-                className="relative flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-colors no-underline mb-0.5"
+                className="relative flex items-center gap-2.5 px-3 py-2 text-xs font-medium transition-colors no-underline mb-0.5"
                 style={{
-                  backgroundColor: isActive ? "#eeeae4" : "transparent",
-                  color: isActive ? "#181410" : "#4a4540",
-                  fontFamily: "'Space Grotesk', sans-serif",
+                  backgroundColor: isActive ? "rgba(89,128,166,0.22)" : "transparent",
+                  color: isActive ? "#ffffff" : "rgba(233,237,241,.75)",
+                  fontFamily: "var(--font-heading)",
                 }}
                 onMouseEnter={(e) => {
                   if (!isActive)
                     (e.currentTarget as HTMLElement).style.backgroundColor =
-                      "#eeeae4";
+                      "rgba(255,255,255,.06)";
                 }}
                 onMouseLeave={(e) => {
                   if (!isActive)
@@ -336,33 +367,45 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               >
                 {isActive && (
                   <div
-                    className="absolute left-0 top-1/2 -translate-y-1/2 rounded-r"
+                    className="absolute left-0 top-0 bottom-0"
                     style={{
                       width: "3px",
-                      height: "16px",
-                      backgroundColor: "#1b5e78",
+                      backgroundColor: "#f0a11e",
                     }}
                   />
                 )}
                 <Icon
                   className="w-4 h-4 flex-shrink-0"
-                  style={{ opacity: isActive ? 1 : 0.65 }}
+                  strokeWidth={1.5}
+                  style={{ opacity: isActive ? 1 : 0.7 }}
                 />
                 <span>{item.name}</span>
+                {navBadge && navBadge.count > 0 && (
+                  <span
+                    className="ml-auto flex-shrink-0 text-[11px] font-bold px-1.5"
+                    style={{
+                      backgroundColor: navBadge.color,
+                      color: "#fff",
+                      fontFamily: "var(--font-heading)",
+                    }}
+                  >
+                    {navBadge.count}
+                  </span>
+                )}
               </Link>
             );
           })}
         </nav>
 
-        <div className="px-2 py-3" style={{ borderTop: "1px solid #d9d4ce" }}>
-          <div className="px-2 py-2 rounded-md">
+        <div className="px-2 py-3" style={{ borderTop: "1px solid rgba(255,255,255,.14)" }}>
+          <div className="px-2 py-2">
             <div className="flex items-center gap-2.5">
               <div
-                className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                className="w-7 h-7 flex items-center justify-center text-xs font-bold flex-shrink-0"
                 style={{
-                  backgroundColor: "#1b5e78",
-                  color: "#ffffff",
-                  fontFamily: "'Space Grotesk', sans-serif",
+                  backgroundColor: "#f0a11e",
+                  color: "#1d2d3d",
+                  fontFamily: "var(--font-heading)",
                 }}
               >
                 {initials}
@@ -371,8 +414,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 <p
                   className="text-xs font-semibold truncate"
                   style={{
-                    color: "#181410",
-                    fontFamily: "'Space Grotesk', sans-serif",
+                    color: "#fff",
+                    fontFamily: "var(--font-heading)",
                   }}
                 >
                   {displayName}
@@ -381,8 +424,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                   <p
                     className="text-[10px] truncate"
                     style={{
-                      color: "#7a7469",
-                      fontFamily: "'JetBrains Mono', monospace",
+                      color: "rgba(233,237,241,.55)",
                     }}
                   >
                     {displayEmail}
@@ -392,8 +434,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               <button
                 onClick={() => setAccountModalOpen(true)}
                 title="Account / change password"
-                className="flex-shrink-0 p-1 rounded transition-colors hover:bg-[#e8e4dd]"
-                style={{ color: "#a8a099" }}
+                className="flex-shrink-0 p-1 transition-colors hover:bg-[rgba(255,255,255,.1)]"
+                style={{ color: "rgba(233,237,241,.55)" }}
               >
                 <KeyRound className="w-3.5 h-3.5" />
               </button>
@@ -406,8 +448,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                   })
                 }
                 title="Sign out"
-                className="flex-shrink-0 p-1 rounded transition-colors hover:bg-[#e8e4dd]"
-                style={{ color: "#a8a099" }}
+                className="flex-shrink-0 p-1 transition-colors hover:bg-[rgba(255,255,255,.1)]"
+                style={{ color: "rgba(233,237,241,.55)" }}
               >
                 <LogOut className="w-3.5 h-3.5" />
               </button>
@@ -417,10 +459,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 style={{
                   display: "inline-block",
                   padding: "2px 8px",
-                  borderRadius: 99,
                   fontSize: 10,
                   fontWeight: 700,
-                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontFamily: "var(--font-heading)",
                   backgroundColor: badge.bg,
                   color: badge.color,
                   textTransform: "uppercase",
@@ -438,25 +479,25 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         <header
           className="h-14 flex items-center justify-between px-4 sm:px-6 flex-shrink-0"
           style={{
-            backgroundColor: "#fafaf8",
-            borderBottom: "1px solid #d9d4ce",
+            backgroundColor: "var(--surface)",
+            borderBottom: "1px solid var(--border)",
           }}
         >
           <div className="flex items-center gap-3">
             <button
-              className="lg:hidden p-2 rounded"
+              className="lg:hidden p-2"
               onClick={() => setSidebarOpen(true)}
-              style={{ color: "#7a7469" }}
+              style={{ color: "var(--muted)" }}
             >
               <Menu className="w-5 h-5" />
             </button>
             <span
               style={{
-                fontFamily: "'Space Grotesk', sans-serif",
+                fontFamily: "var(--font-heading)",
                 fontWeight: 600,
                 fontSize: "17px",
                 letterSpacing: "-0.01em",
-                color: "#181410",
+                color: "var(--ink)",
               }}
             >
               {pageTitle}
@@ -465,12 +506,12 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setSearchOpen(true)}
-              className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded text-xs transition-colors"
+              className="hidden md:flex items-center gap-2 px-3 py-1.5 text-xs transition-colors"
               style={{
-                backgroundColor: "#eeeae4",
-                border: "1px solid #d9d4ce",
-                color: "#7a7469",
-                fontFamily: "'JetBrains Mono', monospace",
+                backgroundColor: "var(--surface-2)",
+                border: "1px solid var(--border)",
+                color: "var(--muted)",
+                fontFamily: "var(--font-body)",
                 fontSize: "12px",
               }}
             >
@@ -478,9 +519,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               <span>Search</span>
               <kbd
                 style={{
-                  backgroundColor: "#fafaf8",
-                  color: "#8a8377",
-                  border: "1px solid #d9d4ce",
+                  backgroundColor: "var(--surface)",
+                  color: "var(--muted-2)",
+                  border: "1px solid var(--border)",
                   borderRadius: "3px",
                   padding: "1px 5px",
                   fontSize: "10px",
@@ -495,8 +536,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             <div ref={bellRef} className="relative">
               <button
                 onClick={() => setBellOpen((o) => !o)}
-                className="relative p-2 rounded transition-colors hover:bg-[#eeeae4]"
-                style={{ color: bellCount > 0 ? "#c13a2a" : "#7a7469" }}
+                className="relative p-2 transition-colors hover:bg-[var(--surface-2)]"
+                style={{ color: bellCount > 0 ? "var(--danger)" : "var(--muted)" }}
                 title={
                   bellCount > 0
                     ? `${bellCount} alert${bellCount !== 1 ? "s" : ""}`
@@ -506,12 +547,12 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 <Bell className="w-4 h-4" />
                 {bellCount > 0 && (
                   <span
-                    className="absolute -top-0.5 -right-0.5 w-4 h-4 flex items-center justify-center rounded-full text-[9px] font-bold"
+                    className="absolute -top-0.5 -right-0.5 w-4 h-4 flex items-center justify-center text-[9px] font-bold"
                     style={{
                       backgroundColor:
-                        criticalCount > 0 ? "#c13a2a" : "#d87c2a",
+                        criticalCount > 0 ? "var(--danger)" : "#d87c2a",
                       color: "#ffffff",
-                      fontFamily: "'Space Grotesk', sans-serif",
+                      fontFamily: "var(--font-heading)",
                     }}
                   >
                     {bellCount > 9 ? "9+" : bellCount}
@@ -521,33 +562,33 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
               {bellOpen && (
                 <div
-                  className="absolute right-0 top-full mt-2 w-80 rounded-xl overflow-hidden z-50"
+                  className="absolute right-0 top-full mt-2 w-80 overflow-hidden z-50"
                   style={{
-                    backgroundColor: "#fafaf8",
-                    border: "1px solid #d9d4ce",
-                    boxShadow: "0 8px 32px rgba(24,20,16,0.12)",
+                    backgroundColor: "var(--surface)",
+                    border: "1px solid var(--border)",
+                    boxShadow: "0 8px 32px rgba(29,45,61,0.16)",
                   }}
                 >
                   <div
                     className="flex items-center justify-between px-4 py-3"
-                    style={{ borderBottom: "1px solid #e8e4dd" }}
+                    style={{ borderBottom: "1px solid var(--surface-3)" }}
                   >
                     <span
                       style={{
-                        fontFamily: "'Space Grotesk', sans-serif",
+                        fontFamily: "var(--font-heading)",
                         fontWeight: 600,
                         fontSize: "13px",
-                        color: "#181410",
+                        color: "var(--ink)",
                       }}
                     >
                       Alerts{" "}
                       {bellCount > 0 && (
-                        <span style={{ color: "#c13a2a" }}>({bellCount})</span>
+                        <span style={{ color: "var(--danger)" }}>({bellCount})</span>
                       )}
                     </span>
                     <button
                       onClick={() => setBellOpen(false)}
-                      style={{ color: "#a8a099" }}
+                      style={{ color: "var(--muted-2)" }}
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -555,15 +596,15 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
                   {alerts.length === 0 ? (
                     <div className="py-8 flex flex-col items-center gap-2">
-                      <Bell className="w-5 h-5" style={{ color: "#d9d4ce" }} />
-                      <p className="text-sm" style={{ color: "#7a7469" }}>
+                      <Bell className="w-5 h-5" style={{ color: "var(--border)" }} />
+                      <p className="text-sm" style={{ color: "var(--muted)" }}>
                         No alerts right now
                       </p>
                     </div>
                   ) : (
                     <div
                       className="max-h-80 overflow-y-auto divide-y"
-                      style={{ borderColor: "#e8e4dd" }}
+                      style={{ borderColor: "var(--surface-3)" }}
                     >
                       {alerts.map((alert) => {
                         const Icon = ALERT_ICONS[alert.category];
@@ -576,17 +617,17 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                             className="flex items-start gap-3 px-4 py-3 no-underline transition-colors hover:bg-[#f5f2ee]"
                           >
                             <div
-                              className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
+                              className="w-7 h-7 flex items-center justify-center flex-shrink-0 mt-0.5"
                               style={{
                                 backgroundColor: isCritical
-                                  ? "rgba(193,58,42,0.1)"
+                                  ? "rgba(178,58,38,0.1)"
                                   : "rgba(216,124,42,0.1)",
                               }}
                             >
                               <Icon
                                 className="w-3.5 h-3.5"
                                 style={{
-                                  color: isCritical ? "#c13a2a" : "#d87c2a",
+                                  color: isCritical ? "var(--danger)" : "#d87c2a",
                                 }}
                               />
                             </div>
@@ -594,15 +635,15 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                               <p
                                 className="text-xs font-semibold"
                                 style={{
-                                  color: "#181410",
-                                  fontFamily: "'Space Grotesk', sans-serif",
+                                  color: "var(--ink)",
+                                  fontFamily: "var(--font-heading)",
                                 }}
                               >
                                 {alert.title}
                               </p>
                               <p
                                 className="text-[11px] mt-0.5"
-                                style={{ color: "#7a7469" }}
+                                style={{ color: "var(--muted)" }}
                               >
                                 {alert.detail}
                               </p>
@@ -610,7 +651,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                             {isCritical && (
                               <AlertTriangle
                                 className="w-3 h-3 flex-shrink-0 mt-1"
-                                style={{ color: "#c13a2a" }}
+                                style={{ color: "var(--danger)" }}
                               />
                             )}
                           </Link>

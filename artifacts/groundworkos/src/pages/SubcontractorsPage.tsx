@@ -7,11 +7,14 @@ import {
   ChevronRight,
   Trash2,
   Pencil,
+  HardHat,
 } from "lucide-react";
+import { useLocation } from "wouter";
 import { Panel } from "../components/ui/Panel";
 import { Badge } from "../components/ui/Badge";
 import { Btn } from "../components/ui/Btn";
 import { StatCard } from "../components/ui/StatCard";
+import { EmptyState } from "../components/ui/EmptyState";
 import { Modal, Field, Input, Select, Textarea } from "../components/ui/Modal";
 import { cn, formatDate, daysUntil } from "../lib/utils";
 import { useApp } from "../store/AppContext";
@@ -44,10 +47,12 @@ const emptyForm = {
 export function SubcontractorsPage() {
   const { state, dispatch } = useApp();
   const { subcontractors } = state;
+  const [, setLocation] = useLocation();
 
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
   const [tab, setTab] = useState<"all" | "active" | "inactive">("all");
+  const [actionNeededOnly, setActionNeededOnly] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -57,6 +62,7 @@ export function SubcontractorsPage() {
   const filtered = subcontractors.filter((s) => {
     if (tab === "active" && !s.active) return false;
     if (tab === "inactive" && s.active) return false;
+    if (actionNeededOnly && getDocWarnings(s).length === 0) return false;
     if (!search) return true;
     const q = search.toLowerCase();
     return (
@@ -206,14 +212,14 @@ export function SubcontractorsPage() {
           <h1
             className="text-2xl font-semibold"
             style={{
-              color: "#181410",
+              color: "var(--ink)",
               fontFamily: "'Space Grotesk', sans-serif",
               letterSpacing: "-0.02em",
             }}
           >
             Subcontractors
           </h1>
-          <p className="text-sm mt-1" style={{ color: "#7a7469" }}>
+          <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
             CIS, compliance and document tracking
           </p>
         </div>
@@ -225,76 +231,116 @@ export function SubcontractorsPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           accent
-          label="Active"
-          value={subcontractors.filter((s) => s.active).length}
-          sub="Registered subbies"
+          label="On The Books"
+          value={subcontractors.length}
+          sub={`${subcontractors.filter((s) => s.active).length} active`}
         />
         <StatCard
-          label="Gross"
-          value={subcontractors.filter((s) => s.cis_status === "gross").length}
-          sub="0% deduction"
+          danger={
+            subcontractors.filter((s) => getDocWarnings(s).length > 0).length > 0
+          }
+          label="Action Needed"
+          value={subcontractors.filter((s) => getDocWarnings(s).length > 0).length}
+          sub="Compliance docs expiring"
+          actionLabel={
+            subcontractors.filter((s) => getDocWarnings(s).length > 0).length > 0
+              ? "Verify"
+              : undefined
+          }
+          onAction={() => setActionNeededOnly(true)}
+        />
+        <StatCard
+          label="CIS Due"
+          value={
+            subcontractors.filter((s) => s.cis_status === "unverified").length
+          }
+          sub="Awaiting verification"
         />
         <StatCard
           label="Net 20%"
           value={subcontractors.filter((s) => s.cis_status === "net").length}
           sub="Standard deduction"
         />
-        <StatCard
-          danger={
-            subcontractors.filter((s) => s.cis_status === "unverified").length >
-            0
-          }
-          label="Unverified"
-          value={
-            subcontractors.filter((s) => s.cis_status === "unverified").length
-          }
-          sub="Higher 30% rate"
-        />
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2">
         <div
-          className="flex items-center gap-1"
-          style={{ borderBottom: "1px solid #d9d4ce" }}
+          className="flex items-center gap-1 overflow-x-auto"
+          style={{ borderBottom: "1px solid var(--border)" }}
         >
-          {(["all", "active", "inactive"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className="px-4 py-2.5 text-sm capitalize transition-colors"
-              style={
-                tab === t
-                  ? {
-                      color: "#181410",
-                      fontWeight: 600,
-                      borderBottom: "2px solid #1b5e78",
-                      marginBottom: "-1px",
-                    }
-                  : { color: "#7a7469", fontWeight: 500 }
-              }
-            >
-              {t}
-            </button>
-          ))}
+          {(["all", "active", "inactive"] as const).map((t) => {
+            const count =
+              t === "all"
+                ? subcontractors.length
+                : subcontractors.filter((s) => (t === "active" ? s.active : !s.active))
+                    .length;
+            return (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className="px-4 py-2.5 text-sm capitalize transition-colors whitespace-nowrap flex items-center gap-1.5"
+                style={
+                  tab === t
+                    ? {
+                        color: "var(--ink)",
+                        fontWeight: 600,
+                        borderBottom: "2px solid var(--accent)",
+                        marginBottom: "-1px",
+                      }
+                    : { color: "var(--muted)", fontWeight: 500 }
+                }
+              >
+                {t}
+                <span
+                  className="inline-flex items-center justify-center px-1.5 text-[11px] font-bold"
+                  style={{
+                    fontFamily: "var(--font-heading)",
+                    backgroundColor:
+                      tab === t ? "var(--accent-bg)" : "var(--surface-3)",
+                    color: tab === t ? "var(--accent)" : "var(--muted-2)",
+                    minWidth: "18px",
+                  }}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
-        <div className="relative">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
-            style={{ color: "#a8a099" }}
-          />
-          <input
-            type="text"
-            placeholder="Search subcontractors..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 pr-4 py-2 rounded-lg text-sm w-full sm:w-64 focus:outline-none transition-colors"
-            style={{
-              backgroundColor: "#fafaf8",
-              border: "1px solid #d9d4ce",
-              color: "#181410",
+        <div className="flex items-center gap-2">
+          {actionNeededOnly && (
+            <button
+              onClick={() => setActionNeededOnly(false)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold uppercase tracking-wider"
+              style={{
+                backgroundColor: "var(--danger-bg)",
+                color: "var(--danger)",
+                border: "1px solid rgba(178,58,38,0.3)",
+              }}
+            >
+              Action needed only
+              <X className="w-3 h-3" strokeWidth={1.5} />
+            </button>
+          )}
+          <div className="relative">
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
+              strokeWidth={1.5}
+              style={{ color: "var(--muted-2)" }}
+            />
+            <input
+              type="text"
+              placeholder="Search subcontractors..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 pr-4 py-2 text-sm w-full sm:w-64 focus:outline-none transition-colors"
+              style={{
+                backgroundColor: "var(--surface)",
+                border: "1px solid var(--border)",
+              color: "var(--ink)",
             }}
-            onFocus={(e) => (e.target.style.borderColor = "#1b5e78")}
-            onBlur={(e) => (e.target.style.borderColor = "#d9d4ce")}
+            onFocus={(e) => (e.target.style.borderColor = "var(--accent)")}
+            onBlur={(e) => (e.target.style.borderColor = "var(--border)")}
           />
         </div>
       </div>
@@ -309,7 +355,7 @@ export function SubcontractorsPage() {
             {filtered.length === 0 ? (
               <p
                 className="text-center py-12 text-sm"
-                style={{ color: "#a8a099" }}
+                style={{ color: "var(--muted-2)" }}
               >
                 No subcontractors found
               </p>
@@ -322,20 +368,20 @@ export function SubcontractorsPage() {
                     onClick={() =>
                       setSelected(selected === sub.id ? null : sub.id)
                     }
-                    className="flex items-center gap-4 px-5 py-4 cursor-pointer group transition-colors hover:bg-[#eeeae4]"
+                    className="flex items-center gap-4 px-5 py-4 cursor-pointer group transition-colors hover:bg-[var(--surface-2)]"
                     style={{
                       borderBottom:
-                        i < filtered.length - 1 ? "1px solid #d9d4ce" : "none",
+                        i < filtered.length - 1 ? "1px solid var(--border)" : "none",
                       backgroundColor:
-                        selected === sub.id ? "#eeeae4" : undefined,
+                        selected === sub.id ? "var(--surface-2)" : undefined,
                     }}
                   >
                     <div
                       className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 transition-colors"
                       style={{
                         backgroundColor:
-                          selected === sub.id ? "#1b5e78" : "#e8e4dd",
-                        color: selected === sub.id ? "#ffffff" : "#8a8377",
+                          selected === sub.id ? "var(--accent)" : "var(--surface-3)",
+                        color: selected === sub.id ? "#ffffff" : "var(--muted-2)",
                         fontFamily: "'Space Grotesk', sans-serif",
                       }}
                     >
@@ -344,26 +390,26 @@ export function SubcontractorsPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
                         <span
-                          className="text-sm font-semibold truncate transition-colors group-hover:text-[#1b5e78]"
-                          style={{ color: "#181410" }}
+                          className="text-sm font-semibold truncate transition-colors group-hover:text-[var(--accent)]"
+                          style={{ color: "var(--ink)" }}
                         >
                           {sub.company_name}
                         </span>
                         {warnings.length > 0 && (
                           <AlertTriangle
                             className="w-3.5 h-3.5 flex-shrink-0"
-                            style={{ color: "#b56918" }}
+                            style={{ color: "var(--warning)" }}
                           />
                         )}
                       </div>
                       <div
                         className="text-[13px] flex items-center gap-2"
-                        style={{ color: "#7a7469" }}
+                        style={{ color: "var(--muted)" }}
                       >
                         <span className="truncate">{sub.trade ?? "—"}</span>
                         <span
                           className="w-1 h-1 rounded-full"
-                          style={{ backgroundColor: "#d9d4ce" }}
+                          style={{ backgroundColor: "var(--border)" }}
                         />
                         <span className="truncate">
                           {sub.contact_name ?? "—"}
@@ -376,7 +422,7 @@ export function SubcontractorsPage() {
                         <span
                           className="text-[10px] px-2 py-0.5 rounded hidden md:block font-bold uppercase tracking-wider"
                           style={{
-                            color: "#1b5e78",
+                            color: "var(--accent)",
                             backgroundColor: "rgba(27,94,120,0.1)",
                           }}
                         >
@@ -385,7 +431,7 @@ export function SubcontractorsPage() {
                       )}
                       <div
                         className="text-xs text-right hidden xl:block font-mono tnum w-28"
-                        style={{ color: "#7a7469" }}
+                        style={{ color: "var(--muted)" }}
                       >
                         {sub.utr_number ? sub.utr_number : "—"}
                       </div>
@@ -396,7 +442,7 @@ export function SubcontractorsPage() {
                             ? "opacity-100"
                             : "opacity-0 group-hover:opacity-100",
                         )}
-                        style={{ color: "#7a7469" }}
+                        style={{ color: "var(--muted)" }}
                       />
                     </div>
                   </div>
@@ -413,8 +459,8 @@ export function SubcontractorsPage() {
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => openEdit(selectedSub)}
-                    className="p-1 rounded hover:bg-[#e8e4dd] transition-colors"
-                    style={{ color: "#7a7469" }}
+                    className="p-1 rounded hover:bg-[var(--surface-3)] transition-colors"
+                    style={{ color: "var(--muted)" }}
                     title="Edit subcontractor"
                   >
                     <Pencil className="w-4 h-4" />
@@ -424,14 +470,14 @@ export function SubcontractorsPage() {
                       handleDelete(selectedSub.id, selectedSub.company_name)
                     }
                     className="p-1 rounded hover:bg-red-50 transition-colors"
-                    style={{ color: "#c13a2a" }}
+                    style={{ color: "var(--danger)" }}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setSelected(null)}
-                    className="p-1 rounded hover:bg-[#e8e4dd] transition-colors"
-                    style={{ color: "#7a7469" }}
+                    className="p-1 rounded hover:bg-[var(--surface-3)] transition-colors"
+                    style={{ color: "var(--muted)" }}
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -445,7 +491,7 @@ export function SubcontractorsPage() {
                     {!selectedSub.active && (
                       <span
                         className="text-[11px] font-bold uppercase tracking-widest"
-                        style={{ color: "#c13a2a" }}
+                        style={{ color: "var(--danger)" }}
                       >
                         Inactive
                       </span>
@@ -454,24 +500,24 @@ export function SubcontractorsPage() {
                   <h3
                     className="text-lg font-semibold"
                     style={{
-                      color: "#181410",
+                      color: "var(--ink)",
                       fontFamily: "'Space Grotesk', sans-serif",
                     }}
                   >
                     {selectedSub.company_name}
                   </h3>
-                  <p className="text-sm mt-1" style={{ color: "#7a7469" }}>
+                  <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
                     {selectedSub.trade ?? "—"}
                   </p>
                 </div>
 
                 <div
                   className="space-y-3 pt-4"
-                  style={{ borderTop: "1px solid #d9d4ce" }}
+                  style={{ borderTop: "1px solid var(--border)" }}
                 >
                   <p
                     className="text-[10px] font-bold uppercase tracking-widest mb-1"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     Contact Details
                   </p>
@@ -498,7 +544,7 @@ export function SubcontractorsPage() {
                     >
                       <span
                         className="flex-shrink-0"
-                        style={{ color: "#7a7469" }}
+                        style={{ color: "var(--muted)" }}
                       >
                         {label}
                       </span>
@@ -507,7 +553,7 @@ export function SubcontractorsPage() {
                           "text-right truncate",
                           isMono && "font-mono tnum",
                         )}
-                        style={{ color: "#181410", fontWeight: 500 }}
+                        style={{ color: "var(--ink)", fontWeight: 500 }}
                       >
                         {value}
                       </span>
@@ -518,13 +564,13 @@ export function SubcontractorsPage() {
                 <div
                   className="p-4 rounded-xl"
                   style={{
-                    backgroundColor: "#eeeae4",
-                    border: "1px solid #d9d4ce",
+                    backgroundColor: "var(--surface-2)",
+                    border: "1px solid var(--border)",
                   }}
                 >
                   <p
                     className="text-[10px] font-bold uppercase tracking-widest mb-3"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     CIS Details
                   </p>
@@ -546,10 +592,10 @@ export function SubcontractorsPage() {
                       key={label}
                       className="flex justify-between text-[13px] mb-2 last:mb-0"
                     >
-                      <span style={{ color: "#7a7469" }}>{label}</span>
+                      <span style={{ color: "var(--muted)" }}>{label}</span>
                       <span
                         className="font-mono tnum font-semibold"
-                        style={{ color: "#181410" }}
+                        style={{ color: "var(--ink)" }}
                       >
                         {value}
                       </span>
@@ -560,7 +606,7 @@ export function SubcontractorsPage() {
                 <div className="pt-2">
                   <p
                     className="text-[10px] font-bold uppercase tracking-widest mb-3"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     Compliance & Documents
                   </p>
@@ -582,19 +628,19 @@ export function SubcontractorsPage() {
                       <div
                         key={label}
                         className="flex justify-between items-center py-2.5 text-[13px]"
-                        style={{ borderBottom: "1px solid #eeeae4" }}
+                        style={{ borderBottom: "1px solid var(--surface-2)" }}
                       >
-                        <span style={{ color: "#4a4540" }}>{label}</span>
+                        <span style={{ color: "var(--ink-2)" }}>{label}</span>
                         <span
                           className="font-mono tnum text-xs font-semibold"
                           style={{
                             color: isExpired
-                              ? "#c13a2a"
+                              ? "var(--danger)"
                               : isExpiring
-                                ? "#b56918"
+                                ? "var(--warning)"
                                 : expiry
                                   ? "#2a6e45"
-                                  : "#a8a099",
+                                  : "var(--muted-2)",
                           }}
                         >
                           {expiry ? formatDate(expiry) : "—"}
@@ -608,15 +654,15 @@ export function SubcontractorsPage() {
                   <div
                     className="p-3 rounded-lg space-y-2 mt-2"
                     style={{
-                      backgroundColor: "rgba(193,58,42,0.05)",
-                      border: "1px solid rgba(193,58,42,0.2)",
+                      backgroundColor: "rgba(178,58,38,0.05)",
+                      border: "1px solid rgba(178,58,38,0.2)",
                     }}
                   >
                     {getDocWarnings(selectedSub).map((w) => (
                       <div
                         key={w}
                         className="flex items-center gap-2 text-[13px] font-medium"
-                        style={{ color: "#c13a2a" }}
+                        style={{ color: "var(--danger)" }}
                       >
                         <AlertTriangle className="w-4 h-4 flex-shrink-0" />
                         {w}
@@ -647,7 +693,7 @@ export function SubcontractorsPage() {
             {errors.company_name && (
               <p
                 className="mt-1 text-xs font-medium"
-                style={{ color: "#c13a2a" }}
+                style={{ color: "var(--danger)" }}
               >
                 {errors.company_name}
               </p>
@@ -698,11 +744,11 @@ export function SubcontractorsPage() {
           </div>
           <div
             className="p-4 rounded-xl"
-            style={{ backgroundColor: "#eeeae4", border: "1px solid #d9d4ce" }}
+            style={{ backgroundColor: "var(--surface-2)", border: "1px solid var(--border)" }}
           >
             <div
               className="text-[10px] font-bold uppercase tracking-widest mb-4"
-              style={{ color: "#7a7469" }}
+              style={{ color: "var(--muted)" }}
             >
               CIS Details
             </div>
@@ -744,7 +790,7 @@ export function SubcontractorsPage() {
           <div>
             <div
               className="text-[10px] font-bold uppercase tracking-widest mb-4 mt-2"
-              style={{ color: "#7a7469" }}
+              style={{ color: "var(--muted)" }}
             >
               Compliance Expiry Dates
             </div>
@@ -807,7 +853,7 @@ export function SubcontractorsPage() {
               rows={3}
             />
           </Field>
-          <div className="flex gap-3 pt-4 border-t border-[#d9d4ce]">
+          <div className="flex gap-3 pt-4 border-t border-[var(--border)]">
             <Btn
               className="flex-1 justify-center"
               onClick={handleSubmit}

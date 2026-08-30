@@ -62,8 +62,8 @@ export function AccountModal({
         style={{
           width: 380,
           maxWidth: "100%",
-          backgroundColor: "#fafaf8",
-          border: "1px solid #d9d4ce",
+          backgroundColor: "var(--surface)",
+          border: "1px solid var(--border)",
           borderRadius: 12,
           padding: 24,
         }}
@@ -73,7 +73,7 @@ export function AccountModal({
             fontFamily: "'Space Grotesk', sans-serif",
             fontWeight: 700,
             fontSize: 16,
-            color: "#181410",
+            color: "var(--ink)",
             marginBottom: 2,
           }}
         >
@@ -83,7 +83,7 @@ export function AccountModal({
           style={{
             fontFamily: "'JetBrains Mono', monospace",
             fontSize: 12,
-            color: "#7a7469",
+            color: "var(--muted)",
             marginBottom: 20,
           }}
         >
@@ -97,7 +97,7 @@ export function AccountModal({
                 fontFamily: "'Space Grotesk', sans-serif",
                 fontWeight: 600,
                 fontSize: 11,
-                color: "#7a7469",
+                color: "var(--muted)",
                 textTransform: "uppercase",
                 letterSpacing: "0.06em",
               }}
@@ -115,9 +115,9 @@ export function AccountModal({
                 fontSize: 13,
                 padding: "8px 10px",
                 borderRadius: 6,
-                border: "1px solid #d9d4ce",
+                border: "1px solid var(--border)",
                 backgroundColor: "#ffffff",
-                color: "#181410",
+                color: "var(--ink)",
               }}
             />
           </div>
@@ -127,7 +127,7 @@ export function AccountModal({
                 fontFamily: "'Space Grotesk', sans-serif",
                 fontWeight: 600,
                 fontSize: 11,
-                color: "#7a7469",
+                color: "var(--muted)",
                 textTransform: "uppercase",
                 letterSpacing: "0.06em",
               }}
@@ -146,9 +146,9 @@ export function AccountModal({
                 fontSize: 13,
                 padding: "8px 10px",
                 borderRadius: 6,
-                border: "1px solid #d9d4ce",
+                border: "1px solid var(--border)",
                 backgroundColor: "#ffffff",
-                color: "#181410",
+                color: "var(--ink)",
               }}
             />
           </div>
@@ -161,11 +161,11 @@ export function AccountModal({
                 padding: "9px 0",
                 borderRadius: 6,
                 backgroundColor: "transparent",
-                color: "#4a4540",
+                color: "var(--ink-2)",
                 fontFamily: "'Space Grotesk', sans-serif",
                 fontWeight: 600,
                 fontSize: 12,
-                border: "1px solid #d9d4ce",
+                border: "1px solid var(--border)",
                 cursor: "pointer",
               }}
             >
@@ -178,7 +178,7 @@ export function AccountModal({
                 flex: 1,
                 padding: "9px 0",
                 borderRadius: 6,
-                backgroundColor: "#1b5e78",
+                backgroundColor: "var(--accent)",
                 color: "#fff",
                 fontFamily: "'Space Grotesk', sans-serif",
                 fontWeight: 600,

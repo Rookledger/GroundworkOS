@@ -84,8 +84,8 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                 j.status === "active"
                   ? "#2a6e45"
                   : j.status === "complete"
-                    ? "#1b5e78"
-                    : "#8a8377",
+                    ? "var(--accent)"
+                    : "var(--muted-2)",
             })),
           ...state.invoices
             .filter(
@@ -106,8 +106,8 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                 i.status === "paid"
                   ? "#2a6e45"
                   : i.status === "overdue"
-                    ? "#c13a2a"
-                    : "#8a8377",
+                    ? "var(--danger)"
+                    : "var(--muted-2)",
             })),
           ...state.quotes
             .filter(
@@ -128,8 +128,8 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                 q2.status === "accepted"
                   ? "#2a6e45"
                   : q2.status === "declined"
-                    ? "#c13a2a"
-                    : "#8a8377",
+                    ? "var(--danger)"
+                    : "var(--muted-2)",
             })),
           ...state.clients
             .filter(
@@ -165,8 +165,8 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                 s.cis_status === "gross"
                   ? "#2a6e45"
                   : s.cis_status === "unverified"
-                    ? "#c13a2a"
-                    : "#8a8377",
+                    ? "var(--danger)"
+                    : "var(--muted-2)",
             })),
         ];
 
@@ -207,8 +207,8 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
       <div
         className="relative w-full max-w-xl mx-4 rounded-xl overflow-hidden"
         style={{
-          backgroundColor: "#fafaf8",
-          border: "1px solid #d9d4ce",
+          backgroundColor: "var(--surface)",
+          border: "1px solid var(--border)",
           boxShadow:
             "0 24px 60px -12px rgba(24,20,16,0.22), 0 8px 20px -8px rgba(24,20,16,0.12)",
         }}
@@ -216,11 +216,11 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
       >
         <div
           className="flex items-center gap-3 px-4 py-3.5"
-          style={{ borderBottom: "1px solid #d9d4ce" }}
+          style={{ borderBottom: "1px solid var(--border)" }}
         >
           <Search
             className="w-4 h-4 flex-shrink-0"
-            style={{ color: "#7a7469" }}
+            style={{ color: "var(--muted)" }}
           />
           <input
             ref={inputRef}
@@ -229,19 +229,19 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
             onKeyDown={handleKey}
             placeholder="Search jobs, invoices, clients, quotes..."
             className="flex-1 bg-transparent text-sm focus:outline-none"
-            style={{ color: "#181410", fontFamily: "'Inter', sans-serif" }}
+            style={{ color: "var(--ink)", fontFamily: "'Inter', sans-serif" }}
           />
           {query && (
-            <button onClick={() => setQuery("")} style={{ color: "#8a8377" }}>
+            <button onClick={() => setQuery("")} style={{ color: "var(--muted-2)" }}>
               <X className="w-3.5 h-3.5" />
             </button>
           )}
           <kbd
             className="hidden md:flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs"
             style={{
-              backgroundColor: "#eeeae4",
-              color: "#7a7469",
-              border: "1px solid #d9d4ce",
+              backgroundColor: "var(--surface-2)",
+              color: "var(--muted)",
+              border: "1px solid var(--border)",
               fontFamily: "'JetBrains Mono', monospace",
             }}
           >
@@ -262,7 +262,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                   }}
                   className="w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors mx-1 rounded-md"
                   style={{
-                    backgroundColor: i === selected ? "#e8f3f7" : "transparent",
+                    backgroundColor: i === selected ? "var(--accent-bg)" : "transparent",
                     width: "calc(100% - 8px)",
                   }}
                   onMouseEnter={() => setSelected(i)}
@@ -270,19 +270,19 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                   <div
                     className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0"
                     style={{
-                      backgroundColor: i === selected ? "#d4e9f0" : "#eeeae4",
+                      backgroundColor: i === selected ? "#d4e9f0" : "var(--surface-2)",
                     }}
                   >
                     <Icon
                       className="w-4 h-4"
-                      style={{ color: i === selected ? "#1b5e78" : "#7a7469" }}
+                      style={{ color: i === selected ? "var(--accent)" : "var(--muted)" }}
                     />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p
                       className="text-sm font-medium truncate"
                       style={{
-                        color: "#181410",
+                        color: "var(--ink)",
                         fontFamily: "'Inter', sans-serif",
                       }}
                     >
@@ -291,7 +291,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                     <p
                       className="text-xs truncate mt-0.5"
                       style={{
-                        color: "#7a7469",
+                        color: "var(--muted)",
                         fontFamily: "'JetBrains Mono', monospace",
                       }}
                     >
@@ -314,7 +314,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                     <span
                       className="text-xs uppercase tracking-wider"
                       style={{
-                        color: "#8a8377",
+                        color: "var(--muted-2)",
                         fontFamily: "'Space Grotesk', sans-serif",
                       }}
                     >
@@ -332,7 +332,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
             <p
               className="text-sm"
               style={{
-                color: "#8a8377",
+                color: "var(--muted-2)",
                 fontFamily: "'JetBrains Mono', monospace",
               }}
             >
@@ -351,10 +351,10 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                     navigate(`/${page}`);
                     onClose();
                   }}
-                  className="flex-1 py-2 rounded-md text-xs uppercase tracking-wider transition-colors hover:bg-[#eeeae4]"
+                  className="flex-1 py-2 rounded-md text-xs uppercase tracking-wider transition-colors hover:bg-[var(--surface-2)]"
                   style={{
-                    color: "#7a7469",
-                    border: "1px solid #d9d4ce",
+                    color: "var(--muted)",
+                    border: "1px solid var(--border)",
                     fontFamily: "'Space Grotesk', sans-serif",
                   }}
                 >

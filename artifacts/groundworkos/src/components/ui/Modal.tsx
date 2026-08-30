@@ -43,8 +43,8 @@ export function Modal({ open, onClose, title, children, wide }: ModalProps) {
           wide ? "max-w-2xl" : "max-w-lg",
         )}
         style={{
-          backgroundColor: "#fafaf8",
-          border: "1px solid #d9d4ce",
+          backgroundColor: "var(--surface)",
+          border: "1px solid var(--border)",
           boxShadow:
             "0 24px 60px -12px rgba(24,20,16,0.22), 0 8px 20px -8px rgba(24,20,16,0.12)",
         }}
@@ -52,14 +52,14 @@ export function Modal({ open, onClose, title, children, wide }: ModalProps) {
         <div
           className="flex items-center justify-between px-5 py-4 sticky top-0 z-10"
           style={{
-            borderBottom: "1px solid #d9d4ce",
-            backgroundColor: "#fafaf8",
+            borderBottom: "1px solid var(--border)",
+            backgroundColor: "var(--surface)",
           }}
         >
           <h2
             className="text-base font-semibold"
             style={{
-              color: "#181410",
+              color: "var(--ink)",
               fontFamily: "'Space Grotesk', sans-serif",
               letterSpacing: "-0.01em",
             }}
@@ -68,8 +68,8 @@ export function Modal({ open, onClose, title, children, wide }: ModalProps) {
           </h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-md hover:bg-[#eeeae4] transition-colors"
-            style={{ color: "#7a7469" }}
+            className="p-1.5 rounded-md hover:bg-[var(--surface-2)] transition-colors"
+            style={{ color: "var(--muted)" }}
           >
             <X className="w-4 h-4" />
           </button>
@@ -93,14 +93,14 @@ export function Field({ label, required, children, hint, error }: FieldProps) {
     <div>
       <label
         className="block text-xs font-medium uppercase tracking-widest mb-1.5"
-        style={{ color: "#7a7469", letterSpacing: "0.07em" }}
+        style={{ color: "var(--muted)", letterSpacing: "0.07em" }}
       >
         {label}
-        {required && <span style={{ color: "#c13a2a" }}> *</span>}
+        {required && <span style={{ color: "var(--danger)" }}> *</span>}
       </label>
       {children}
       {error && (
-        <p className="mt-1 text-xs" style={{ color: "#c13a2a" }}>
+        <p className="mt-1 text-xs" style={{ color: "var(--danger)" }}>
           {error}
         </p>
       )}
@@ -117,16 +117,16 @@ const inputCls =
   "w-full py-2 px-3 rounded-md text-sm focus:outline-none transition-colors";
 const inputStyle = {
   backgroundColor: "#ffffff",
-  border: "1px solid #d9d4ce",
-  color: "#181410",
+  border: "1px solid var(--border)",
+  color: "var(--ink)",
 };
 const inputErrorStyle = {
   backgroundColor: "#ffffff",
-  border: "1px solid #c13a2a",
-  color: "#181410",
+  border: "1px solid var(--danger)",
+  color: "var(--ink)",
 };
-const inputFocusBorder = "#1b5e78";
-const inputBlurBorder = "#d9d4ce";
+const inputFocusBorder = "var(--accent)";
+const inputBlurBorder = "var(--border)";
 
 export function Input({
   error,
@@ -143,7 +143,7 @@ export function Input({
       }}
       onBlur={(e) => {
         (e.target as HTMLInputElement).style.borderColor = error
-          ? "#c13a2a"
+          ? "var(--danger)"
           : inputBlurBorder;
         props.onBlur?.(e);
       }}

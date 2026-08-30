@@ -1,92 +1,100 @@
-import { Link } from "wouter";
-import { Compass, ArrowLeft } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import { Compass, ArrowLeft, Search } from "lucide-react";
+import { CornerMarks } from "../components/ui/Blueprint";
+import { Btn } from "../components/ui/Btn";
 
 export default function NotFound() {
+  const [, navigate] = useLocation();
+
   return (
     <div
-      style={{
-        minHeight: "50vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 24,
-      }}
+      className="flex items-center justify-center px-6"
+      style={{ minHeight: "60vh" }}
     >
-      <div style={{ textAlign: "center", maxWidth: 420 }}>
+      <div className="text-center max-w-sm w-full flex flex-col items-center">
         <div
+          className="blueprint relative flex items-center justify-center"
           style={{
-            width: 56,
-            height: 56,
-            margin: "0 auto 20px",
-            borderRadius: 12,
-            border: "1.5px solid #1b5e78",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: "#e8f3f7",
+            width: 120,
+            height: 120,
+            backgroundColor: "var(--accent-bg)",
+            marginBottom: 24,
           }}
         >
-          <Compass style={{ width: 26, height: 26, color: "#1b5e78" }} />
+          <CornerMarks />
+          <span
+            className="tnum"
+            style={{
+              fontFamily: "var(--font-heading)",
+              fontWeight: 700,
+              fontSize: 44,
+              letterSpacing: "-0.02em",
+              color: "var(--accent)",
+              lineHeight: 1,
+            }}
+          >
+            404
+          </span>
         </div>
 
-        <p
-          style={{
-            fontFamily: "'JetBrains Mono', monospace",
-            fontSize: 12,
-            fontWeight: 700,
-            letterSpacing: "0.12em",
-            color: "#1b5e78",
-            marginBottom: 10,
-          }}
+        <div
+          className="flex items-center gap-2 mb-3"
+          style={{ color: "var(--muted-2)" }}
         >
-          ERROR 404
-        </p>
+          <Compass className="w-3.5 h-3.5" strokeWidth={1.5} />
+          <span
+            style={{
+              fontFamily: "var(--font-heading)",
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+            }}
+          >
+            Off the map
+          </span>
+        </div>
 
         <h1
           style={{
-            fontFamily: "'Space Grotesk', sans-serif",
-            fontWeight: 700,
-            fontSize: 24,
-            letterSpacing: "-0.01em",
-            color: "#181410",
-            marginBottom: 10,
+            fontFamily: "var(--font-heading)",
+            fontWeight: 600,
+            fontSize: 20,
+            color: "var(--ink)",
+            marginBottom: 8,
           }}
         >
-          Off the map
+          This page doesn't exist
         </h1>
 
         <p
+          className="text-sm"
           style={{
-            fontFamily: "'Inter', sans-serif",
-            fontSize: 14,
+            color: "var(--muted)",
             lineHeight: 1.6,
-            color: "#7a7469",
             marginBottom: 28,
           }}
         >
-          This page doesn't exist, or you don't have access to it. Check the
-          address, or head back to the dashboard.
+          Check the address, or you don't have access to it — head back to
+          the dashboard or search your jobs instead.
         </p>
 
-        <Link
-          href="/"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "10px 20px",
-            borderRadius: 7,
-            backgroundColor: "#1b5e78",
-            color: "#ffffff",
-            fontFamily: "'Space Grotesk', sans-serif",
-            fontWeight: 600,
-            fontSize: 13,
-            textDecoration: "none",
-          }}
-        >
-          <ArrowLeft style={{ width: 14, height: 14 }} />
-          Back to dashboard
-        </Link>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
+          <Link href="/">
+            <Btn variant="primary" className="w-full sm:w-auto justify-center">
+              <ArrowLeft className="w-3.5 h-3.5" strokeWidth={1.5} />
+              Back to dashboard
+            </Btn>
+          </Link>
+          <Btn
+            variant="outline"
+            className="w-full sm:w-auto justify-center"
+            onClick={() => navigate("/jobs")}
+          >
+            <Search className="w-3.5 h-3.5" strokeWidth={1.5} />
+            Search jobs
+          </Btn>
+        </div>
       </div>
     </div>
   );

@@ -8,9 +8,11 @@ import {
   ChevronRight,
   Trash2,
 } from "lucide-react";
+import { useLocation } from "wouter";
 import { Panel } from "../components/ui/Panel";
 import { Badge } from "../components/ui/Badge";
 import { Btn } from "../components/ui/Btn";
+import { EmptyState } from "../components/ui/EmptyState";
 import { Modal, Field, Input, Select, Textarea } from "../components/ui/Modal";
 import { StatCard } from "../components/ui/StatCard";
 import { cn, formatDate, formatCurrency, daysUntil } from "../lib/utils";
@@ -50,6 +52,7 @@ const emptyForm = {
 export function PlantPage() {
   const { state, dispatch } = useApp();
   const { plant } = state;
+  const [, setLocation] = useLocation();
 
   const [selected, setSelected] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState("all");
@@ -161,15 +164,15 @@ export function PlantPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold" style={{ color: "#181410" }}>
+          <h1 className="text-xl font-semibold" style={{ color: "var(--ink)" }}>
             Plant & Machinery
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: "#7a7469" }}>
+          <p className="text-sm mt-0.5" style={{ color: "var(--muted)" }}>
             Fleet tracking, service & LOLER compliance
           </p>
         </div>
         <Btn onClick={openNew}>
-          <Plus className="w-4 h-4" /> Add Plant
+          <Plus className="w-4 h-4" strokeWidth={1.5} /> Add Plant
         </Btn>
       </div>
 
@@ -189,11 +192,17 @@ export function PlantPage() {
         />
         <StatCard
           danger={plant.filter((p) => p.status === "maintenance").length > 0}
-          label="Workshop"
+          label="Off The Road"
           value={plant
             .filter((p) => p.status === "maintenance")
             .length.toString()}
           sub="Under maintenance"
+          actionLabel={
+            plant.filter((p) => p.status === "maintenance").length > 0
+              ? "Book in"
+              : undefined
+          }
+          onAction={() => setStatusFilter("maintenance")}
         />
         <StatCard
           label="Owned"
@@ -203,75 +212,122 @@ export function PlantPage() {
       </div>
 
       <div
-        className="flex items-center gap-1"
-        style={{ borderBottom: "1px solid #d9d4ce" }}
+        className="flex items-center gap-1 overflow-x-auto"
+        style={{ borderBottom: "1px solid var(--border)" }}
       >
-        {STATUS_OPTIONS.map((opt) => (
-          <button
-            key={opt.id}
-            onClick={() => setStatusFilter(opt.id)}
-            className="px-4 py-2.5 text-sm transition-colors"
-            style={
-              statusFilter === opt.id
-                ? {
-                    color: "#181410",
-                    fontWeight: 500,
-                    borderBottom: "2px solid #1b5e78",
-                    marginBottom: "-1px",
-                  }
-                : { color: "#7a7469" }
-            }
-          >
-            {opt.label}
-          </button>
-        ))}
+        {STATUS_OPTIONS.map((opt) => {
+          const count =
+            opt.id === "all"
+              ? plant.length
+              : plant.filter((p) => p.status === opt.id).length;
+          return (
+            <button
+              key={opt.id}
+              onClick={() => setStatusFilter(opt.id)}
+              className="px-4 py-2.5 text-sm transition-colors whitespace-nowrap flex items-center gap-1.5"
+              style={
+                statusFilter === opt.id
+                  ? {
+                      color: "var(--ink)",
+                      fontWeight: 600,
+                      borderBottom: "2px solid var(--accent)",
+                      marginBottom: "-1px",
+                    }
+                  : { color: "var(--muted)" }
+              }
+            >
+              {opt.label}
+              <span
+                className="inline-flex items-center justify-center px-1.5 text-[11px] font-bold"
+                style={{
+                  fontFamily: "var(--font-heading)",
+                  backgroundColor:
+                    statusFilter === opt.id
+                      ? "var(--accent-bg)"
+                      : "var(--surface-3)",
+                  color:
+                    statusFilter === opt.id ? "var(--accent)" : "var(--muted-2)",
+                  minWidth: "18px",
+                }}
+              >
+                {count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <div className={selectedPlant ? "xl:col-span-2" : "xl:col-span-3"}>
           <Panel title="Plant Register" badge={filtered.length} noPad>
             {filtered.length === 0 ? (
-              <p
-                className="text-center py-12 text-sm"
-                style={{ color: "#c0bab4" }}
-              >
-                No plant items found
-              </p>
+              <EmptyState
+                icon={Truck}
+                title={
+                  plant.length === 0
+                    ? "No assets yet"
+                    : "No plant items match this filter"
+                }
+                description={
+                  plant.length === 0
+                    ? "Track your fleet's location, ownership and compliance dates in one place."
+                    : "Try a different status filter."
+                }
+                primaryLabel={plant.length === 0 ? "Add your first asset" : undefined}
+                onPrimary={plant.length === 0 ? openNew : undefined}
+                secondaryLabel="Import from spreadsheet"
+                onSecondary={() => setLocation("/import")}
+              />
             ) : (
               filtered.map((p, i) => {
                 const alerts = getPlantAlerts(p);
+                const isOverdue =
+                  (daysUntil(p.service_due) !== null &&
+                    (daysUntil(p.service_due) as number) <= 0) ||
+                  (daysUntil(p.thorough_exam_due) !== null &&
+                    (daysUntil(p.thorough_exam_due) as number) <= 0);
+                const needsAttention = p.status === "maintenance" || alerts.length > 0;
+                const rowTint = isOverdue
+                  ? "var(--danger-bg)"
+                  : needsAttention
+                    ? "var(--warning-bg)"
+                    : undefined;
+                const rowBorderColor = isOverdue
+                  ? "var(--danger)"
+                  : needsAttention
+                    ? "var(--warning)"
+                    : "transparent";
                 return (
                   <div
                     key={p.id}
                     onClick={() => setSelected(selected === p.id ? null : p.id)}
-                    className="flex items-center gap-4 px-5 py-4 cursor-pointer transition-colors hover:bg-[#eeeae4] group"
+                    className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 px-5 py-4 cursor-pointer transition-colors hover:bg-[var(--surface-2)] group"
                     style={{
                       borderBottom:
-                        i < filtered.length - 1 ? "1px solid #d9d4ce" : "none",
+                        i < filtered.length - 1 ? "1px solid var(--border)" : "none",
                       backgroundColor:
-                        selected === p.id ? "#eeeae4" : undefined,
-                      borderLeft:
-                        selected === p.id
-                          ? "2px solid #1b5e78"
-                          : "2px solid transparent",
+                        selected === p.id ? "var(--surface-2)" : rowTint,
+                      borderLeft: `3px solid ${rowBorderColor}`,
                     }}
                   >
                     <div
-                      className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0"
+                      className="w-8 h-8 flex items-center justify-center flex-shrink-0"
                       style={{
-                        backgroundColor: "#e8e4dd",
-                        border: "1px solid #d9d4ce",
+                        backgroundColor: "var(--surface-3)",
+                        border: "1px solid var(--border)",
                       }}
                     >
                       {p.status === "maintenance" ? (
                         <Wrench
                           className="w-3.5 h-3.5"
-                          style={{ color: "#e07b39" }}
+                          strokeWidth={1.5}
+                          style={{ color: "var(--warning)" }}
                         />
                       ) : (
                         <Truck
                           className="w-3.5 h-3.5"
-                          style={{ color: "#8a8377" }}
+                          strokeWidth={1.5}
+                          style={{ color: "var(--muted-2)" }}
                         />
                       )}
                     </div>
@@ -279,22 +335,23 @@ export function PlantPage() {
                       <div className="flex items-center gap-2 mb-0.5">
                         <span
                           className="text-sm font-semibold truncate"
-                          style={{ color: "#181410" }}
+                          style={{ color: "var(--ink)" }}
                         >
                           {p.name}
                         </span>
                         {alerts.length > 0 && (
                           <AlertTriangle
                             className="w-3.5 h-3.5 flex-shrink-0"
-                            style={{ color: "#e07b39" }}
+                            strokeWidth={1.5}
+                            style={{ color: isOverdue ? "var(--danger)" : "var(--warning)" }}
                           />
                         )}
                         {!p.owned && (
                           <span
-                            className="flex-shrink-0 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded"
+                            className="flex-shrink-0 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5"
                             style={{
-                              backgroundColor: "#e8e4dd",
-                              color: "#4a4540",
+                              backgroundColor: "var(--surface-3)",
+                              color: "var(--ink-2)",
                             }}
                           >
                             Hired In
@@ -303,7 +360,7 @@ export function PlantPage() {
                       </div>
                       <div
                         className="text-xs flex items-center gap-2 truncate"
-                        style={{ color: "#7a7469" }}
+                        style={{ color: "var(--muted)" }}
                       >
                         <span className="font-mono tnum">
                           {p.registration ?? "No Reg"}
@@ -320,29 +377,30 @@ export function PlantPage() {
                         )}
                       </div>
                     </div>
-                    <div className="hidden sm:block">
+                    <div className="flex items-center gap-4 flex-shrink-0">
                       <Badge status={p.status} />
+                      {p.daily_rate && (
+                        <div className="w-24 hidden lg:block flex-shrink-0 text-right">
+                          <div
+                            className="text-[10px] font-bold uppercase tracking-widest mb-1"
+                            style={{ color: "var(--muted)" }}
+                          >
+                            Day Rate
+                          </div>
+                          <div
+                            className="text-sm font-medium font-mono tnum"
+                            style={{ color: "var(--ink)" }}
+                          >
+                            {formatCurrency(p.daily_rate)}
+                          </div>
+                        </div>
+                      )}
+                      <ChevronRight
+                        className="w-4 h-4 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        strokeWidth={1.5}
+                        style={{ color: "var(--muted)" }}
+                      />
                     </div>
-                    {p.daily_rate && (
-                      <div className="w-24 hidden lg:block flex-shrink-0 text-right">
-                        <div
-                          className="text-[10px] font-bold uppercase tracking-widest mb-1"
-                          style={{ color: "#7a7469" }}
-                        >
-                          Day Rate
-                        </div>
-                        <div
-                          className="text-sm font-medium font-mono tnum"
-                          style={{ color: "#181410" }}
-                        >
-                          {formatCurrency(p.daily_rate)}
-                        </div>
-                      </div>
-                    )}
-                    <ChevronRight
-                      className="w-4 h-4 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                      style={{ color: "#7a7469" }}
-                    />
                   </div>
                 );
               })
@@ -359,17 +417,17 @@ export function PlantPage() {
                     onClick={() =>
                       handleDelete(selectedPlant.id, selectedPlant.name)
                     }
-                    className="p-1 rounded-md transition-colors hover:bg-red-50"
-                    style={{ color: "#c13a2a" }}
+                    className="p-1 transition-colors hover:bg-red-50"
+                    style={{ color: "var(--danger)" }}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4" strokeWidth={1.5} />
                   </button>
                   <button
                     onClick={() => setSelected(null)}
-                    className="p-1 rounded-md transition-colors hover:bg-[#e8e4dd]"
-                    style={{ color: "#7a7469" }}
+                    className="p-1 transition-colors hover:bg-[var(--surface-3)]"
+                    style={{ color: "var(--muted)" }}
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-4 h-4" strokeWidth={1.5} />
                   </button>
                 </div>
               }
@@ -380,8 +438,8 @@ export function PlantPage() {
                     <Badge status={selectedPlant.status} />
                     {!selectedPlant.owned && (
                       <span
-                        className="flex-shrink-0 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded"
-                        style={{ backgroundColor: "#e8e4dd", color: "#4a4540" }}
+                        className="flex-shrink-0 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5"
+                        style={{ backgroundColor: "var(--surface-3)", color: "var(--ink-2)" }}
                       >
                         Hired In
                       </span>
@@ -390,8 +448,8 @@ export function PlantPage() {
                   <p
                     className="text-lg font-semibold"
                     style={{
-                      color: "#181410",
-                      fontFamily: "'Space Grotesk', sans-serif",
+                      color: "var(--ink)",
+                      fontFamily: "var(--font-heading)",
                     }}
                   >
                     {selectedPlant.name}
@@ -401,7 +459,7 @@ export function PlantPage() {
                 <div>
                   <p
                     className="text-[10px] font-bold uppercase tracking-widest mb-2"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     Status
                   </p>
@@ -410,14 +468,14 @@ export function PlantPage() {
                       <button
                         key={s}
                         onClick={() => updateStatus(selectedPlant.id, s)}
-                        className="px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors capitalize"
+                        className="px-2.5 py-1.5 text-xs font-medium transition-colors capitalize"
                         style={
                           selectedPlant.status === s
-                            ? { backgroundColor: "#1b5e78", color: "#ffffff" }
+                            ? { backgroundColor: "var(--accent)", color: "#ffffff" }
                             : {
                                 backgroundColor: "transparent",
-                                color: "#4a4540",
-                                border: "1px solid #d9d4ce",
+                                color: "var(--ink-2)",
+                                border: "1px solid var(--border)",
                               }
                         }
                       >
@@ -429,7 +487,7 @@ export function PlantPage() {
 
                 <div
                   className="space-y-0 pt-2"
-                  style={{ borderTop: "1px solid #d9d4ce" }}
+                  style={{ borderTop: "1px solid var(--border)" }}
                 >
                   {[
                     {
@@ -463,11 +521,11 @@ export function PlantPage() {
                     <div
                       key={label}
                       className="flex justify-between items-baseline gap-3 py-2.5"
-                      style={{ borderBottom: "1px solid #ece8e3" }}
+                      style={{ borderBottom: "1px solid var(--surface-3)" }}
                     >
                       <span
                         className="text-xs font-medium flex-shrink-0"
-                        style={{ color: "#7a7469" }}
+                        style={{ color: "var(--muted)" }}
                       >
                         {label}
                       </span>
@@ -476,7 +534,7 @@ export function PlantPage() {
                           "text-sm text-right",
                           mono && "font-mono tnum",
                         )}
-                        style={{ color: "#181410" }}
+                        style={{ color: "var(--ink)" }}
                       >
                         {value}
                       </span>
@@ -487,7 +545,7 @@ export function PlantPage() {
                 <div>
                   <p
                     className="text-[10px] font-bold uppercase tracking-widest mb-2"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     Compliance
                   </p>
@@ -510,11 +568,11 @@ export function PlantPage() {
                         <div
                           key={label}
                           className="flex justify-between items-center py-2.5"
-                          style={{ borderBottom: "1px solid #ece8e3" }}
+                          style={{ borderBottom: "1px solid var(--surface-3)" }}
                         >
                           <span
                             className="text-xs font-medium"
-                            style={{ color: "#7a7469" }}
+                            style={{ color: "var(--muted)" }}
                           >
                             {label}
                           </span>
@@ -522,12 +580,12 @@ export function PlantPage() {
                             className="text-sm font-mono tnum"
                             style={{
                               color: isOverdue
-                                ? "#c13a2a"
+                                ? "var(--danger)"
                                 : isDue
-                                  ? "#e07b39"
+                                  ? "var(--warning)"
                                   : value
-                                    ? "#2a6e45"
-                                    : "#8a8377",
+                                    ? "var(--success)"
+                                    : "var(--muted-2)",
                             }}
                           >
                             {value ? formatDate(value) : "N/A"}
@@ -540,19 +598,19 @@ export function PlantPage() {
 
                 {getPlantAlerts(selectedPlant).length > 0 && (
                   <div
-                    className="space-y-1.5 p-3 rounded-lg"
+                    className="space-y-1.5 p-3"
                     style={{
-                      backgroundColor: "rgba(193,58,42,0.05)",
-                      border: "1px solid rgba(193,58,42,0.1)",
+                      backgroundColor: "var(--danger-bg)",
+                      border: "1px solid rgba(178,58,38,0.2)",
                     }}
                   >
                     {getPlantAlerts(selectedPlant).map((w) => (
                       <div
                         key={w}
                         className="flex items-center gap-2 text-xs font-medium"
-                        style={{ color: "#c13a2a" }}
+                        style={{ color: "var(--danger)" }}
                       >
-                        <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                        <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={1.5} />
                         {w}
                       </div>
                     ))}
@@ -563,13 +621,13 @@ export function PlantPage() {
                   <div className="pt-2">
                     <p
                       className="text-[10px] font-bold uppercase tracking-widest mb-2"
-                      style={{ color: "#7a7469" }}
+                      style={{ color: "var(--muted)" }}
                     >
                       Notes
                     </p>
                     <p
                       className="text-sm leading-relaxed"
-                      style={{ color: "#4a4540" }}
+                      style={{ color: "var(--ink-2)" }}
                     >
                       {selectedPlant.notes}
                     </p>
@@ -594,7 +652,7 @@ export function PlantPage() {
               placeholder="e.g. 13T Tracked Excavator"
             />
             {errors.name && (
-              <p className="mt-1 text-xs" style={{ color: "#c13a2a" }}>
+              <p className="mt-1 text-xs" style={{ color: "var(--danger)" }}>
                 {errors.name}
               </p>
             )}
@@ -675,7 +733,7 @@ export function PlantPage() {
           <div>
             <div
               className="text-xs font-mono uppercase tracking-wider mb-3"
-              style={{ color: "#7a7469" }}
+              style={{ color: "var(--muted)" }}
             >
               Compliance Dates
             </div>

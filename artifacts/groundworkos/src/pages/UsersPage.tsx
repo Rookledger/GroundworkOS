@@ -25,8 +25,8 @@ interface Invitation {
 const ROLE_COLORS: Record<Role, { bg: string; text: string; border: string }> =
   {
     admin: { bg: "#fef3c7", text: "#92400e", border: "rgba(146,64,14,0.2)" },
-    manager: { bg: "#e8f3f7", text: "#1b5e78", border: "rgba(27,94,120,0.2)" },
-    foreman: { bg: "#f3f4f6", text: "#4a4540", border: "rgba(74,69,64,0.2)" },
+    manager: { bg: "var(--accent-bg)", text: "var(--accent)", border: "rgba(27,94,120,0.2)" },
+    foreman: { bg: "#f3f4f6", text: "var(--ink-2)", border: "rgba(74,69,64,0.2)" },
   };
 
 export function UsersPage() {
@@ -227,19 +227,19 @@ export function UsersPage() {
         >
           <p
             style={{
-              fontFamily: "'Space Grotesk', sans-serif",
+              fontFamily: "var(--font-heading)",
               fontWeight: 700,
               fontSize: 18,
-              color: "#181410",
+              color: "var(--ink)",
             }}
           >
             First-time setup
           </p>
           <p
             style={{
-              color: "#7a7469",
+              color: "var(--muted)",
               fontSize: 13,
-              fontFamily: "'Inter', sans-serif",
+              fontFamily: "var(--font-body)",
               lineHeight: 1.5,
             }}
           >
@@ -252,9 +252,9 @@ export function UsersPage() {
             style={{
               padding: "10px 20px",
               borderRadius: 8,
-              backgroundColor: "#1b5e78",
+              backgroundColor: "var(--accent)",
               color: "#fff",
-              fontFamily: "'Space Grotesk', sans-serif",
+              fontFamily: "var(--font-heading)",
               fontWeight: 600,
               fontSize: 13,
               border: "none",
@@ -271,9 +271,9 @@ export function UsersPage() {
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3">
         <p
           style={{
-            color: "#7a7469",
+            color: "var(--muted)",
             fontSize: 14,
-            fontFamily: "'Inter', sans-serif",
+            fontFamily: "var(--font-body)",
           }}
         >
           Admin access required
@@ -287,10 +287,10 @@ export function UsersPage() {
       <div className="mb-6">
         <h1
           style={{
-            fontFamily: "'Space Grotesk', sans-serif",
+            fontFamily: "var(--font-heading)",
             fontWeight: 700,
             fontSize: 22,
-            color: "#181410",
+            color: "var(--ink)",
             letterSpacing: "-0.02em",
             marginBottom: 4,
           }}
@@ -299,9 +299,9 @@ export function UsersPage() {
         </h1>
         <p
           style={{
-            color: "#7a7469",
+            color: "var(--muted)",
             fontSize: 13,
-            fontFamily: "'Inter', sans-serif",
+            fontFamily: "var(--font-body)",
           }}
         >
           Manage team access and roles. Changes take effect on next sign-in.
@@ -312,9 +312,9 @@ export function UsersPage() {
       <form
         onSubmit={handleInvite}
         style={{
-          border: "1px solid #d9d4ce",
+          border: "1px solid var(--border)",
           borderRadius: 10,
-          backgroundColor: "#fafaf8",
+          backgroundColor: "var(--surface)",
           padding: 16,
           marginBottom: 20,
           display: "flex",
@@ -326,10 +326,10 @@ export function UsersPage() {
         <div style={{ flex: "1 1 220px", display: "grid", gap: 4 }}>
           <label
             style={{
-              fontFamily: "'Space Grotesk', sans-serif",
+              fontFamily: "var(--font-heading)",
               fontWeight: 600,
               fontSize: 11,
-              color: "#7a7469",
+              color: "var(--muted)",
               textTransform: "uppercase",
               letterSpacing: "0.06em",
             }}
@@ -343,13 +343,13 @@ export function UsersPage() {
             value={inviteEmail}
             onChange={(e) => setInviteEmail(e.target.value)}
             style={{
-              fontFamily: "'Inter', sans-serif",
+              fontFamily: "var(--font-body)",
               fontSize: 13,
               padding: "8px 10px",
               borderRadius: 6,
-              border: "1px solid #d9d4ce",
+              border: "1px solid var(--border)",
               backgroundColor: "#ffffff",
-              color: "#181410",
+              color: "var(--ink)",
             }}
           />
         </div>
@@ -357,13 +357,13 @@ export function UsersPage() {
           value={inviteRole}
           onChange={(e) => setInviteRole(e.target.value as Role)}
           style={{
-            fontFamily: "'Space Grotesk', sans-serif",
+            fontFamily: "var(--font-heading)",
             fontSize: 12,
             padding: "9px 8px",
             borderRadius: 6,
-            border: "1px solid #d9d4ce",
+            border: "1px solid var(--border)",
             backgroundColor: "#ffffff",
-            color: "#181410",
+            color: "var(--ink)",
             cursor: "pointer",
           }}
         >
@@ -377,9 +377,9 @@ export function UsersPage() {
           style={{
             padding: "9px 18px",
             borderRadius: 6,
-            backgroundColor: "#1b5e78",
+            backgroundColor: "var(--accent)",
             color: "#fff",
-            fontFamily: "'Space Grotesk', sans-serif",
+            fontFamily: "var(--font-heading)",
             fontWeight: 600,
             fontSize: 12,
             border: "none",
@@ -394,9 +394,9 @@ export function UsersPage() {
       {invitations.length > 0 && (
         <div
           style={{
-            border: "1px solid #d9d4ce",
+            border: "1px solid var(--border)",
             borderRadius: 10,
-            backgroundColor: "#fafaf8",
+            backgroundColor: "var(--surface)",
             overflow: "hidden",
             marginBottom: 20,
           }}
@@ -404,15 +404,15 @@ export function UsersPage() {
           <div
             style={{
               padding: "10px 16px",
-              borderBottom: "1px solid #ece8e3",
+              borderBottom: "1px solid var(--surface-3)",
             }}
           >
             <span
               style={{
-                fontFamily: "'Space Grotesk', sans-serif",
+                fontFamily: "var(--font-heading)",
                 fontWeight: 600,
                 fontSize: 11,
-                color: "#7a7469",
+                color: "var(--muted)",
                 textTransform: "uppercase",
                 letterSpacing: "0.06em",
               }}
@@ -429,15 +429,15 @@ export function UsersPage() {
                 alignItems: "center",
                 gap: 12,
                 borderBottom:
-                  idx < invitations.length - 1 ? "1px solid #ece8e3" : "none",
+                  idx < invitations.length - 1 ? "1px solid var(--surface-3)" : "none",
               }}
             >
               <div style={{ flex: 1, minWidth: 0 }}>
                 <span
                   style={{
-                    fontFamily: "'JetBrains Mono', monospace",
+                    fontFamily: "var(--font-body)",
                     fontSize: 12,
-                    color: "#181410",
+                    color: "var(--ink)",
                   }}
                 >
                   {inv.email}
@@ -449,7 +449,7 @@ export function UsersPage() {
                   borderRadius: 99,
                   fontSize: 11,
                   fontWeight: 600,
-                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontFamily: "var(--font-heading)",
                   backgroundColor: ROLE_COLORS[inv.role].bg,
                   color: ROLE_COLORS[inv.role].text,
                   border: `1px solid ${ROLE_COLORS[inv.role].border}`,
@@ -464,11 +464,11 @@ export function UsersPage() {
                   padding: "5px 12px",
                   borderRadius: 6,
                   backgroundColor: "transparent",
-                  color: "#c13a2a",
-                  fontFamily: "'Space Grotesk', sans-serif",
+                  color: "var(--danger)",
+                  fontFamily: "var(--font-heading)",
                   fontWeight: 600,
                   fontSize: 11,
-                  border: "1px solid rgba(193,58,42,0.3)",
+                  border: "1px solid rgba(178,58,38,0.3)",
                   cursor: revokingId === inv.id ? "default" : "pointer",
                   opacity: revokingId === inv.id ? 0.5 : 1,
                 }}
@@ -488,7 +488,7 @@ export function UsersPage() {
               style={{
                 height: 72,
                 borderRadius: 8,
-                backgroundColor: "#eeeae4",
+                backgroundColor: "var(--surface-2)",
                 animation: "pulse 1.5s ease-in-out infinite",
               }}
             />
@@ -497,16 +497,16 @@ export function UsersPage() {
       ) : (
         <div
           style={{
-            border: "1px solid #d9d4ce",
+            border: "1px solid var(--border)",
             borderRadius: 10,
-            backgroundColor: "#fafaf8",
+            backgroundColor: "var(--surface)",
             overflow: "hidden",
           }}
         >
           <div
             style={{
               padding: "10px 16px",
-              borderBottom: "1px solid #ece8e3",
+              borderBottom: "1px solid var(--surface-3)",
               display: "grid",
               gridTemplateColumns: "1fr auto",
               gap: 12,
@@ -515,10 +515,10 @@ export function UsersPage() {
           >
             <span
               style={{
-                fontFamily: "'Space Grotesk', sans-serif",
+                fontFamily: "var(--font-heading)",
                 fontWeight: 600,
                 fontSize: 11,
-                color: "#7a7469",
+                color: "var(--muted)",
                 textTransform: "uppercase",
                 letterSpacing: "0.06em",
               }}
@@ -540,7 +540,7 @@ export function UsersPage() {
                   alignItems: "center",
                   gap: 12,
                   borderBottom:
-                    idx < users.length - 1 ? "1px solid #ece8e3" : "none",
+                    idx < users.length - 1 ? "1px solid var(--surface-3)" : "none",
                   opacity: u.active ? 1 : 0.55,
                 }}
               >
@@ -549,7 +549,7 @@ export function UsersPage() {
                     width: 36,
                     height: 36,
                     borderRadius: "50%",
-                    backgroundColor: "#1b5e78",
+                    backgroundColor: "var(--accent)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -561,7 +561,7 @@ export function UsersPage() {
                       color: "#fff",
                       fontWeight: 700,
                       fontSize: 14,
-                      fontFamily: "'Space Grotesk', sans-serif",
+                      fontFamily: "var(--font-heading)",
                     }}
                   >
                     {initials}
@@ -573,10 +573,10 @@ export function UsersPage() {
                   >
                     <span
                       style={{
-                        fontFamily: "'Space Grotesk', sans-serif",
+                        fontFamily: "var(--font-heading)",
                         fontWeight: 600,
                         fontSize: 13,
-                        color: "#181410",
+                        color: "var(--ink)",
                       }}
                     >
                       {name}
@@ -584,9 +584,9 @@ export function UsersPage() {
                     {isSelf && (
                       <span
                         style={{
-                          fontFamily: "'JetBrains Mono', monospace",
+                          fontFamily: "var(--font-body)",
                           fontSize: 10,
-                          color: "#a8a099",
+                          color: "var(--muted-2)",
                         }}
                       >
                         you
@@ -599,10 +599,10 @@ export function UsersPage() {
                           borderRadius: 99,
                           fontSize: 10,
                           fontWeight: 600,
-                          fontFamily: "'Space Grotesk', sans-serif",
+                          fontFamily: "var(--font-heading)",
                           backgroundColor: "#f3e8e8",
-                          color: "#c13a2a",
-                          border: "1px solid rgba(193,58,42,0.2)",
+                          color: "var(--danger)",
+                          border: "1px solid rgba(178,58,38,0.2)",
                         }}
                       >
                         Deactivated
@@ -611,9 +611,9 @@ export function UsersPage() {
                   </div>
                   <span
                     style={{
-                      fontFamily: "'JetBrains Mono', monospace",
+                      fontFamily: "var(--font-body)",
                       fontSize: 11,
-                      color: "#7a7469",
+                      color: "var(--muted)",
                     }}
                   >
                     {u.email}
@@ -626,7 +626,7 @@ export function UsersPage() {
                       borderRadius: 99,
                       fontSize: 11,
                       fontWeight: 600,
-                      fontFamily: "'Space Grotesk', sans-serif",
+                      fontFamily: "var(--font-heading)",
                       backgroundColor: colors.bg,
                       color: colors.text,
                       border: `1px solid ${colors.border}`,
@@ -641,13 +641,13 @@ export function UsersPage() {
                       handleRoleChange(u.id, e.target.value as Role)
                     }
                     style={{
-                      fontFamily: "'Space Grotesk', sans-serif",
+                      fontFamily: "var(--font-heading)",
                       fontSize: 12,
                       padding: "5px 8px",
                       borderRadius: 6,
-                      border: "1px solid #d9d4ce",
+                      border: "1px solid var(--border)",
                       backgroundColor: "#ffffff",
-                      color: "#181410",
+                      color: "var(--ink)",
                       cursor: "pointer",
                       opacity: updating === u.id ? 0.5 : 1,
                     }}
@@ -664,13 +664,13 @@ export function UsersPage() {
                         padding: "5px 12px",
                         borderRadius: 6,
                         backgroundColor: "transparent",
-                        color: u.active ? "#c13a2a" : "#1b5e78",
-                        fontFamily: "'Space Grotesk', sans-serif",
+                        color: u.active ? "var(--danger)" : "var(--accent)",
+                        fontFamily: "var(--font-heading)",
                         fontWeight: 600,
                         fontSize: 11,
                         border: `1px solid ${
                           u.active
-                            ? "rgba(193,58,42,0.3)"
+                            ? "rgba(178,58,38,0.3)"
                             : "rgba(27,94,120,0.3)"
                         }`,
                         cursor:
@@ -698,16 +698,16 @@ export function UsersPage() {
           marginTop: 24,
           padding: 16,
           borderRadius: 8,
-          backgroundColor: "#fafaf8",
-          border: "1px solid #d9d4ce",
+          backgroundColor: "var(--surface)",
+          border: "1px solid var(--border)",
         }}
       >
         <p
           style={{
-            fontFamily: "'Space Grotesk', sans-serif",
+            fontFamily: "var(--font-heading)",
             fontWeight: 600,
             fontSize: 12,
-            color: "#181410",
+            color: "var(--ink)",
             marginBottom: 8,
           }}
         >
@@ -730,10 +730,10 @@ export function UsersPage() {
             >
               <span
                 style={{
-                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontFamily: "var(--font-heading)",
                   fontWeight: 600,
                   fontSize: 11,
-                  color: "#7a7469",
+                  color: "var(--muted)",
                   minWidth: 64,
                 }}
               >
@@ -741,9 +741,9 @@ export function UsersPage() {
               </span>
               <span
                 style={{
-                  fontFamily: "'Inter', sans-serif",
+                  fontFamily: "var(--font-body)",
                   fontSize: 12,
-                  color: "#7a7469",
+                  color: "var(--muted)",
                   lineHeight: 1.5,
                 }}
               >

@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Search, Clock, Filter } from "lucide-react";
 import { Panel } from "../components/ui/Panel";
 import { StatCard } from "../components/ui/StatCard";
+import { Badge } from "../components/ui/Badge";
 
 const BASE = (import.meta as any).env?.BASE_URL?.replace(/\/$/, "") ?? "";
 
@@ -19,8 +20,8 @@ interface AuditLog {
 
 const ACTION_CONFIG = {
   create: { label: "Created", color: "#2a6e45", bg: "rgba(42,110,69,0.1)" },
-  update: { label: "Updated", color: "#1b5e78", bg: "#e8f3f7" },
-  delete: { label: "Deleted", color: "#c13a2a", bg: "rgba(193,58,42,0.1)" },
+  update: { label: "Updated", color: "var(--accent)", bg: "var(--accent-bg)" },
+  delete: { label: "Deleted", color: "var(--danger)", bg: "rgba(178,58,38,0.1)" },
 };
 
 const ENTITY_LABELS: Record<string, string> = {
@@ -56,6 +57,22 @@ function formatChanges(changes: Record<string, any> | null): string {
       ? ` +${Object.keys(changes).length - 3} more`
       : "")
   );
+}
+
+function dayLabel(dateStr: string): string {
+  const d = new Date(dateStr);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  if (d.toDateString() === today.toDateString()) return "Today";
+  if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+  return d.toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "short",
+    year:
+      d.getFullYear() !== today.getFullYear() ? "numeric" : undefined,
+  });
 }
 
 export function AuditLogPage() {
@@ -106,6 +123,16 @@ export function AuditLogPage() {
     return true;
   });
 
+  const grouped = useMemo(() => {
+    const map = new Map<string, AuditLog[]>();
+    for (const l of filtered) {
+      const key = new Date(l.createdAt).toDateString();
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(l);
+    }
+    return [...map.entries()];
+  }, [filtered]);
+
   const totalToday = logs.filter(
     (l) => new Date(l.createdAt).toDateString() === new Date().toDateString(),
   ).length;
@@ -118,9 +145,9 @@ export function AuditLogPage() {
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3">
         <p
           style={{
-            color: "#7a7469",
+            color: "var(--muted)",
             fontSize: 14,
-            fontFamily: "'Inter', sans-serif",
+            fontFamily: "var(--font-body)",
           }}
         >
           Admin access required
@@ -135,13 +162,13 @@ export function AuditLogPage() {
         <h1
           className="text-xl font-semibold"
           style={{
-            color: "#181410",
-            fontFamily: "'Space Grotesk', sans-serif",
+            color: "var(--ink)",
+            fontFamily: "var(--font-heading)",
           }}
         >
           Audit Trail
         </h1>
-        <p className="text-sm mt-0.5" style={{ color: "#7a7469" }}>
+        <p className="text-sm mt-0.5" style={{ color: "var(--muted)" }}>
           Full history of who changed what and when
         </p>
       </div>
@@ -168,29 +195,29 @@ export function AuditLogPage() {
 
       <div className="flex flex-wrap gap-3">
         <div
-          className="flex items-center gap-2 flex-1 min-w-[200px] max-w-sm px-3 py-2 rounded-lg"
-          style={{ backgroundColor: "#fafaf8", border: "1px solid #d9d4ce" }}
+          className="flex items-center gap-2 flex-1 min-w-[200px] max-w-sm px-3 py-2 "
+          style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border)" }}
         >
-          <Search
+          <Search strokeWidth={1.5}
             className="w-3.5 h-3.5 flex-shrink-0"
-            style={{ color: "#a8a099" }}
+            style={{ color: "var(--muted-2)" }}
           />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search user, entity…"
-            className="flex-1 text-sm bg-transparent focus:outline-none placeholder:text-[#a8a099]"
-            style={{ color: "#181410" }}
+            className="flex-1 text-sm bg-transparent focus:outline-none placeholder:text-[var(--muted-2)]"
+            style={{ color: "var(--ink)" }}
           />
         </div>
         <select
           value={entityFilter}
           onChange={(e) => setEntityFilter(e.target.value)}
-          className="py-2 px-3 rounded-lg text-sm focus:outline-none"
+          className="py-2 px-3 text-sm focus:outline-none"
           style={{
-            backgroundColor: "#fafaf8",
-            border: "1px solid #d9d4ce",
-            color: "#4a4540",
+            backgroundColor: "var(--surface)",
+            border: "1px solid var(--border)",
+            color: "var(--ink-2)",
           }}
         >
           <option value="all">All entities</option>
@@ -203,11 +230,11 @@ export function AuditLogPage() {
         <select
           value={actionFilter}
           onChange={(e) => setActionFilter(e.target.value)}
-          className="py-2 px-3 rounded-lg text-sm focus:outline-none"
+          className="py-2 px-3 text-sm focus:outline-none"
           style={{
-            backgroundColor: "#fafaf8",
-            border: "1px solid #d9d4ce",
-            color: "#4a4540",
+            backgroundColor: "var(--surface)",
+            border: "1px solid var(--border)",
+            color: "var(--ink-2)",
           }}
         >
           <option value="all">All actions</option>
@@ -218,11 +245,11 @@ export function AuditLogPage() {
         <select
           value={days}
           onChange={(e) => setDays(e.target.value)}
-          className="py-2 px-3 rounded-lg text-sm focus:outline-none"
+          className="py-2 px-3 text-sm focus:outline-none"
           style={{
-            backgroundColor: "#fafaf8",
-            border: "1px solid #d9d4ce",
-            color: "#4a4540",
+            backgroundColor: "var(--surface)",
+            border: "1px solid var(--border)",
+            color: "var(--ink-2)",
           }}
         >
           <option value="7">Last 7 days</option>
@@ -236,150 +263,131 @@ export function AuditLogPage() {
         <Panel noPad className="flex-1 min-w-0">
           {loading ? (
             <div className="py-16 flex flex-col items-center gap-3">
-              <Clock
+              <Clock strokeWidth={1.5}
                 className="w-6 h-6 animate-pulse"
-                style={{ color: "#d9d4ce" }}
+                style={{ color: "var(--border)" }}
               />
-              <p className="text-sm" style={{ color: "#7a7469" }}>
+              <p className="text-sm" style={{ color: "var(--muted)" }}>
                 Loading audit log…
               </p>
             </div>
           ) : filtered.length === 0 ? (
             <div className="py-16 flex flex-col items-center gap-3">
-              <Filter className="w-6 h-6" style={{ color: "#d9d4ce" }} />
-              <p className="text-sm font-medium" style={{ color: "#7a7469" }}>
+              <Filter strokeWidth={1.5} className="w-6 h-6" style={{ color: "var(--border)" }} />
+              <p className="text-sm font-medium" style={{ color: "var(--muted)" }}>
                 No entries found
               </p>
-              <p className="text-xs" style={{ color: "#a8a099" }}>
+              <p className="text-xs" style={{ color: "var(--muted-2)" }}>
                 Audit entries are recorded as you use the system
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr
+            <div className="divide-y" style={{ borderColor: "var(--border)" }}>
+              {grouped.map(([dateKey, dayLogs]) => (
+                <div key={dateKey}>
+                  <div
+                    className="px-4 sm:px-5 py-2 sticky top-0 z-10 flex items-center justify-between"
                     style={{
-                      borderBottom: "1px solid #d9d4ce",
-                      backgroundColor: "#fafaf8",
+                      backgroundColor: "var(--surface-2)",
+                      borderBottom: "1px solid var(--border)",
                     }}
                   >
-                    {["When", "User", "Action", "Entity", "Changes"].map(
-                      (h) => (
-                        <th
-                          key={h}
-                          className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-widest"
-                          style={{ color: "#7a7469" }}
-                        >
-                          {h}
-                        </th>
-                      ),
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((log, i) => {
+                    <span
+                      className="text-[11px] font-bold uppercase tracking-widest"
+                      style={{
+                        color: "var(--ink-2)",
+                        fontFamily: "var(--font-heading)",
+                      }}
+                    >
+                      {dayLabel(dayLogs[0].createdAt)}
+                    </span>
+                    <span
+                      className="text-[10px] font-semibold"
+                      style={{ color: "var(--muted-2)" }}
+                    >
+                      {dayLogs.length} event{dayLogs.length === 1 ? "" : "s"}
+                    </span>
+                  </div>
+                  {dayLogs.map((log, i) => {
                     const cfg =
                       ACTION_CONFIG[log.action] ?? ACTION_CONFIG.update;
                     const isSelected = selected?.id === log.id;
+                    const isDestructive = log.action === "delete";
                     return (
-                      <tr
+                      <div
                         key={log.id}
                         onClick={() => setSelected(isSelected ? null : log)}
-                        className="cursor-pointer transition-colors hover:bg-[#eeeae4]"
+                        className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 px-4 sm:px-5 py-3 cursor-pointer transition-colors hover:bg-[var(--surface-2)]"
                         style={{
                           borderBottom:
-                            i < filtered.length - 1
-                              ? "1px solid #e8e4dd"
+                            i < dayLogs.length - 1
+                              ? "1px solid var(--surface-3)"
                               : "none",
-                          backgroundColor: isSelected ? "#eeeae4" : undefined,
+                          backgroundColor: isDestructive
+                            ? "var(--danger-bg)"
+                            : isSelected
+                              ? "var(--surface-2)"
+                              : undefined,
+                          borderLeft: isDestructive
+                            ? "3px solid var(--danger)"
+                            : "3px solid transparent",
                         }}
                       >
-                        <td className="py-3 px-4">
+                        <div
+                          className="flex-shrink-0 w-14"
+                          style={{
+                            fontFamily: "ui-monospace, monospace",
+                            fontSize: "11px",
+                            color: "var(--muted)",
+                          }}
+                        >
+                          {new Date(log.createdAt).toLocaleTimeString(
+                            "en-GB",
+                            { hour: "2-digit", minute: "2-digit" },
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0 w-44 min-w-0">
                           <div
-                            className="text-xs font-mono"
-                            style={{ color: "#181410" }}
-                          >
-                            {new Date(log.createdAt).toLocaleDateString(
-                              "en-GB",
-                              { day: "numeric", month: "short" },
-                            )}
-                          </div>
-                          <div
-                            className="text-[10px] font-mono"
-                            style={{ color: "#a8a099" }}
-                          >
-                            {new Date(log.createdAt).toLocaleTimeString(
-                              "en-GB",
-                              { hour: "2-digit", minute: "2-digit" },
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-2">
-                            <div
-                              className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
-                              style={{
-                                backgroundColor: "#1b5e78",
-                                color: "#ffffff",
-                              }}
-                            >
-                              {initials(log.userName, log.userEmail)}
-                            </div>
-                            <div>
-                              <div
-                                className="text-xs font-medium"
-                                style={{ color: "#181410" }}
-                              >
-                                {log.userName ?? "System"}
-                              </div>
-                              {log.userEmail && (
-                                <div
-                                  className="text-[10px] font-mono"
-                                  style={{ color: "#a8a099" }}
-                                >
-                                  {log.userEmail}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span
-                            className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded"
+                            className="w-6 h-6 flex items-center justify-center text-[10px] font-bold flex-shrink-0"
                             style={{
-                              backgroundColor: cfg.bg,
-                              color: cfg.color,
+                              backgroundColor: "var(--accent)",
+                              color: "#ffffff",
                             }}
                           >
-                            {cfg.label}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div
-                            className="text-sm font-medium"
-                            style={{ color: "#181410" }}
-                          >
-                            {ENTITY_LABELS[log.entityType] ?? log.entityType}
+                            {initials(log.userName, log.userEmail)}
                           </div>
-                          <div
-                            className="text-[10px] font-mono"
-                            style={{ color: "#a8a099" }}
-                          >
-                            {log.entityId.slice(0, 8)}…
+                          <div className="min-w-0">
+                            <div
+                              className="text-xs font-medium truncate"
+                              style={{ color: "var(--ink)" }}
+                            >
+                              {log.userName ?? "System"}
+                            </div>
                           </div>
-                        </td>
-                        <td
-                          className="py-3 px-4 text-xs max-w-[200px] truncate"
-                          style={{ color: "#7a7469" }}
+                        </div>
+                        <div
+                          className="text-xs flex-shrink-0 w-20"
+                          style={{ color: cfg.color, fontWeight: 600 }}
+                        >
+                          {cfg.label}
+                        </div>
+                        <div className="flex-shrink-0">
+                          <Badge
+                            status={log.entityType}
+                            label={ENTITY_LABELS[log.entityType] ?? log.entityType}
+                          />
+                        </div>
+                        <div
+                          className="text-xs truncate flex-1 min-w-0"
+                          style={{ color: "var(--muted)" }}
                         >
                           {formatChanges(log.changes)}
-                        </td>
-                      </tr>
+                        </div>
+                      </div>
                     );
                   })}
-                </tbody>
-              </table>
+                </div>
+              ))}
             </div>
           )}
         </Panel>
@@ -391,11 +399,11 @@ export function AuditLogPage() {
                 <div>
                   <div
                     className="text-[10px] font-bold uppercase tracking-widest mb-1"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     When
                   </div>
-                  <div style={{ color: "#181410" }}>
+                  <div style={{ color: "var(--ink)" }}>
                     {new Date(selected.createdAt).toLocaleString("en-GB", {
                       dateStyle: "long",
                       timeStyle: "short",
@@ -405,17 +413,17 @@ export function AuditLogPage() {
                 <div>
                   <div
                     className="text-[10px] font-bold uppercase tracking-widest mb-1"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     By
                   </div>
-                  <div style={{ color: "#181410" }}>
+                  <div style={{ color: "var(--ink)" }}>
                     {selected.userName ?? "System"}
                   </div>
                   {selected.userEmail && (
                     <div
                       className="text-xs font-mono"
-                      style={{ color: "#7a7469" }}
+                      style={{ color: "var(--muted)" }}
                     >
                       {selected.userEmail}
                     </div>
@@ -424,12 +432,12 @@ export function AuditLogPage() {
                 <div>
                   <div
                     className="text-[10px] font-bold uppercase tracking-widest mb-1"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     Action
                   </div>
                   <span
-                    className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded"
+                    className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 "
                     style={{
                       backgroundColor: ACTION_CONFIG[selected.action].bg,
                       color: ACTION_CONFIG[selected.action].color,
@@ -441,16 +449,16 @@ export function AuditLogPage() {
                 <div>
                   <div
                     className="text-[10px] font-bold uppercase tracking-widest mb-1"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     Entity
                   </div>
-                  <div style={{ color: "#181410" }}>
+                  <div style={{ color: "var(--ink)" }}>
                     {ENTITY_LABELS[selected.entityType] ?? selected.entityType}
                   </div>
                   <div
                     className="text-xs font-mono mt-0.5"
-                    style={{ color: "#a8a099" }}
+                    style={{ color: "var(--muted-2)" }}
                   >
                     {selected.entityId}
                   </div>
@@ -460,7 +468,7 @@ export function AuditLogPage() {
                     <div>
                       <div
                         className="text-[10px] font-bold uppercase tracking-widest mb-1.5"
-                        style={{ color: "#7a7469" }}
+                        style={{ color: "var(--muted)" }}
                       >
                         Changed fields
                       </div>
@@ -468,18 +476,18 @@ export function AuditLogPage() {
                         {Object.entries(selected.changes).map(([k, v]) => (
                           <div
                             key={k}
-                            className="p-2 rounded text-xs"
-                            style={{ backgroundColor: "#f0ede8" }}
+                            className="p-2 text-xs"
+                            style={{ backgroundColor: "var(--bg)" }}
                           >
                             <div
                               className="font-mono font-bold mb-0.5"
-                              style={{ color: "#7a7469" }}
+                              style={{ color: "var(--muted)" }}
                             >
                               {k.replace(/_/g, " ")}
                             </div>
                             <div
                               className="font-mono truncate"
-                              style={{ color: "#181410" }}
+                              style={{ color: "var(--ink)" }}
                             >
                               {typeof v === "object"
                                 ? JSON.stringify(v)

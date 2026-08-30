@@ -9,12 +9,16 @@ import {
   MapPin,
   Trash2,
   Pencil,
+  Users,
+  Search,
 } from "lucide-react";
+import { useLocation } from "wouter";
 import { Panel } from "../components/ui/Panel";
 import { StatCard } from "../components/ui/StatCard";
 import { Btn } from "../components/ui/Btn";
 import { SearchInput } from "../components/ui/SearchInput";
 import { ListPanel } from "../components/ui/ListPanel";
+import { EmptyState } from "../components/ui/EmptyState";
 import { Modal, Field, Input, Textarea } from "../components/ui/Modal";
 import { cn, formatCurrency } from "../lib/utils";
 import { useApp } from "../store/AppContext";
@@ -40,6 +44,7 @@ const emptyForm = {
 export function ClientsPage() {
   const { state, dispatch } = useApp();
   const { clients } = state;
+  const [, navigate] = useLocation();
 
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
@@ -49,15 +54,17 @@ export function ClientsPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
-  const filtered = clients.filter((c) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return (
-      c.company_name.toLowerCase().includes(q) ||
-      (c.contact_name ?? "").toLowerCase().includes(q) ||
-      (c.email ?? "").toLowerCase().includes(q)
-    );
-  });
+  const filtered = clients
+    .filter((c) => {
+      if (!search) return true;
+      const q = search.toLowerCase();
+      return (
+        c.company_name.toLowerCase().includes(q) ||
+        (c.contact_name ?? "").toLowerCase().includes(q) ||
+        (c.email ?? "").toLowerCase().includes(q)
+      );
+    })
+    .sort((a, b) => b.total_value - a.total_value);
 
   const selectedClient = selected
     ? clients.find((c) => c.id === selected)
@@ -159,15 +166,15 @@ export function ClientsPage() {
         <h1
           className="text-2xl font-bold"
           style={{
-            fontFamily: "'Space Grotesk', sans-serif",
-            color: "#181410",
+            fontFamily: "var(--font-heading)",
+            color: "var(--ink)",
             letterSpacing: "-0.02em",
           }}
         >
           Clients
         </h1>
         <Btn onClick={openNew}>
-          <Plus className="w-4 h-4" /> New Client
+          <Plus className="w-4 h-4" strokeWidth={1.5} /> New Client
         </Btn>
       </div>
 
@@ -190,15 +197,46 @@ export function ClientsPage() {
         />
       </div>
 
-      <SearchInput
-        value={search}
-        onChange={setSearch}
-        placeholder="Search clients..."
-        className="py-2 w-full max-w-sm rounded-lg focus:outline-none transition-colors"
-      />
+      <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3">
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Search clients..."
+          className="py-2 w-full max-w-sm focus:outline-none transition-colors"
+        />
+        {clients.length > 0 && (
+          <span className="text-xs" style={{ color: "var(--muted-2)" }}>
+            Sorted by lifetime value
+          </span>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className={selectedClient ? "xl:col-span-2" : "xl:col-span-3"}>
+          {clients.length === 0 ? (
+            <Panel title="Client Directory" noPad>
+              <EmptyState
+                icon={Users}
+                title="No clients yet"
+                description="Clients are the companies and contacts you work for — every job, quote and invoice is tied back to one."
+                primaryLabel="Add your first client"
+                onPrimary={openNew}
+                secondaryLabel="Import from spreadsheet"
+                onSecondary={() => navigate("/import")}
+                hint="You can also import an existing client list as a CSV."
+              />
+            </Panel>
+          ) : filtered.length === 0 ? (
+            <Panel title="Client Directory" noPad>
+              <EmptyState
+                icon={Search}
+                title="No clients match your search"
+                description={`No results for "${search}". Try a different name or email.`}
+                primaryLabel="Clear search"
+                onPrimary={() => setSearch("")}
+              />
+            </Panel>
+          ) : (
           <ListPanel
             title="Client Directory"
             items={filtered}
@@ -210,92 +248,97 @@ export function ClientsPage() {
                   setSelected(selected === client.id ? null : client.id)
                 }
                 className={cn(
-                  "flex items-center gap-5 px-5 py-4 cursor-pointer transition-colors group",
+                  "flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5 px-5 py-4 cursor-pointer transition-colors group",
                   selected === client.id
-                    ? "bg-[#eeeae4]"
-                    : "hover:bg-[#eeeae4]",
+                    ? "bg-[var(--surface-2)]"
+                    : "hover:bg-[var(--surface-2)]",
                 )}
                 style={{
-                  borderBottom: i < total - 1 ? "1px solid #d9d4ce" : "none",
+                  borderBottom: i < total - 1 ? "1px solid var(--border)" : "none",
                   borderLeft:
                     selected === client.id
-                      ? "3px solid #1b5e78"
+                      ? "3px solid var(--accent)"
                       : "3px solid transparent",
                 }}
               >
-                <div
-                  className="w-10 h-10 rounded flex items-center justify-center text-sm font-bold flex-shrink-0"
-                  style={{
-                    backgroundColor: "#e8e4dd",
-                    color: "#4a4540",
-                    border: "1px solid #d9d4ce",
-                  }}
-                >
-                  {client.company_name[0]}
-                </div>
-                <div className="flex-1 min-w-0">
+                <div className="flex items-start gap-3 flex-1 min-w-0">
                   <div
-                    className="text-sm font-semibold truncate"
-                    style={{ color: "#181410" }}
+                    className="w-10 h-10 flex items-center justify-center text-sm font-bold flex-shrink-0"
+                    style={{
+                      backgroundColor: "var(--surface-3)",
+                      color: "var(--ink-2)",
+                      border: "1px solid var(--border)",
+                    }}
                   >
-                    {client.company_name}
+                    {client.company_name[0]}
                   </div>
-                  <div
-                    className="text-xs mt-0.5 truncate"
-                    style={{ color: "#7a7469" }}
-                  >
-                    {client.contact_name ?? "No contact"}
-                  </div>
-                </div>
-                {client.email && (
-                  <div
-                    className="hidden md:flex items-center gap-1.5 w-48 flex-shrink-0 text-xs"
-                    style={{ color: "#7a7469" }}
-                  >
-                    <Mail className="w-3.5 h-3.5" />
-                    <span className="truncate font-mono">{client.email}</span>
-                  </div>
-                )}
-                <div className="text-right hidden sm:block w-28 flex-shrink-0">
-                  <div
-                    className="text-[10px] font-bold uppercase tracking-widest mb-1"
-                    style={{ color: "#7a7469" }}
-                  >
-                    Jobs
-                  </div>
-                  <div
-                    className="text-sm font-medium font-mono tnum"
-                    style={{ color: "#181410" }}
-                  >
-                    {client.total_jobs}
+                  <div className="flex-1 min-w-0">
+                    <div
+                      className="text-sm font-semibold truncate"
+                      style={{ color: "var(--ink)" }}
+                    >
+                      {client.company_name}
+                    </div>
+                    <div
+                      className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs mt-0.5"
+                      style={{ color: "var(--muted)" }}
+                    >
+                      <span className="truncate">
+                        {client.contact_name ?? "No contact"}
+                      </span>
+                      {client.email && (
+                        <span className="flex items-center gap-1.5 truncate">
+                          <Mail className="w-3 h-3 flex-shrink-0" strokeWidth={1.5} />
+                          <span className="truncate font-mono">{client.email}</span>
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <div className="text-right hidden sm:block w-28 flex-shrink-0">
-                  <div
-                    className="text-[10px] font-bold uppercase tracking-widest mb-1"
-                    style={{ color: "#7a7469" }}
-                  >
-                    Value
+                <div className="flex items-center justify-between sm:justify-end gap-6 pl-[52px] sm:pl-0 flex-shrink-0">
+                  <div className="text-right w-16 sm:w-28 flex-shrink-0">
+                    <div
+                      className="text-[10px] font-bold uppercase tracking-widest mb-1"
+                      style={{ color: "var(--muted)" }}
+                    >
+                      Jobs
+                    </div>
+                    <div
+                      className="text-sm font-medium tnum"
+                      style={{ color: "var(--ink)" }}
+                    >
+                      {client.total_jobs}
+                    </div>
                   </div>
-                  <div
-                    className="text-sm font-medium font-mono tnum"
-                    style={{ color: "#181410" }}
-                  >
-                    {formatCurrency(client.total_value)}
+                  <div className="text-right w-24 sm:w-28 flex-shrink-0">
+                    <div
+                      className="text-[10px] font-bold uppercase tracking-widest mb-1"
+                      style={{ color: "var(--muted)" }}
+                    >
+                      Value
+                    </div>
+                    <div
+                      className="text-sm font-medium tnum"
+                      style={{ color: "var(--ink)" }}
+                    >
+                      {formatCurrency(client.total_value)}
+                    </div>
                   </div>
+                  <ChevronRight
+                    className={cn(
+                      "w-4 h-4 flex-shrink-0 transition-opacity hidden sm:block",
+                      selected === client.id
+                        ? "opacity-100"
+                        : "opacity-0 group-hover:opacity-100",
+                    )}
+                    style={{ color: "var(--muted)" }}
+                    strokeWidth={1.5}
+                  />
                 </div>
-                <ChevronRight
-                  className={cn(
-                    "w-4 h-4 flex-shrink-0 transition-opacity ml-2",
-                    selected === client.id
-                      ? "opacity-100"
-                      : "opacity-0 group-hover:opacity-100",
-                  )}
-                  style={{ color: "#7a7469" }}
-                />
               </div>
             )}
           />
+          )}
         </div>
 
         {selectedClient && (
@@ -305,11 +348,11 @@ export function ClientsPage() {
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => openEdit(selectedClient)}
-                    className="p-1.5 rounded transition-colors hover:bg-[#e8e4dd]"
-                    style={{ color: "#7a7469" }}
+                    className="p-1.5 transition-colors hover:bg-[var(--surface-3)]"
+                    style={{ color: "var(--muted)" }}
                     title="Edit client"
                   >
-                    <Pencil className="w-4 h-4" />
+                    <Pencil className="w-4 h-4" strokeWidth={1.5} />
                   </button>
                   <button
                     onClick={() =>
@@ -318,18 +361,18 @@ export function ClientsPage() {
                         selectedClient.company_name,
                       )
                     }
-                    className="p-1.5 rounded transition-colors hover:bg-red-50"
-                    style={{ color: "#c13a2a" }}
+                    className="p-1.5 transition-colors hover:bg-red-50"
+                    style={{ color: "var(--danger)" }}
                     title="Delete client"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4" strokeWidth={1.5} />
                   </button>
                   <button
                     onClick={() => setSelected(null)}
-                    className="hover:bg-[#e8e4dd] p-1.5 rounded transition-colors"
-                    style={{ color: "#7a7469" }}
+                    className="hover:bg-[var(--surface-3)] p-1.5 transition-colors"
+                    style={{ color: "var(--muted)" }}
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-4 h-4" strokeWidth={1.5} />
                   </button>
                 </div>
               }
@@ -337,11 +380,11 @@ export function ClientsPage() {
               <div className="space-y-6">
                 <div className="flex items-start gap-4">
                   <div
-                    className="w-12 h-12 rounded flex items-center justify-center text-lg font-bold flex-shrink-0"
+                    className="w-12 h-12 flex items-center justify-center text-lg font-bold flex-shrink-0"
                     style={{
-                      backgroundColor: "#e8e4dd",
-                      color: "#181410",
-                      border: "1px solid #d9d4ce",
+                      backgroundColor: "var(--surface-3)",
+                      color: "var(--ink)",
+                      border: "1px solid var(--border)",
                     }}
                   >
                     {selectedClient.company_name[0]}
@@ -350,15 +393,15 @@ export function ClientsPage() {
                     <h2
                       className="text-xl font-bold leading-none mb-1.5"
                       style={{
-                        fontFamily: "'Space Grotesk', sans-serif",
-                        color: "#181410",
+                        fontFamily: "var(--font-heading)",
+                        color: "var(--ink)",
                       }}
                     >
                       {selectedClient.company_name}
                     </h2>
                     <div
                       className="flex items-center gap-2 text-sm"
-                      style={{ color: "#7a7469" }}
+                      style={{ color: "var(--muted)" }}
                     >
                       <span className="font-medium">
                         {selectedClient.contact_name ?? "No contact"}
@@ -369,41 +412,41 @@ export function ClientsPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div
-                    className="p-4 rounded-lg"
+                    className="p-4 "
                     style={{
-                      backgroundColor: "#eeeae4",
-                      border: "1px solid #d9d4ce",
+                      backgroundColor: "var(--surface-2)",
+                      border: "1px solid var(--border)",
                     }}
                   >
                     <div
                       className="text-[11px] font-bold uppercase tracking-widest mb-1"
-                      style={{ color: "#7a7469" }}
+                      style={{ color: "var(--muted)" }}
                     >
                       Total Jobs
                     </div>
                     <div
                       className="text-2xl font-bold font-mono tnum"
-                      style={{ color: "#181410" }}
+                      style={{ color: "var(--ink)" }}
                     >
                       {selectedClient.total_jobs}
                     </div>
                   </div>
                   <div
-                    className="p-4 rounded-lg"
+                    className="p-4 "
                     style={{
-                      backgroundColor: "#eeeae4",
-                      border: "1px solid #d9d4ce",
+                      backgroundColor: "var(--surface-2)",
+                      border: "1px solid var(--border)",
                     }}
                   >
                     <div
                       className="text-[11px] font-bold uppercase tracking-widest mb-1"
-                      style={{ color: "#7a7469" }}
+                      style={{ color: "var(--muted)" }}
                     >
                       Total Value
                     </div>
                     <div
                       className="text-2xl font-bold font-mono tnum"
-                      style={{ color: "#1b5e78" }}
+                      style={{ color: "var(--accent)" }}
                     >
                       {formatCurrency(selectedClient.total_value)}
                     </div>
@@ -414,8 +457,8 @@ export function ClientsPage() {
                   <h3
                     className="text-[11px] font-bold uppercase tracking-widest"
                     style={{
-                      color: "#7a7469",
-                      fontFamily: "'Space Grotesk', sans-serif",
+                      color: "var(--muted)",
+                      fontFamily: "var(--font-heading)",
                     }}
                   >
                     Contact Details
@@ -423,7 +466,7 @@ export function ClientsPage() {
                   <div
                     className="space-y-3"
                     style={{
-                      borderTop: "1px solid #d9d4ce",
+                      borderTop: "1px solid var(--border)",
                       paddingTop: "12px",
                     }}
                   >
@@ -431,35 +474,35 @@ export function ClientsPage() {
                       {
                         label: "Email",
                         value: selectedClient.email,
-                        icon: <Mail className="w-3.5 h-3.5" />,
+                        icon: <Mail className="w-3.5 h-3.5" strokeWidth={1.5} />,
                       },
                       {
                         label: "Phone",
                         value: selectedClient.phone,
-                        icon: <Phone className="w-3.5 h-3.5" />,
+                        icon: <Phone className="w-3.5 h-3.5" strokeWidth={1.5} />,
                       },
                       {
                         label: "Address",
                         value: selectedClient.address,
-                        icon: <MapPin className="w-3.5 h-3.5" />,
+                        icon: <MapPin className="w-3.5 h-3.5" strokeWidth={1.5} />,
                       },
                       {
                         label: "VAT No",
                         value: selectedClient.vat_number,
-                        icon: <Building2 className="w-3.5 h-3.5" />,
+                        icon: <Building2 className="w-3.5 h-3.5" strokeWidth={1.5} />,
                       },
                     ].map(({ label, value, icon }) => (
                       <div key={label} className="flex gap-3">
                         <div
                           className="w-6 flex-shrink-0 flex items-center justify-center mt-0.5"
-                          style={{ color: "#7a7469" }}
+                          style={{ color: "var(--muted)" }}
                         >
                           {icon}
                         </div>
                         <div className="min-w-0">
                           <div
                             className="text-[10px] font-bold uppercase tracking-widest mb-0.5"
-                            style={{ color: "#7a7469" }}
+                            style={{ color: "var(--muted)" }}
                           >
                             {label}
                           </div>
@@ -467,12 +510,12 @@ export function ClientsPage() {
                             <div
                               className="text-sm font-medium truncate"
                               style={{
-                                color: "#181410",
+                                color: "var(--ink)",
                                 fontFamily:
                                   label === "Email" ||
                                   label === "Phone" ||
                                   label === "VAT No"
-                                    ? "'JetBrains Mono', monospace"
+                                    ? "var(--font-heading)"
                                     : "inherit",
                               }}
                             >
@@ -481,7 +524,7 @@ export function ClientsPage() {
                           ) : (
                             <div
                               className="text-sm italic"
-                              style={{ color: "#a8a099" }}
+                              style={{ color: "var(--muted-2)" }}
                             >
                               Not provided
                             </div>
@@ -497,18 +540,18 @@ export function ClientsPage() {
                     <h3
                       className="text-[11px] font-bold uppercase tracking-widest mb-3"
                       style={{
-                        color: "#7a7469",
-                        fontFamily: "'Space Grotesk', sans-serif",
+                        color: "var(--muted)",
+                        fontFamily: "var(--font-heading)",
                       }}
                     >
                       Notes
                     </h3>
                     <div
-                      className="p-4 rounded-lg text-sm leading-relaxed whitespace-pre-wrap"
+                      className="p-4 text-sm leading-relaxed whitespace-pre-wrap"
                       style={{
-                        backgroundColor: "#fafaf8",
-                        border: "1px solid #d9d4ce",
-                        color: "#4a4540",
+                        backgroundColor: "var(--surface)",
+                        border: "1px solid var(--border)",
+                        color: "var(--ink-2)",
                       }}
                     >
                       {selectedClient.notes}
@@ -536,7 +579,7 @@ export function ClientsPage() {
               placeholder="e.g. Midlands Groundworks Ltd"
             />
             {errors.company_name && (
-              <p className="mt-1 text-xs" style={{ color: "#c13a2a" }}>
+              <p className="mt-1 text-xs" style={{ color: "var(--danger)" }}>
                 {errors.company_name}
               </p>
             )}

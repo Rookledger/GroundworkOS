@@ -31,7 +31,7 @@ export class ErrorBoundary extends Component<Props, State> {
       <div
         style={{
           minHeight: "100vh",
-          background: "#f0ede8",
+          background: "var(--bg)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -41,8 +41,8 @@ export class ErrorBoundary extends Component<Props, State> {
       >
         <div
           style={{
-            background: "#fafaf8",
-            border: "1px solid #d9d4ce",
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
             borderRadius: "12px",
             padding: "48px 40px",
             maxWidth: "480px",
@@ -81,7 +81,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <p
             style={{
               fontSize: "14px",
-              color: "#7a7469",
+              color: "var(--muted)",
               lineHeight: "1.6",
               margin: "0 0 32px",
             }}
@@ -94,12 +94,12 @@ export class ErrorBoundary extends Component<Props, State> {
             <details
               style={{
                 textAlign: "left",
-                background: "#f0ede8",
+                background: "var(--bg)",
                 borderRadius: "8px",
                 padding: "12px 16px",
                 marginBottom: "28px",
                 fontSize: "12px",
-                color: "#7a7469",
+                color: "var(--muted)",
                 fontFamily: "'JetBrains Mono', monospace",
                 cursor: "pointer",
               }}
@@ -126,7 +126,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "8px",
-                background: "#1b5e78",
+                background: "var(--accent)",
                 color: "#ffffff",
                 border: "none",
                 borderRadius: "8px",
@@ -150,8 +150,8 @@ export class ErrorBoundary extends Component<Props, State> {
                 alignItems: "center",
                 gap: "8px",
                 background: "transparent",
-                color: "#1b5e78",
-                border: "1px solid #d9d4ce",
+                color: "var(--accent)",
+                border: "1px solid var(--border)",
                 borderRadius: "8px",
                 padding: "10px 20px",
                 fontSize: "14px",
