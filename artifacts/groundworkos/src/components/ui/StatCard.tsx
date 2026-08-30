@@ -7,6 +7,8 @@ interface StatCardProps {
   sub?: string;
   accent?: boolean;
   danger?: boolean;
+  actionLabel?: string;
+  onAction?: () => void;
   className?: string;
 }
 
@@ -16,6 +18,8 @@ export function StatCard({
   sub,
   accent,
   danger,
+  actionLabel,
+  onAction,
   className,
 }: StatCardProps) {
   return (
@@ -70,6 +74,20 @@ export function StatCard({
         <p style={{ fontSize: "12px", color: "var(--muted)", fontWeight: 500 }}>
           {sub}
         </p>
+      )}
+      {actionLabel && (
+        <button
+          onClick={onAction}
+          className="mt-2 text-left"
+          style={{
+            fontFamily: "var(--font-heading)",
+            fontWeight: 600,
+            fontSize: "12px",
+            color: danger ? "var(--danger-ink)" : "var(--accent)",
+          }}
+        >
+          {actionLabel} →
+        </button>
       )}
     </div>
   );

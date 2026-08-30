@@ -120,7 +120,7 @@ export function AuditLogPage() {
           style={{
             color: "var(--muted)",
             fontSize: 14,
-            fontFamily: "'Inter', sans-serif",
+            fontFamily: "var(--font-body)",
           }}
         >
           Admin access required
@@ -136,7 +136,7 @@ export function AuditLogPage() {
           className="text-xl font-semibold"
           style={{
             color: "var(--ink)",
-            fontFamily: "'Space Grotesk', sans-serif",
+            fontFamily: "var(--font-heading)",
           }}
         >
           Audit Trail
@@ -168,10 +168,10 @@ export function AuditLogPage() {
 
       <div className="flex flex-wrap gap-3">
         <div
-          className="flex items-center gap-2 flex-1 min-w-[200px] max-w-sm px-3 py-2 rounded-lg"
+          className="flex items-center gap-2 flex-1 min-w-[200px] max-w-sm px-3 py-2 "
           style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border)" }}
         >
-          <Search
+          <Search strokeWidth={1.5}
             className="w-3.5 h-3.5 flex-shrink-0"
             style={{ color: "var(--muted-2)" }}
           />
@@ -186,7 +186,7 @@ export function AuditLogPage() {
         <select
           value={entityFilter}
           onChange={(e) => setEntityFilter(e.target.value)}
-          className="py-2 px-3 rounded-lg text-sm focus:outline-none"
+          className="py-2 px-3 text-sm focus:outline-none"
           style={{
             backgroundColor: "var(--surface)",
             border: "1px solid var(--border)",
@@ -203,7 +203,7 @@ export function AuditLogPage() {
         <select
           value={actionFilter}
           onChange={(e) => setActionFilter(e.target.value)}
-          className="py-2 px-3 rounded-lg text-sm focus:outline-none"
+          className="py-2 px-3 text-sm focus:outline-none"
           style={{
             backgroundColor: "var(--surface)",
             border: "1px solid var(--border)",
@@ -218,7 +218,7 @@ export function AuditLogPage() {
         <select
           value={days}
           onChange={(e) => setDays(e.target.value)}
-          className="py-2 px-3 rounded-lg text-sm focus:outline-none"
+          className="py-2 px-3 text-sm focus:outline-none"
           style={{
             backgroundColor: "var(--surface)",
             border: "1px solid var(--border)",
@@ -236,7 +236,7 @@ export function AuditLogPage() {
         <Panel noPad className="flex-1 min-w-0">
           {loading ? (
             <div className="py-16 flex flex-col items-center gap-3">
-              <Clock
+              <Clock strokeWidth={1.5}
                 className="w-6 h-6 animate-pulse"
                 style={{ color: "var(--border)" }}
               />
@@ -246,7 +246,7 @@ export function AuditLogPage() {
             </div>
           ) : filtered.length === 0 ? (
             <div className="py-16 flex flex-col items-center gap-3">
-              <Filter className="w-6 h-6" style={{ color: "var(--border)" }} />
+              <Filter strokeWidth={1.5} className="w-6 h-6" style={{ color: "var(--border)" }} />
               <p className="text-sm font-medium" style={{ color: "var(--muted)" }}>
                 No entries found
               </p>
@@ -318,7 +318,7 @@ export function AuditLogPage() {
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
                             <div
-                              className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
+                              className="w-6 h-6 flex items-center justify-center text-[10px] font-bold flex-shrink-0"
                               style={{
                                 backgroundColor: "var(--accent)",
                                 color: "#ffffff",
@@ -346,7 +346,7 @@ export function AuditLogPage() {
                         </td>
                         <td className="py-3 px-4">
                           <span
-                            className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded"
+                            className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 "
                             style={{
                               backgroundColor: cfg.bg,
                               color: cfg.color,
@@ -429,7 +429,7 @@ export function AuditLogPage() {
                     Action
                   </div>
                   <span
-                    className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded"
+                    className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 "
                     style={{
                       backgroundColor: ACTION_CONFIG[selected.action].bg,
                       color: ACTION_CONFIG[selected.action].color,
@@ -468,7 +468,7 @@ export function AuditLogPage() {
                         {Object.entries(selected.changes).map(([k, v]) => (
                           <div
                             key={k}
-                            className="p-2 rounded text-xs"
+                            className="p-2 text-xs"
                             style={{ backgroundColor: "var(--bg)" }}
                           >
                             <div

@@ -46,6 +46,8 @@ const statusConfig: Record<
     bg: "rgba(184,115,12,0.12)",
   },
   pending: { label: "Pending", color: "#5d5d60", bg: "rgba(93,93,96,0.08)" },
+  approved: { label: "Approved", color: "#2a6e45", bg: "rgba(42,110,69,0.1)" },
+  query: { label: "Query", color: "#b23a26", bg: "rgba(178,58,38,0.1)" },
   gross: { label: "Gross", color: "#2a6e45", bg: "rgba(42,110,69,0.1)" },
   net: { label: "Net 20%", color: "#5d5d60", bg: "rgba(93,93,96,0.1)" },
   unmatched: {

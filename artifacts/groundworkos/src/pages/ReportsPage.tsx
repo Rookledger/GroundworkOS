@@ -55,12 +55,12 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
     <div
-      className="px-3 py-2.5 rounded-lg gw-shadow text-xs"
+      className="px-3 py-2.5 gw-shadow text-xs"
       style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border)" }}
     >
       <div
         className="font-medium mb-1.5"
-        style={{ color: "var(--ink)", fontFamily: "'Inter', sans-serif" }}
+        style={{ color: "var(--ink)", fontFamily: "var(--font-body)" }}
       >
         {label}
       </div>
@@ -71,7 +71,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         >
           <div className="flex items-center gap-2">
             <span
-              className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+              className="w-1.5 h-1.5 flex-shrink-0"
               style={{ backgroundColor: p.color }}
             />
             <span style={{ color: "var(--muted)" }}>{p.name}</span>
@@ -80,7 +80,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
             className="tnum"
             style={{
               color: "var(--ink)",
-              fontFamily: "'JetBrains Mono', monospace",
+              fontFamily: "var(--font-body)",
             }}
           >
             {typeof p.value === "number" && p.value > 100
@@ -385,7 +385,7 @@ export function ReportsPage() {
             className="text-xl font-semibold"
             style={{
               color: "var(--ink)",
-              fontFamily: "'Space Grotesk', sans-serif",
+              fontFamily: "var(--font-heading)",
             }}
           >
             Reports
@@ -395,7 +395,7 @@ export function ReportsPage() {
           </p>
         </div>
         <Btn variant="outline" size="sm" onClick={exportCurrentTab}>
-          <Download className="w-3.5 h-3.5" /> Export {exportLabel[tab]}
+          <Download strokeWidth={1.5} className="w-3.5 h-3.5" /> Export {exportLabel[tab]}
         </Btn>
       </div>
 
@@ -479,7 +479,7 @@ export function ReportsPage() {
                         tick={{
                           fill: "var(--muted)",
                           fontSize: 11,
-                          fontFamily: "'JetBrains Mono', monospace",
+                          fontFamily: "var(--font-body)",
                         }}
                         axisLine={false}
                         tickLine={false}
@@ -489,7 +489,7 @@ export function ReportsPage() {
                         tick={{
                           fill: "var(--muted)",
                           fontSize: 10,
-                          fontFamily: "'JetBrains Mono', monospace",
+                          fontFamily: "var(--font-body)",
                         }}
                         axisLine={false}
                         tickLine={false}
@@ -528,7 +528,7 @@ export function ReportsPage() {
                     style={{ color: "var(--muted)" }}
                   >
                     <span
-                      className="w-3 h-3 rounded-sm inline-block"
+                      className="w-3 h-3 inline-block"
                       style={{ backgroundColor: "#e0dbd5" }}
                     />{" "}
                     Invoiced
@@ -538,7 +538,7 @@ export function ReportsPage() {
                     style={{ color: "var(--muted)" }}
                   >
                     <span
-                      className="w-3 h-3 rounded-sm inline-block"
+                      className="w-3 h-3 inline-block"
                       style={{ backgroundColor: "#2a6e45" }}
                     />{" "}
                     Collected
@@ -580,7 +580,7 @@ export function ReportsPage() {
                     className="flex items-center gap-2 text-[11px] uppercase tracking-widest font-medium"
                   >
                     <span
-                      className="w-2 h-2 rounded-full flex-shrink-0"
+                      className="w-2 h-2 flex-shrink-0"
                       style={{
                         backgroundColor: TYPE_COLORS[i % TYPE_COLORS.length],
                       }}
@@ -624,7 +624,7 @@ export function ReportsPage() {
                       tick={{
                         fill: "var(--muted)",
                         fontSize: 11,
-                        fontFamily: "'JetBrains Mono', monospace",
+                        fontFamily: "var(--font-body)",
                       }}
                       axisLine={false}
                       tickLine={false}
@@ -634,7 +634,7 @@ export function ReportsPage() {
                       tick={{
                         fill: "var(--muted)",
                         fontSize: 10,
-                        fontFamily: "'JetBrains Mono', monospace",
+                        fontFamily: "var(--font-body)",
                       }}
                       axisLine={false}
                       tickLine={false}
@@ -685,7 +685,7 @@ export function ReportsPage() {
                       tick={{
                         fill: "var(--muted)",
                         fontSize: 11,
-                        fontFamily: "'JetBrains Mono', monospace",
+                        fontFamily: "var(--font-body)",
                       }}
                       axisLine={false}
                       tickLine={false}
@@ -695,7 +695,7 @@ export function ReportsPage() {
                       tick={{
                         fill: "var(--muted)",
                         fontSize: 10,
-                        fontFamily: "'JetBrains Mono', monospace",
+                        fontFamily: "var(--font-body)",
                       }}
                       axisLine={false}
                       tickLine={false}
@@ -761,7 +761,7 @@ export function ReportsPage() {
                 return (
                   <div
                     key={label}
-                    className="p-4 rounded-lg"
+                    className="p-4 "
                     style={{
                       backgroundColor: "var(--surface)",
                       border: "1px solid var(--border)",
@@ -769,14 +769,14 @@ export function ReportsPage() {
                   >
                     <div className="flex items-center gap-2 mb-3">
                       <span
-                        className="w-2 h-2 rounded-full"
+                        className="w-2 h-2 "
                         style={{ backgroundColor: color }}
                       />
                       <span
                         className="text-[11px] font-bold uppercase tracking-widest"
                         style={{
                           color: "var(--muted)",
-                          fontFamily: "'Space Grotesk', sans-serif",
+                          fontFamily: "var(--font-heading)",
                         }}
                       >
                         {label}
@@ -795,11 +795,11 @@ export function ReportsPage() {
                       {count} jobs · {pct}% of pipeline
                     </div>
                     <div
-                      className="h-1.5 rounded-full overflow-hidden"
+                      className="h-1.5 overflow-hidden"
                       style={{ backgroundColor: "var(--surface-2)" }}
                     >
                       <div
-                        className="h-full rounded-full transition-all duration-500"
+                        className="h-full transition-all duration-500"
                         style={{ width: `${pct}%`, backgroundColor: color }}
                       />
                     </div>
@@ -920,7 +920,7 @@ export function ReportsPage() {
                           tick={{
                             fill: "var(--muted)",
                             fontSize: 10,
-                            fontFamily: "'JetBrains Mono', monospace",
+                            fontFamily: "var(--font-body)",
                           }}
                           axisLine={false}
                           tickLine={false}
@@ -930,7 +930,7 @@ export function ReportsPage() {
                           tick={{
                             fill: "var(--muted)",
                             fontSize: 10,
-                            fontFamily: "'JetBrains Mono', monospace",
+                            fontFamily: "var(--font-body)",
                           }}
                           axisLine={false}
                           tickLine={false}
@@ -979,7 +979,7 @@ export function ReportsPage() {
                         style={{ color: "var(--muted)" }}
                       >
                         <span
-                          className="w-3 h-3 rounded-sm inline-block"
+                          className="w-3 h-3 inline-block"
                           style={{ backgroundColor: color }}
                         />{" "}
                         {label}
@@ -1057,7 +1057,7 @@ export function ReportsPage() {
                             </td>
                             <td className="py-3 px-4">
                               <span
-                                className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded"
+                                className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 "
                                 style={{
                                   backgroundColor:
                                     r.job.status === "active"
@@ -1128,14 +1128,14 @@ export function ReportsPage() {
                                     {margin.toFixed(1)}%
                                   </div>
                                   <div
-                                    className="h-1 rounded-full mt-1.5 overflow-hidden"
+                                    className="h-1 mt-1.5 overflow-hidden"
                                     style={{
                                       width: 60,
                                       backgroundColor: "var(--surface-3)",
                                     }}
                                   >
                                     <div
-                                      className="h-full rounded-full"
+                                      className="h-full "
                                       style={{
                                         width: `${Math.min(100, Math.max(0, margin))}%`,
                                         backgroundColor: marginColor,
@@ -1222,7 +1222,7 @@ export function ReportsPage() {
       {tab === "cis" && (
         <div className="space-y-6">
           <div
-            className="flex items-start gap-3 p-4 rounded-lg"
+            className="flex items-start gap-3 p-4 "
             style={{
               backgroundColor: "var(--accent-bg)",
               border: "1px solid rgba(27,94,120,0.2)",
@@ -1283,18 +1283,18 @@ export function ReportsPage() {
                         onClick={() =>
                           exportCIS300(monthReturns, `CIS300-${month}.csv`)
                         }
-                        className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded transition-colors hover:bg-[var(--surface-3)]"
+                        className="flex items-center gap-1.5 text-xs px-2.5 py-1 transition-colors hover:bg-[var(--surface-3)]"
                         style={{
                           color: "var(--accent)",
                           border: "1px solid var(--border)",
                         }}
                         title="Download CIS300 CSV for HMRC submission"
                       >
-                        <FileDown className="w-3.5 h-3.5" /> CIS300
+                        <FileDown strokeWidth={1.5} className="w-3.5 h-3.5" /> CIS300
                       </button>
                       {submitted ? (
                         <span
-                          className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded"
+                          className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 "
                           style={{
                             backgroundColor: "rgba(42,110,69,0.1)",
                             color: GREEN,
@@ -1468,7 +1468,7 @@ export function ReportsPage() {
       {tab === "ratebook" && (
         <div className="space-y-6">
           <div
-            className="flex items-center justify-between p-4 rounded-lg gw-shadow"
+            className="flex items-center justify-between p-4 gw-shadow"
             style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border)" }}
           >
             <div className="flex items-center gap-3">
@@ -1481,7 +1481,7 @@ export function ReportsPage() {
               <select
                 value={rateCategory}
                 onChange={(e) => setRateCategory(e.target.value)}
-                className="py-1.5 px-3 rounded-md text-sm font-medium focus:outline-none"
+                className="py-1.5 px-3 text-sm font-medium focus:outline-none"
                 style={{
                   backgroundColor: "var(--surface-2)",
                   border: "1px solid var(--border)",
@@ -1518,7 +1518,7 @@ export function ReportsPage() {
                     title={cat}
                     actions={
                       <span
-                        className="text-xs font-mono px-2 py-1 rounded"
+                        className="text-xs font-mono px-2 py-1 "
                         style={{ backgroundColor: "var(--surface-2)", color: "var(--ink-2)" }}
                       >
                         Avg £{avgTotal.toFixed(2)}/unit
@@ -1632,7 +1632,7 @@ export function ReportsPage() {
                                 £{r.total_rate.toFixed(2)}
                               </td>
                               <td className="py-3 px-2 text-right">
-                                <ChevronRight
+                                <ChevronRight strokeWidth={1.5}
                                   className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity"
                                   style={{ color: "var(--muted)" }}
                                 />

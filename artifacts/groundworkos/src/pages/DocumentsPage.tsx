@@ -4,6 +4,7 @@ import {
   Search,
   AlertTriangle,
   FolderOpen,
+  FileText,
   X,
   ChevronRight,
   Trash2,
@@ -12,10 +13,12 @@ import {
   Upload,
   Pencil,
 } from "lucide-react";
+import { useLocation } from "wouter";
 import { Panel } from "../components/ui/Panel";
 import { StatCard } from "../components/ui/StatCard";
 import { Badge } from "../components/ui/Badge";
 import { Btn } from "../components/ui/Btn";
+import { EmptyState } from "../components/ui/EmptyState";
 import { Modal, Field, Input, Select, Textarea } from "../components/ui/Modal";
 import { formatDate, daysUntil } from "../lib/utils";
 import { useApp } from "../store/AppContext";
@@ -68,8 +71,12 @@ const emptyForm = {
 export function DocumentsPage() {
   const { state, dispatch } = useApp();
   const { documents } = state;
+  const [, setLocation] = useLocation();
 
   const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState<
+    "all" | "valid" | "expiring_soon" | "expired"
+  >("all");
   const [filterType, setFilterType] = useState<DocumentType | "all">("all");
   const [filterRelatedTo, setFilterRelatedTo] = useState<
     DocumentRelatedTo | "all"
@@ -88,6 +95,7 @@ export function DocumentsPage() {
   });
 
   const filtered = documents.filter((d) => {
+    if (filterStatus !== "all" && d.status !== filterStatus) return false;
     if (filterType !== "all" && d.type !== filterType) return false;
     if (filterRelatedTo !== "all" && d.related_to !== filterRelatedTo)
       return false;
@@ -225,7 +233,7 @@ export function DocumentsPage() {
             className="text-2xl font-bold"
             style={{
               color: "var(--ink)",
-              fontFamily: "'Space Grotesk', sans-serif",
+              fontFamily: "var(--font-heading)",
             }}
           >
             Documents
@@ -235,7 +243,7 @@ export function DocumentsPage() {
           </p>
         </div>
         <Btn onClick={openNew}>
-          <Plus className="w-4 h-4" /> Add Document
+          <Plus className="w-4 h-4" strokeWidth={1.5} /> Add Document
         </Btn>
       </div>
 
@@ -262,11 +270,12 @@ export function DocumentsPage() {
 
       {(expired.length > 0 || expiring.length > 0) && (
         <div
-          className="flex items-start gap-3 p-4 rounded-xl"
+          className="flex items-start gap-3 p-4"
           style={{ backgroundColor: "var(--surface-2)", border: "1px solid var(--border)" }}
         >
           <AlertTriangle
             className="w-4 h-4 flex-shrink-0 mt-0.5"
+            strokeWidth={1.5}
             style={{ color: "var(--danger)" }}
           />
           <div className="flex-1">
@@ -280,7 +289,7 @@ export function DocumentsPage() {
               {[...expired, ...expiring].map((d) => (
                 <span
                   key={d.id}
-                  className="text-xs px-2 py-1 rounded font-mono font-medium"
+                  className="text-xs px-2 py-1 font-medium"
                   style={{
                     backgroundColor: "var(--surface)",
                     border: "1px solid var(--border)",
@@ -298,18 +307,70 @@ export function DocumentsPage() {
         </div>
       )}
 
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div
+          className="flex items-center gap-1 overflow-x-auto"
+          style={{ borderBottom: "1px solid var(--border)" }}
+        >
+          {(
+            [
+              { id: "all", label: "All", count: documents.length },
+              { id: "valid", label: "Valid", count: valid.length },
+              { id: "expiring_soon", label: "Expiring", count: expiring.length },
+              { id: "expired", label: "Expired", count: expired.length },
+            ] as const
+          ).map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setFilterStatus(tab.id)}
+              className="px-4 py-2.5 text-sm transition-colors relative whitespace-nowrap flex items-center gap-1.5"
+              style={
+                filterStatus === tab.id
+                  ? {
+                      color: "var(--ink)",
+                      fontWeight: 600,
+                      borderBottom: "2px solid var(--accent)",
+                      marginBottom: "-1px",
+                    }
+                  : { color: "var(--muted)" }
+              }
+            >
+              {tab.label}
+              <span
+                className="inline-flex items-center justify-center px-1.5 text-[11px] font-bold"
+                style={{
+                  fontFamily: "var(--font-heading)",
+                  backgroundColor:
+                    filterStatus === tab.id
+                      ? "var(--accent-bg)"
+                      : "var(--surface-3)",
+                  color:
+                    filterStatus === tab.id
+                      ? "var(--accent)"
+                      : "var(--muted-2)",
+                  minWidth: "18px",
+                }}
+              >
+                {tab.count}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative">
           <Search
             className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5"
-            style={{ color: "#c0bab4" }}
+            strokeWidth={1.5}
+            style={{ color: "var(--muted-2)" }}
           />
           <input
             type="text"
             placeholder="Search documents..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 pr-4 py-1.5 rounded-md text-sm w-52 focus:outline-none"
+            className="pl-9 pr-4 py-1.5 text-sm w-52 focus:outline-none"
             style={{
               backgroundColor: "var(--surface)",
               border: "1px solid var(--border)",
@@ -324,7 +385,7 @@ export function DocumentsPage() {
           onChange={(e) =>
             setFilterType(e.target.value as DocumentType | "all")
           }
-          className="py-1.5 px-3 rounded-md text-sm focus:outline-none"
+          className="py-1.5 px-3 text-sm focus:outline-none"
           style={{
             backgroundColor: "var(--surface)",
             border: "1px solid var(--border)",
@@ -343,7 +404,7 @@ export function DocumentsPage() {
           onChange={(e) =>
             setFilterRelatedTo(e.target.value as DocumentRelatedTo | "all")
           }
-          className="py-1.5 px-3 rounded-md text-sm focus:outline-none"
+          className="py-1.5 px-3 text-sm focus:outline-none"
           style={{
             backgroundColor: "var(--surface)",
             border: "1px solid var(--border)",
@@ -362,39 +423,74 @@ export function DocumentsPage() {
         <div className={selectedDoc ? "xl:col-span-2" : "xl:col-span-3"}>
           <Panel title="Document Directory" noPad>
             {filtered.length === 0 ? (
-              <p
-                className="text-center py-12 text-sm"
-                style={{ color: "#c0bab4" }}
-              >
-                No documents found
-              </p>
+              <EmptyState
+                icon={FolderOpen}
+                title={
+                  documents.length === 0
+                    ? "No documents yet"
+                    : "No documents match your filters"
+                }
+                description={
+                  documents.length === 0
+                    ? "Store RAMS, compliance certs, permits and insurance so nothing lapses unnoticed."
+                    : "Try a different status, type or search term."
+                }
+                primaryLabel={
+                  documents.length === 0 ? "Add your first document" : undefined
+                }
+                onPrimary={documents.length === 0 ? openNew : undefined}
+                secondaryLabel="Import from spreadsheet"
+                onSecondary={() => setLocation("/import")}
+                hint={
+                  documents.length === 0
+                    ? "You can attach a file now or add it later."
+                    : undefined
+                }
+              />
             ) : (
               filtered.map((doc, i) => {
                 const days = daysUntil(doc.expiry_date);
                 const isExpiringSoon = days !== null && days <= 30 && days > 0;
                 const isExpired = doc.status === "expired";
+                const needsAttention = isExpired || isExpiringSoon;
+                const rowTint = isExpired
+                  ? "var(--danger-bg)"
+                  : isExpiringSoon
+                    ? "var(--warning-bg)"
+                    : undefined;
+                const rowBorderColor = isExpired
+                  ? "var(--danger)"
+                  : isExpiringSoon
+                    ? "var(--warning)"
+                    : "transparent";
                 return (
                   <div
                     key={doc.id}
                     onClick={() =>
                       setSelected(selected === doc.id ? null : doc.id)
                     }
-                    className="flex items-center gap-4 px-5 py-4 cursor-pointer group transition-colors hover:bg-[var(--surface-2)]"
+                    className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 px-5 py-4 cursor-pointer group transition-colors hover:bg-[var(--surface-2)]"
                     style={{
                       borderBottom:
                         i < filtered.length - 1 ? "1px solid var(--border)" : "none",
                       backgroundColor:
-                        selected === doc.id ? "var(--surface-2)" : undefined,
-                      borderLeft:
-                        selected === doc.id
-                          ? "2px solid var(--accent)"
-                          : "2px solid transparent",
+                        selected === doc.id ? "var(--surface-2)" : rowTint,
+                      borderLeft: `3px solid ${rowBorderColor}`,
                     }}
                   >
                     <div
-                      className="w-1.5 h-8 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: TYPE_COLORS[doc.type] }}
-                    />
+                      className="w-8 h-8 flex items-center justify-center flex-shrink-0"
+                      style={{
+                        backgroundColor: "var(--surface-3)",
+                        border: "1px solid var(--border)",
+                      }}
+                    >
+                      <FileText
+                        className="w-3.5 h-3.5"
+                        strokeWidth={1.5}
+                        style={{ color: TYPE_COLORS[doc.type] }}
+                      />
+                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span
@@ -403,15 +499,17 @@ export function DocumentsPage() {
                         >
                           {doc.name}
                         </span>
-                        {(isExpired || isExpiringSoon) && (
+                        {needsAttention && (
                           <AlertTriangle
                             className="w-3.5 h-3.5 flex-shrink-0"
-                            style={{ color: isExpired ? "var(--danger)" : "#e07b39" }}
+                            strokeWidth={1.5}
+                            style={{ color: isExpired ? "var(--danger)" : "var(--warning)" }}
                           />
                         )}
                         {doc.file_path && (
                           <Paperclip
                             className="w-3 h-3 flex-shrink-0"
+                            strokeWidth={1.5}
                             style={{ color: "var(--muted-2)" }}
                             aria-label="File attached"
                           />
@@ -424,31 +522,34 @@ export function DocumentsPage() {
                         {doc.related_name && <span> · {doc.related_name}</span>}
                       </div>
                     </div>
-                    <Badge status={doc.status} />
-                    <div
-                      className="text-right text-xs hidden md:block flex-shrink-0 ml-4 font-mono"
-                      style={{ color: "var(--muted)", minWidth: "90px" }}
-                    >
-                      {doc.expiry_date ? (
-                        <span
-                          style={{
-                            color: isExpired
-                              ? "var(--danger)"
-                              : isExpiringSoon
-                                ? "#e07b39"
-                                : "var(--muted)",
-                          }}
-                        >
-                          {formatDate(doc.expiry_date)}
-                        </span>
-                      ) : (
-                        <span>No expiry</span>
-                      )}
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <Badge status={doc.status} />
+                      <div
+                        className="text-right text-xs hidden md:block font-mono"
+                        style={{ color: "var(--muted)", minWidth: "90px" }}
+                      >
+                        {doc.expiry_date ? (
+                          <span
+                            style={{
+                              color: isExpired
+                                ? "var(--danger)"
+                                : isExpiringSoon
+                                  ? "var(--warning)"
+                                  : "var(--muted)",
+                            }}
+                          >
+                            {formatDate(doc.expiry_date)}
+                          </span>
+                        ) : (
+                          <span>No expiry</span>
+                        )}
+                      </div>
+                      <ChevronRight
+                        className="w-4 h-4 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        strokeWidth={1.5}
+                        style={{ color: "var(--muted)" }}
+                      />
                     </div>
-                    <ChevronRight
-                      className="w-4 h-4 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ml-2"
-                      style={{ color: "var(--muted)" }}
-                    />
                   </div>
                 );
               })
@@ -463,26 +564,26 @@ export function DocumentsPage() {
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => openEdit(selectedDoc)}
-                    className="p-1 rounded transition-colors hover:bg-[var(--surface-3)]"
+                    className="p-1 transition-colors hover:bg-[var(--surface-3)]"
                     style={{ color: "var(--muted)" }}
                     title="Edit document"
                   >
-                    <Pencil className="w-4 h-4" />
+                    <Pencil className="w-4 h-4" strokeWidth={1.5} />
                   </button>
                   <button
                     onClick={() =>
                       handleDelete(selectedDoc.id, selectedDoc.name)
                     }
-                    className="p-1 rounded transition-colors hover:bg-red-50"
+                    className="p-1 transition-colors hover:bg-red-50"
                     style={{ color: "var(--danger)" }}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4" strokeWidth={1.5} />
                   </button>
                   <button
                     onClick={() => setSelected(null)}
                     style={{ color: "var(--muted)" }}
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-4 h-4" strokeWidth={1.5} />
                   </button>
                 </div>
               }
@@ -492,13 +593,14 @@ export function DocumentsPage() {
                   <div className="flex items-center gap-2 mb-2">
                     <FolderOpen
                       className="w-3.5 h-3.5"
+                      strokeWidth={1.5}
                       style={{ color: TYPE_COLORS[selectedDoc.type] }}
                     />
                     <span
                       className="text-xs"
                       style={{
                         color: TYPE_COLORS[selectedDoc.type],
-                        fontFamily: "'JetBrains Mono', monospace",
+                        fontFamily: "var(--font-body)",
                       }}
                     >
                       {TYPE_LABELS[selectedDoc.type]}
@@ -560,11 +662,11 @@ export function DocumentsPage() {
                       days <= 0
                         ? "var(--danger)"
                         : days <= 30
-                          ? "#e07b39"
-                          : "#2a6e45";
+                          ? "var(--warning)"
+                          : "var(--success)";
                     return (
                       <div
-                        className="p-3 rounded-md text-xs font-mono font-medium"
+                        className="p-3 text-xs font-mono font-medium"
                         style={{
                           backgroundColor: "var(--surface-2)",
                           border: `1px solid ${color}30`,
@@ -585,14 +687,14 @@ export function DocumentsPage() {
                     href={`${BASE}/api/storage${selectedDoc.file_path}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-colors hover:opacity-80"
+                    className="flex items-center gap-2 w-full px-3 py-2.5 text-sm font-medium transition-colors hover:opacity-80"
                     style={{
                       backgroundColor: "var(--accent-bg)",
                       color: "var(--accent)",
-                      border: "1px solid #b8d8e8",
+                      border: "1px solid var(--border-2)",
                     }}
                   >
-                    <Download className="w-4 h-4 flex-shrink-0" />
+                    <Download className="w-4 h-4 flex-shrink-0" strokeWidth={1.5} />
                     View / Download File
                   </a>
                 )}
@@ -722,15 +824,16 @@ export function DocumentsPage() {
             />
             {selectedFile ? (
               <div
-                className="flex items-center justify-between px-3 py-2.5 rounded-lg"
+                className="flex items-center justify-between px-3 py-2.5"
                 style={{
                   backgroundColor: "var(--accent-bg)",
-                  border: "1px solid #b8d8e8",
+                  border: "1px solid var(--border-2)",
                 }}
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <Paperclip
                     className="w-3.5 h-3.5 flex-shrink-0"
+                    strokeWidth={1.5}
                     style={{ color: "var(--accent)" }}
                   />
                   <span
@@ -754,21 +857,21 @@ export function DocumentsPage() {
                   className="ml-2 flex-shrink-0"
                   style={{ color: "var(--muted)" }}
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-4 h-4" strokeWidth={1.5} />
                 </button>
               </div>
             ) : (
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm transition-colors hover:opacity-80"
+                className="w-full flex items-center gap-2 px-3 py-2.5 text-sm transition-colors hover:opacity-80"
                 style={{
-                  backgroundColor: "#f5f3ef",
-                  border: "1px dashed #c0bab4",
+                  backgroundColor: "var(--surface-2)",
+                  border: "1px dashed var(--border-2)",
                   color: "var(--muted)",
                 }}
               >
-                <Upload className="w-4 h-4" />
+                <Upload className="w-4 h-4" strokeWidth={1.5} />
                 Click to attach a file
               </button>
             )}

@@ -9,12 +9,16 @@ import {
   MapPin,
   Trash2,
   Pencil,
+  Users,
+  Search,
 } from "lucide-react";
+import { useLocation } from "wouter";
 import { Panel } from "../components/ui/Panel";
 import { StatCard } from "../components/ui/StatCard";
 import { Btn } from "../components/ui/Btn";
 import { SearchInput } from "../components/ui/SearchInput";
 import { ListPanel } from "../components/ui/ListPanel";
+import { EmptyState } from "../components/ui/EmptyState";
 import { Modal, Field, Input, Textarea } from "../components/ui/Modal";
 import { cn, formatCurrency } from "../lib/utils";
 import { useApp } from "../store/AppContext";
@@ -40,6 +44,7 @@ const emptyForm = {
 export function ClientsPage() {
   const { state, dispatch } = useApp();
   const { clients } = state;
+  const [, navigate] = useLocation();
 
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
@@ -49,15 +54,17 @@ export function ClientsPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
-  const filtered = clients.filter((c) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return (
-      c.company_name.toLowerCase().includes(q) ||
-      (c.contact_name ?? "").toLowerCase().includes(q) ||
-      (c.email ?? "").toLowerCase().includes(q)
-    );
-  });
+  const filtered = clients
+    .filter((c) => {
+      if (!search) return true;
+      const q = search.toLowerCase();
+      return (
+        c.company_name.toLowerCase().includes(q) ||
+        (c.contact_name ?? "").toLowerCase().includes(q) ||
+        (c.email ?? "").toLowerCase().includes(q)
+      );
+    })
+    .sort((a, b) => b.total_value - a.total_value);
 
   const selectedClient = selected
     ? clients.find((c) => c.id === selected)
@@ -159,7 +166,7 @@ export function ClientsPage() {
         <h1
           className="text-2xl font-bold"
           style={{
-            fontFamily: "'Space Grotesk', sans-serif",
+            fontFamily: "var(--font-heading)",
             color: "var(--ink)",
             letterSpacing: "-0.02em",
           }}
@@ -167,7 +174,7 @@ export function ClientsPage() {
           Clients
         </h1>
         <Btn onClick={openNew}>
-          <Plus className="w-4 h-4" /> New Client
+          <Plus className="w-4 h-4" strokeWidth={1.5} /> New Client
         </Btn>
       </div>
 
@@ -194,7 +201,7 @@ export function ClientsPage() {
         value={search}
         onChange={setSearch}
         placeholder="Search clients..."
-        className="py-2 w-full max-w-sm rounded-lg focus:outline-none transition-colors"
+        className="py-2 w-full max-w-sm focus:outline-none transition-colors"
       />
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -224,7 +231,7 @@ export function ClientsPage() {
                 }}
               >
                 <div
-                  className="w-10 h-10 rounded flex items-center justify-center text-sm font-bold flex-shrink-0"
+                  className="w-10 h-10 flex items-center justify-center text-sm font-bold flex-shrink-0"
                   style={{
                     backgroundColor: "var(--surface-3)",
                     color: "var(--ink-2)",
@@ -252,7 +259,7 @@ export function ClientsPage() {
                     className="hidden md:flex items-center gap-1.5 w-48 flex-shrink-0 text-xs"
                     style={{ color: "var(--muted)" }}
                   >
-                    <Mail className="w-3.5 h-3.5" />
+                    <Mail className="w-3.5 h-3.5" strokeWidth={1.5} />
                     <span className="truncate font-mono">{client.email}</span>
                   </div>
                 )}
@@ -292,7 +299,7 @@ export function ClientsPage() {
                       : "opacity-0 group-hover:opacity-100",
                   )}
                   style={{ color: "var(--muted)" }}
-                />
+                strokeWidth={1.5} />
               </div>
             )}
           />
@@ -305,11 +312,11 @@ export function ClientsPage() {
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => openEdit(selectedClient)}
-                    className="p-1.5 rounded transition-colors hover:bg-[var(--surface-3)]"
+                    className="p-1.5 transition-colors hover:bg-[var(--surface-3)]"
                     style={{ color: "var(--muted)" }}
                     title="Edit client"
                   >
-                    <Pencil className="w-4 h-4" />
+                    <Pencil className="w-4 h-4" strokeWidth={1.5} />
                   </button>
                   <button
                     onClick={() =>
@@ -318,18 +325,18 @@ export function ClientsPage() {
                         selectedClient.company_name,
                       )
                     }
-                    className="p-1.5 rounded transition-colors hover:bg-red-50"
+                    className="p-1.5 transition-colors hover:bg-red-50"
                     style={{ color: "var(--danger)" }}
                     title="Delete client"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4" strokeWidth={1.5} />
                   </button>
                   <button
                     onClick={() => setSelected(null)}
-                    className="hover:bg-[var(--surface-3)] p-1.5 rounded transition-colors"
+                    className="hover:bg-[var(--surface-3)] p-1.5 transition-colors"
                     style={{ color: "var(--muted)" }}
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-4 h-4" strokeWidth={1.5} />
                   </button>
                 </div>
               }
@@ -337,7 +344,7 @@ export function ClientsPage() {
               <div className="space-y-6">
                 <div className="flex items-start gap-4">
                   <div
-                    className="w-12 h-12 rounded flex items-center justify-center text-lg font-bold flex-shrink-0"
+                    className="w-12 h-12 flex items-center justify-center text-lg font-bold flex-shrink-0"
                     style={{
                       backgroundColor: "var(--surface-3)",
                       color: "var(--ink)",
@@ -350,7 +357,7 @@ export function ClientsPage() {
                     <h2
                       className="text-xl font-bold leading-none mb-1.5"
                       style={{
-                        fontFamily: "'Space Grotesk', sans-serif",
+                        fontFamily: "var(--font-heading)",
                         color: "var(--ink)",
                       }}
                     >
@@ -369,7 +376,7 @@ export function ClientsPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div
-                    className="p-4 rounded-lg"
+                    className="p-4 "
                     style={{
                       backgroundColor: "var(--surface-2)",
                       border: "1px solid var(--border)",
@@ -389,7 +396,7 @@ export function ClientsPage() {
                     </div>
                   </div>
                   <div
-                    className="p-4 rounded-lg"
+                    className="p-4 "
                     style={{
                       backgroundColor: "var(--surface-2)",
                       border: "1px solid var(--border)",
@@ -415,7 +422,7 @@ export function ClientsPage() {
                     className="text-[11px] font-bold uppercase tracking-widest"
                     style={{
                       color: "var(--muted)",
-                      fontFamily: "'Space Grotesk', sans-serif",
+                      fontFamily: "var(--font-heading)",
                     }}
                   >
                     Contact Details
@@ -431,22 +438,22 @@ export function ClientsPage() {
                       {
                         label: "Email",
                         value: selectedClient.email,
-                        icon: <Mail className="w-3.5 h-3.5" />,
+                        icon: <Mail className="w-3.5 h-3.5" strokeWidth={1.5} />,
                       },
                       {
                         label: "Phone",
                         value: selectedClient.phone,
-                        icon: <Phone className="w-3.5 h-3.5" />,
+                        icon: <Phone className="w-3.5 h-3.5" strokeWidth={1.5} />,
                       },
                       {
                         label: "Address",
                         value: selectedClient.address,
-                        icon: <MapPin className="w-3.5 h-3.5" />,
+                        icon: <MapPin className="w-3.5 h-3.5" strokeWidth={1.5} />,
                       },
                       {
                         label: "VAT No",
                         value: selectedClient.vat_number,
-                        icon: <Building2 className="w-3.5 h-3.5" />,
+                        icon: <Building2 className="w-3.5 h-3.5" strokeWidth={1.5} />,
                       },
                     ].map(({ label, value, icon }) => (
                       <div key={label} className="flex gap-3">
@@ -472,7 +479,7 @@ export function ClientsPage() {
                                   label === "Email" ||
                                   label === "Phone" ||
                                   label === "VAT No"
-                                    ? "'JetBrains Mono', monospace"
+                                    ? "var(--font-heading)"
                                     : "inherit",
                               }}
                             >
@@ -498,13 +505,13 @@ export function ClientsPage() {
                       className="text-[11px] font-bold uppercase tracking-widest mb-3"
                       style={{
                         color: "var(--muted)",
-                        fontFamily: "'Space Grotesk', sans-serif",
+                        fontFamily: "var(--font-heading)",
                       }}
                     >
                       Notes
                     </h3>
                     <div
-                      className="p-4 rounded-lg text-sm leading-relaxed whitespace-pre-wrap"
+                      className="p-4 text-sm leading-relaxed whitespace-pre-wrap"
                       style={{
                         backgroundColor: "var(--surface)",
                         border: "1px solid var(--border)",

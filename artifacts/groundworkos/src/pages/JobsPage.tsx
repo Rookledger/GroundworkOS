@@ -8,11 +8,14 @@ import {
   ChevronRight,
   MapPin,
   Trash2,
+  HardHat,
 } from "lucide-react";
+import { useLocation } from "wouter";
 import { Panel } from "../components/ui/Panel";
 import { StatCard } from "../components/ui/StatCard";
 import { Badge } from "../components/ui/Badge";
 import { Btn } from "../components/ui/Btn";
+import { EmptyState } from "../components/ui/EmptyState";
 import { Modal, Field, Input, Select, Textarea } from "../components/ui/Modal";
 import { cn, formatCurrency, formatDate } from "../lib/utils";
 import { useApp } from "../store/AppContext";
@@ -69,6 +72,7 @@ const emptyForm = {
 export function JobsPage() {
   const { state, dispatch } = useApp();
   const { jobs, clients } = state;
+  const [, navigate] = useLocation();
 
   const [activeTab, setActiveTab] = useState("all");
   const [search, setSearch] = useState("");
@@ -275,7 +279,7 @@ export function JobsPage() {
             className="text-xl font-semibold tracking-tight"
             style={{
               color: "var(--ink)",
-              fontFamily: "'Space Grotesk', sans-serif",
+              fontFamily: "var(--font-heading)",
             }}
           >
             Jobs
@@ -286,7 +290,7 @@ export function JobsPage() {
           </p>
         </div>
         <Btn onClick={openNew}>
-          <Plus className="w-4 h-4" /> New Job
+          <Plus className="w-4 h-4" strokeWidth={1.5} /> New Job
         </Btn>
       </div>
 
@@ -319,48 +323,55 @@ export function JobsPage() {
           className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0"
           style={{ borderBottom: "1px solid var(--border)" }}
         >
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className="px-4 py-2 text-sm transition-colors relative whitespace-nowrap"
-              style={
-                activeTab === tab.id
-                  ? {
-                      color: "var(--ink)",
-                      fontWeight: 500,
-                      borderBottom: "2px solid var(--accent)",
-                      marginBottom: "-1px",
-                    }
-                  : { color: "var(--muted)" }
-              }
-            >
-              {tab.label}
-              {tab.id !== "all" && (
+          {TABS.map((tab) => {
+            const count =
+              tab.id === "all"
+                ? jobs.length
+                : jobs.filter((j) => j.status === tab.id).length;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className="px-4 py-2 text-sm transition-colors relative whitespace-nowrap flex items-center gap-1.5"
+                style={
+                  isActive
+                    ? {
+                        color: "var(--ink)",
+                        fontWeight: 500,
+                        borderBottom: "2px solid var(--accent)",
+                        marginBottom: "-1px",
+                      }
+                    : { color: "var(--muted)" }
+                }
+              >
+                {tab.label}
                 <span
-                  className="text-[11px] ml-1.5 font-mono font-bold"
+                  className="inline-flex items-center justify-center px-1.5 py-0.5 text-[11px] font-bold tnum"
                   style={{
-                    color: activeTab === tab.id ? "var(--accent)" : "#c0bab4",
+                    fontFamily: "var(--font-heading)",
+                    backgroundColor: isActive ? "var(--accent-bg)" : "var(--surface-3)",
+                    color: isActive ? "var(--accent)" : "var(--muted-2)",
                   }}
                 >
-                  {jobs.filter((j) => j.status === tab.id).length}
+                  {count}
                 </span>
-              )}
-            </button>
-          ))}
+              </button>
+            );
+          })}
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <div className="relative flex-1 sm:w-64">
             <Search
               className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5"
               style={{ color: "#c0bab4" }}
-            />
+            strokeWidth={1.5} />
             <input
               type="text"
               placeholder="Search jobs..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 pr-4 py-1.5 rounded-md text-sm w-full focus:outline-none transition-colors"
+              className="pl-9 pr-4 py-1.5 text-sm w-full focus:outline-none transition-colors"
               style={{
                 backgroundColor: "var(--surface)",
                 border: "1px solid var(--border)",
@@ -376,10 +387,10 @@ export function JobsPage() {
             onClick={() => setShowFilters((f) => !f)}
             className="flex-shrink-0"
           >
-            <Filter className="w-3.5 h-3.5" />
+            <Filter className="w-3.5 h-3.5" strokeWidth={1.5} />
             <span className="hidden sm:inline">Filter</span>
             {filterTypes.length > 0 && (
-              <span className="ml-1 text-[10px] bg-white/20 px-1.5 rounded font-mono">
+              <span className="ml-1 text-[10px] bg-white/20 px-1.5 font-mono">
                 {filterTypes.length}
               </span>
             )}
@@ -390,7 +401,7 @@ export function JobsPage() {
             onClick={handleExport}
             className="flex-shrink-0"
           >
-            <Download className="w-3.5 h-3.5" />
+            <Download className="w-3.5 h-3.5" strokeWidth={1.5} />
             <span className="hidden sm:inline">Export</span>
           </Btn>
         </div>
@@ -398,7 +409,7 @@ export function JobsPage() {
 
       {showFilters && (
         <div
-          className="p-4 rounded-xl"
+          className="p-4 "
           style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border)" }}
         >
           <div className="flex items-center justify-between mb-3">
@@ -406,7 +417,7 @@ export function JobsPage() {
               className="text-[11px] font-bold uppercase tracking-widest"
               style={{
                 color: "var(--muted)",
-                fontFamily: "'Space Grotesk', sans-serif",
+                fontFamily: "var(--font-heading)",
               }}
             >
               Filter by type
@@ -428,7 +439,7 @@ export function JobsPage() {
                 className="flex items-center gap-2 text-sm cursor-pointer group"
               >
                 <div
-                  className="relative flex items-center justify-center w-4 h-4 rounded border transition-colors"
+                  className="relative flex items-center justify-center w-4 h-4 border transition-colors"
                   style={{
                     borderColor: filterTypes.includes(t)
                       ? "var(--accent)"
@@ -492,14 +503,30 @@ export function JobsPage() {
             noPad
           >
             {filtered.length === 0 ? (
-              <div className="text-center py-16">
-                <p className="text-sm font-medium" style={{ color: "var(--ink-2)" }}>
-                  No jobs found
-                </p>
-                <p className="text-sm mt-1" style={{ color: "var(--muted-2)" }}>
-                  Try adjusting your search or filters
-                </p>
-              </div>
+              jobs.length === 0 ? (
+                <EmptyState
+                  icon={HardHat}
+                  title="No jobs yet"
+                  description="Jobs track a piece of work from first enquiry through to completion — status, crew, progress and value all live here."
+                  primaryLabel="Create your first job"
+                  onPrimary={openNew}
+                  secondaryLabel="Import from spreadsheet"
+                  onSecondary={() => navigate("/import")}
+                  hint="You can also import an existing job list as a CSV."
+                />
+              ) : (
+                <EmptyState
+                  icon={Search}
+                  title="No jobs match your filters"
+                  description="Try a different search term, clear the type filter, or switch tabs."
+                  primaryLabel="Clear filters"
+                  onPrimary={() => {
+                    setActiveTab("all");
+                    setSearch("");
+                    setFilterTypes([]);
+                  }}
+                />
+              )
             ) : (
               <div className="flex flex-col">
                 {filtered.map((job, i) => (
@@ -508,7 +535,7 @@ export function JobsPage() {
                     onClick={() =>
                       setSelected(selected === job.id ? null : job.id)
                     }
-                    className="flex items-center gap-4 px-5 py-4 cursor-pointer transition-colors hover:bg-[var(--surface-2)] group"
+                    className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 px-5 py-4 cursor-pointer transition-colors hover:bg-[var(--surface-2)] group"
                     style={{
                       borderBottom:
                         i < filtered.length - 1 ? "1px solid var(--border)" : "none",
@@ -520,101 +547,149 @@ export function JobsPage() {
                           : "3px solid transparent",
                     }}
                   >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2.5 mb-1.5">
-                        <span
-                          className="text-sm font-semibold truncate transition-colors group-hover:text-[var(--accent)]"
-                          style={{ color: "var(--ink)" }}
-                        >
-                          {job.title}
-                        </span>
-                        {job.client?.company_name && (
-                          <span
-                            className="flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"
-                            style={{
-                              backgroundColor: "var(--surface-3)",
-                              color: "var(--ink-2)",
-                            }}
-                          >
-                            {job.client.company_name}
-                          </span>
-                        )}
-                        <Badge status={job.status} />
-                      </div>
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
                       <div
-                        className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs"
-                        style={{ color: "var(--muted)" }}
+                        className="w-9 h-9 flex items-center justify-center flex-shrink-0"
+                        style={{ backgroundColor: "var(--surface-3)" }}
                       >
-                        <span className="font-mono font-medium">
-                          {job.job_number}
-                        </span>
-                        {job.site_address && (
-                          <span className="flex items-center gap-1">
-                            <MapPin className="w-3 h-3 opacity-70" />{" "}
-                            {job.site_address.split(",")[0]}
-                          </span>
-                        )}
-                        {job.type && (
-                          <span className="capitalize opacity-80">
-                            · {job.type.replace("_", " ")}
-                          </span>
-                        )}
+                        <HardHat
+                          className="w-4 h-4"
+                          style={{ color: "var(--muted)" }}
+                          strokeWidth={1.5}
+                        />
                       </div>
-                    </div>
-                    <div className="w-28 hidden md:block flex-shrink-0 text-right">
-                      <div
-                        className="text-[10px] font-bold uppercase tracking-widest mb-1"
-                        style={{ color: "var(--muted)" }}
-                      >
-                        Value
-                      </div>
-                      <div
-                        className="text-sm font-medium font-mono tnum"
-                        style={{ color: "var(--ink)" }}
-                      >
-                        {job.value ? formatCurrency(job.value) : "—"}
-                      </div>
-                    </div>
-                    {job.status === "active" ? (
-                      <div className="w-32 hidden sm:block flex-shrink-0 ml-4">
-                        <div className="flex justify-between items-center mb-1.5">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2.5 mb-1.5 flex-wrap">
                           <span
-                            className="text-[10px] font-bold uppercase tracking-widest"
-                            style={{ color: "var(--muted)" }}
+                            className="text-sm font-semibold truncate transition-colors group-hover:text-[var(--accent)]"
+                            style={{ color: "var(--ink)" }}
                           >
-                            Progress
+                            {job.title}
                           </span>
-                          <span
-                            className="text-[11px] font-bold font-mono"
-                            style={{ color: "#2a6e45" }}
-                          >
-                            {job.progress_percent}%
+                          {job.client?.company_name && (
+                            <span
+                              className="flex-shrink-0 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+                              style={{
+                                backgroundColor: "var(--surface-3)",
+                                color: "var(--ink-2)",
+                              }}
+                            >
+                              {job.client.company_name}
+                            </span>
+                          )}
+                          <span className="sm:hidden">
+                            <Badge status={job.status} />
                           </span>
                         </div>
                         <div
-                          className="h-1.5 rounded-full overflow-hidden"
-                          style={{ backgroundColor: "var(--surface-3)" }}
+                          className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs"
+                          style={{ color: "var(--muted)" }}
                         >
+                          <span className="font-mono font-medium">
+                            {job.job_number}
+                          </span>
+                          {job.site_address && (
+                            <span className="flex items-center gap-1">
+                              <MapPin className="w-3 h-3 opacity-70" strokeWidth={1.5} />{" "}
+                              {job.site_address.split(",")[0]}
+                            </span>
+                          )}
+                          {job.type && (
+                            <span className="capitalize opacity-80">
+                              · {job.type.replace("_", " ")}
+                            </span>
+                          )}
+                        </div>
+                        {job.status === "active" && (
+                          <div className="sm:hidden mt-2 max-w-[200px]">
+                            <div className="flex justify-between items-center mb-1">
+                              <span
+                                className="text-[10px] font-bold uppercase tracking-widest"
+                                style={{ color: "var(--muted)" }}
+                              >
+                                Progress
+                              </span>
+                              <span
+                                className="text-[11px] font-bold tnum"
+                                style={{ color: "#2a6e45" }}
+                              >
+                                {job.progress_percent}%
+                              </span>
+                            </div>
+                            <div
+                              className="h-1.5 overflow-hidden"
+                              style={{ backgroundColor: "var(--surface-3)" }}
+                            >
+                              <div
+                                className="h-full"
+                                style={{
+                                  width: `${job.progress_percent}%`,
+                                  backgroundColor: "#2a6e45",
+                                }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between sm:justify-end gap-4 pl-12 sm:pl-0 flex-shrink-0">
+                      <span className="hidden sm:block">
+                        <Badge status={job.status} />
+                      </span>
+                      {job.status === "active" && (
+                        <div className="w-32 hidden sm:block flex-shrink-0">
+                          <div className="flex justify-between items-center mb-1.5">
+                            <span
+                              className="text-[10px] font-bold uppercase tracking-widest"
+                              style={{ color: "var(--muted)" }}
+                            >
+                              Progress
+                            </span>
+                            <span
+                              className="text-[11px] font-bold tnum"
+                              style={{ color: "#2a6e45" }}
+                            >
+                              {job.progress_percent}%
+                            </span>
+                          </div>
                           <div
-                            className="h-full rounded-full"
-                            style={{
-                              width: `${job.progress_percent}%`,
-                              backgroundColor: "#2a6e45",
-                            }}
-                          />
+                            className="h-1.5 overflow-hidden"
+                            style={{ backgroundColor: "var(--surface-3)" }}
+                          >
+                            <div
+                              className="h-full"
+                              style={{
+                                width: `${job.progress_percent}%`,
+                                backgroundColor: "#2a6e45",
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                      <div className="w-28 flex-shrink-0 text-right">
+                        <div
+                          className="text-[10px] font-bold uppercase tracking-widest mb-1"
+                          style={{ color: "var(--muted)" }}
+                        >
+                          Value
+                        </div>
+                        <div
+                          className="text-sm font-medium tnum"
+                          style={{ color: "var(--ink)" }}
+                        >
+                          {job.value ? formatCurrency(job.value) : "—"}
                         </div>
                       </div>
-                    ) : (
-                      <div className="w-32 hidden sm:block flex-shrink-0 ml-4" />
-                    )}
-                    <ChevronRight
-                      className={cn(
-                        "w-4 h-4 flex-shrink-0 transition-all",
-                        selected === job.id
-                          ? "opacity-100 text-[var(--accent)] rotate-90"
-                          : "opacity-0 group-hover:opacity-100 text-[var(--muted)]",
-                      )}
-                    />
+                      <ChevronRight
+                        className={cn(
+                          "w-4 h-4 flex-shrink-0 transition-all hidden sm:block",
+                          selected === job.id
+                            ? "opacity-100 text-[var(--accent)] rotate-90"
+                            : "opacity-0 group-hover:opacity-100 text-[var(--muted)]",
+                        )}
+                        strokeWidth={1.5}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -629,7 +704,7 @@ export function JobsPage() {
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => openEdit(selectedJob)}
-                    className="px-2 py-1 rounded-md hover:bg-[var(--surface-3)] transition-colors text-xs font-medium"
+                    className="px-2 py-1 hover:bg-[var(--surface-3)] transition-colors text-xs font-medium"
                     style={{ color: "var(--accent)" }}
                     title="Edit job"
                   >
@@ -639,18 +714,18 @@ export function JobsPage() {
                     onClick={() =>
                       handleDelete(selectedJob.id, selectedJob.job_number)
                     }
-                    className="p-1 rounded-md hover:bg-red-50 transition-colors"
+                    className="p-1 hover:bg-red-50 transition-colors"
                     style={{ color: "var(--danger)" }}
                     title="Delete job"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4" strokeWidth={1.5} />
                   </button>
                   <button
                     onClick={() => setSelected(null)}
-                    className="p-1 rounded-md hover:bg-[var(--surface-3)] transition-colors"
+                    className="p-1 hover:bg-[var(--surface-3)] transition-colors"
                     style={{ color: "var(--muted)" }}
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-4 h-4" strokeWidth={1.5} />
                   </button>
                 </div>
               }
@@ -659,7 +734,7 @@ export function JobsPage() {
                 <div>
                   <div className="flex items-center gap-2.5 mb-2">
                     <span
-                      className="text-xs font-mono font-medium px-2 py-0.5 rounded bg-[var(--surface-3)]"
+                      className="text-xs font-mono font-medium px-2 py-0.5 bg-[var(--surface-3)]"
                       style={{ color: "var(--ink-2)" }}
                     >
                       {selectedJob.job_number}
@@ -670,7 +745,7 @@ export function JobsPage() {
                     className="text-lg font-semibold leading-tight tracking-tight"
                     style={{
                       color: "var(--ink)",
-                      fontFamily: "'Space Grotesk', sans-serif",
+                      fontFamily: "var(--font-heading)",
                     }}
                   >
                     {selectedJob.title}
@@ -682,7 +757,7 @@ export function JobsPage() {
                     className="text-[11px] font-bold uppercase tracking-widest mb-2.5"
                     style={{
                       color: "var(--muted)",
-                      fontFamily: "'Space Grotesk', sans-serif",
+                      fontFamily: "var(--font-heading)",
                     }}
                   >
                     Status Workflow
@@ -692,7 +767,7 @@ export function JobsPage() {
                       <button
                         key={s}
                         onClick={() => updateStatus(selectedJob.id, s)}
-                        className="px-3 py-1.5 rounded text-xs transition-colors capitalize font-medium"
+                        className="px-3 py-1.5 text-xs transition-colors capitalize font-medium"
                         style={
                           selectedJob.status === s
                             ? {
@@ -715,7 +790,7 @@ export function JobsPage() {
 
                 {selectedJob.status === "active" && (
                   <div
-                    className="p-4 rounded-lg bg-[var(--surface)]"
+                    className="p-4 bg-[var(--surface)]"
                     style={{ border: "1px solid var(--surface-3)" }}
                   >
                     <div className="flex items-center justify-between mb-3">
@@ -723,7 +798,7 @@ export function JobsPage() {
                         className="text-[11px] font-bold uppercase tracking-widest"
                         style={{
                           color: "var(--muted)",
-                          fontFamily: "'Space Grotesk', sans-serif",
+                          fontFamily: "var(--font-heading)",
                         }}
                       >
                         Job Progress
@@ -744,11 +819,11 @@ export function JobsPage() {
                       className="w-full accent-[var(--accent)] cursor-pointer"
                     />
                     <div
-                      className="mt-3 h-2 rounded-full overflow-hidden"
+                      className="mt-3 h-2 overflow-hidden"
                       style={{ backgroundColor: "var(--surface-3)" }}
                     >
                       <div
-                        className="h-full rounded-full transition-all"
+                        className="h-full transition-all"
                         style={{
                           width: `${selectedJob.progress_percent}%`,
                           backgroundColor: "#2a6e45",
@@ -763,7 +838,7 @@ export function JobsPage() {
                     className="text-[11px] font-bold uppercase tracking-widest mb-3"
                     style={{
                       color: "var(--muted)",
-                      fontFamily: "'Space Grotesk', sans-serif",
+                      fontFamily: "var(--font-heading)",
                     }}
                   >
                     Job Details
@@ -772,7 +847,6 @@ export function JobsPage() {
                     className="space-y-0 text-sm"
                     style={{
                       border: "1px solid var(--surface-3)",
-                      borderRadius: "8px",
                       overflow: "hidden",
                     }}
                   >
@@ -851,7 +925,7 @@ export function JobsPage() {
 
                 {selectedJob.nrswa_required && (
                   <div
-                    className="p-3 rounded-md text-sm flex items-start gap-3"
+                    className="p-3 text-sm flex items-start gap-3"
                     style={{
                       backgroundColor: "var(--accent-bg)",
                       border: "1px solid var(--accent)",
@@ -877,13 +951,13 @@ export function JobsPage() {
                       className="text-[11px] font-bold uppercase tracking-widest mb-2"
                       style={{
                         color: "var(--muted)",
-                        fontFamily: "'Space Grotesk', sans-serif",
+                        fontFamily: "var(--font-heading)",
                       }}
                     >
                       Scope of Works
                     </p>
                     <p
-                      className="text-sm leading-relaxed whitespace-pre-wrap p-4 rounded-lg bg-[var(--surface)]"
+                      className="text-sm leading-relaxed whitespace-pre-wrap p-4 bg-[var(--surface)]"
                       style={{ color: "var(--ink-2)", border: "1px solid var(--surface-3)" }}
                     >
                       {selectedJob.description}

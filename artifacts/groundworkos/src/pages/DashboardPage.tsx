@@ -11,7 +11,6 @@ import {
   Briefcase,
   Users,
   Truck,
-  FileWarning,
   Activity,
   PlusCircle,
   Edit2,
@@ -69,12 +68,12 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
     <div
-      className="px-3 py-2.5 rounded-lg gw-shadow text-xs"
+      className="px-3 py-2.5 gw-shadow text-xs"
       style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border)" }}
     >
       <div
         className="font-medium mb-1.5"
-        style={{ color: "var(--ink)", fontFamily: "'Inter', sans-serif" }}
+        style={{ color: "var(--ink)", fontFamily: "var(--font-body)" }}
       >
         {label}
       </div>
@@ -85,7 +84,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         >
           <div className="flex items-center gap-2">
             <span
-              className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+              className="w-1.5 h-1.5 flex-shrink-0"
               style={{ backgroundColor: p.color }}
             />
             <span style={{ color: "var(--muted)" }}>{p.name}</span>
@@ -94,7 +93,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
             className="tnum"
             style={{
               color: "var(--ink)",
-              fontFamily: "'JetBrains Mono', monospace",
+              fontFamily: "var(--font-heading)",
             }}
           >
             {typeof p.value === "number" ? formatCurrency(p.value) : p.value}
@@ -104,6 +103,161 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     </div>
   );
 };
+
+// Hero tile for Pipeline — larger frame, bigger numeral, accent-lit. Built to
+// match StatCard's blueprint/token language since StatCard doesn't support
+// this asymmetric hero sizing.
+function HeroStat({
+  label,
+  value,
+  sub,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+}) {
+  return (
+    <div
+      className="blueprint relative p-6 overflow-hidden gw-shadow flex flex-col justify-center"
+      style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}
+    >
+      <CornerMarks />
+      <div
+        className="absolute top-0 left-0 w-full"
+        style={{ height: "4px", backgroundColor: "var(--accent)" }}
+      />
+      <p
+        style={{
+          fontFamily: "var(--font-heading)",
+          fontWeight: 700,
+          fontSize: "12px",
+          textTransform: "uppercase",
+          letterSpacing: "0.1em",
+          color: "var(--accent)",
+          marginBottom: "14px",
+        }}
+      >
+        {label}
+      </p>
+      <p
+        className="tnum"
+        style={{
+          fontFamily: "var(--font-heading)",
+          fontWeight: 700,
+          fontSize: "52px",
+          lineHeight: 1,
+          letterSpacing: "-0.02em",
+          color: "var(--ink)",
+          marginBottom: sub ? "10px" : 0,
+        }}
+      >
+        {value}
+      </p>
+      {sub && (
+        <p style={{ fontSize: "13px", color: "var(--muted)", fontWeight: 500 }}>
+          {sub}
+        </p>
+      )}
+    </div>
+  );
+}
+
+type AttentionVariant = "danger" | "warning" | "neutral";
+
+// "Needs attention" tile — colored top bar + icon + big numeral when there's
+// something to act on, and a neutral all-clear variant (grey bar, check
+// icon, no CTA) when the underlying value is 0. Driven off the actual data
+// value, never a separate flag.
+function AttentionTile({
+  variant,
+  icon: Icon,
+  label,
+  value,
+  sub,
+  ctaLabel,
+  ctaHref,
+}: {
+  variant: AttentionVariant;
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties; strokeWidth?: number }>;
+  label: string;
+  value: string;
+  sub: string;
+  ctaLabel?: string;
+  ctaHref?: string;
+}) {
+  const tone =
+    variant === "danger"
+      ? { bar: "var(--danger)", ink: "var(--danger-ink)", border: "rgba(178,58,38,0.3)" }
+      : variant === "warning"
+        ? { bar: "var(--warning)", ink: "var(--warning-ink)", border: "rgba(184,115,12,0.3)" }
+        : { bar: "var(--border-2)", ink: "var(--ink)", border: "var(--border)" };
+
+  const body = (
+    <div
+      className="blueprint relative p-5 overflow-hidden gw-shadow h-full flex flex-col"
+      style={{ backgroundColor: "var(--surface)", borderColor: tone.border }}
+    >
+      <CornerMarks />
+      <div
+        className="absolute top-0 left-0 w-full"
+        style={{ height: "4px", backgroundColor: tone.bar }}
+      />
+      <div className="flex items-center gap-2 mb-3">
+        <Icon
+          className="w-4 h-4 flex-shrink-0"
+          style={{ color: variant === "neutral" ? "var(--muted)" : tone.ink }}
+          strokeWidth={1.5}
+        />
+        <p
+          style={{
+            fontFamily: "var(--font-heading)",
+            fontWeight: 700,
+            fontSize: "11px",
+            textTransform: "uppercase",
+            letterSpacing: "0.1em",
+            color: "var(--muted)",
+          }}
+        >
+          {label}
+        </p>
+      </div>
+      <p
+        className="tnum"
+        style={{
+          fontFamily: "var(--font-heading)",
+          fontWeight: 700,
+          fontSize: "38px",
+          lineHeight: 1,
+          letterSpacing: "-0.02em",
+          color: variant === "neutral" ? "var(--ink)" : tone.ink,
+          marginBottom: "8px",
+        }}
+      >
+        {value}
+      </p>
+      <p className="text-xs flex-1" style={{ color: "var(--muted)" }}>
+        {sub}
+      </p>
+      {ctaLabel && (
+        <div
+          className="text-xs font-semibold mt-3 flex items-center gap-1"
+          style={{ color: tone.ink, fontFamily: "var(--font-heading)" }}
+        >
+          {ctaLabel} <ArrowRight className="w-3 h-3" strokeWidth={1.5} />
+        </div>
+      )}
+    </div>
+  );
+
+  if (ctaHref) {
+    return (
+      <Link href={ctaHref} className="block h-full cursor-pointer">
+        {body}
+      </Link>
+    );
+  }
+  return body;
+}
 
 const ENTITY_LABELS: Record<string, string> = {
   job: "Job",
@@ -118,13 +272,13 @@ const ENTITY_LABELS: Record<string, string> = {
 };
 
 const ACTION_ICON: Record<string, React.ReactNode> = {
-  create: <PlusCircle className="w-3.5 h-3.5" style={{ color: "#2a6e45" }} />,
-  update: <Edit2 className="w-3.5 h-3.5" style={{ color: "var(--accent)" }} />,
-  delete: <Trash2 className="w-3.5 h-3.5" style={{ color: "var(--danger)" }} />,
+  create: <PlusCircle className="w-3.5 h-3.5" style={{ color: "var(--success)" }} strokeWidth={1.5} />,
+  update: <Edit2 className="w-3.5 h-3.5" style={{ color: "var(--accent)" }} strokeWidth={1.5} />,
+  delete: <Trash2 className="w-3.5 h-3.5" style={{ color: "var(--danger)" }} strokeWidth={1.5} />,
 };
 
 const ACTION_COLOR: Record<string, string> = {
-  create: "#2a6e45",
+  create: "var(--success)",
   update: "var(--accent)",
   delete: "var(--danger)",
 };
@@ -203,6 +357,49 @@ export function DashboardPage() {
   const expiredDocs = documents.filter((d) => d.status === "expired");
   const complianceDocs = [...expiredDocs, ...expiringDocs];
 
+  const daysOverdue = (dueDate: string | null): number => {
+    if (!dueDate) return 0;
+    return Math.floor((Date.now() - new Date(dueDate).getTime()) / 86400000);
+  };
+
+  const agedDebtorInvoices = useMemo(
+    () => outstandingInvoices.filter((i) => daysOverdue(i.due_date) >= 90),
+    [outstandingInvoices],
+  );
+  const totalAgedDebtors = agedDebtorInvoices.reduce(
+    (s, i) => s + i.total_amount,
+    0,
+  );
+
+  const agedBands = useMemo(() => {
+    const bands = [
+      { key: "0-30", label: "0–30d", min: 0, max: 30, value: 0, color: "var(--border-2)" },
+      { key: "31-60", label: "31–60d", min: 31, max: 60, value: 0, color: "var(--muted-2)" },
+      { key: "61-90", label: "61–90d", min: 61, max: 90, value: 0, color: "var(--warning)" },
+      { key: "90+", label: "90+d", min: 91, max: Infinity, value: 0, color: "var(--danger)" },
+    ];
+    for (const inv of outstandingInvoices) {
+      const days = Math.max(0, daysOverdue(inv.due_date));
+      const band = bands.find((b) => days >= b.min && days <= b.max) ?? bands[0];
+      band.value += inv.total_amount;
+    }
+    return bands;
+  }, [outstandingInvoices]);
+
+  const largestRiskBand = useMemo(
+    () => agedBands.reduce((max, b) => (b.value > max.value ? b : max), agedBands[0]),
+    [agedBands],
+  );
+  const agedTotal = agedBands.reduce((s, b) => s + b.value, 0);
+  const riskCalloutText = useMemo(() => {
+    if (agedTotal === 0) return "";
+    const pct = Math.round((largestRiskBand.value / agedTotal) * 100);
+    if (largestRiskBand.key === "90+" || largestRiskBand.key === "61-90") {
+      return `${pct}% of outstanding debt sits in the ${largestRiskBand.label} band — ${largestRiskBand.key === "90+" ? "chase these first" : "watch closely"}.`;
+    }
+    return `Debt is concentrated in the ${largestRiskBand.label} band — collection is healthy.`;
+  }, [agedTotal, largestRiskBand]);
+
   const monthMap = new Map<
     string,
     { invoiced: number; collected: number; month: string }
@@ -230,50 +427,129 @@ export function DashboardPage() {
   const hasAlerts = alertCount > 0;
 
   return (
-    <div className="max-w-[1600px] mx-auto space-y-6">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          accent
-          label="Pipeline"
-          value={formatCurrency(totalPipeline)}
-          sub={`${activeJobs.length} active jobs`}
-        />
-        <StatCard
-          label="Collected"
-          value={formatCurrency(totalCollected)}
-          sub={`${paidInvoices.length} paid invoices`}
-        />
-        <StatCard
-          label="Outstanding"
-          value={formatCurrency(totalOutstanding)}
-          sub={`${outstandingInvoices.length} invoices`}
-        />
-        <StatCard
-          danger={overdueInvoices.length > 0}
-          label="Overdue"
-          value={formatCurrency(totalOverdue)}
-          sub={`${overdueInvoices.length} overdue`}
-        />
+    <div className="max-w-[1600px] mx-auto space-y-8">
+      {/* Money in motion — Pipeline is the hero; Collected/Outstanding are
+          quiet secondary readouts in the same row. */}
+      <div>
+        <h2
+          className="text-xs font-bold uppercase tracking-widest mb-3"
+          style={{ color: "var(--muted)", fontFamily: "var(--font-heading)" }}
+        >
+          Money in motion
+        </h2>
+        <div className="grid grid-cols-1 lg:[grid-template-columns:1.5fr_1fr_1fr] gap-4">
+          <HeroStat
+            label="Pipeline"
+            value={formatCurrency(totalPipeline)}
+            sub={`${activeJobs.length} active job${activeJobs.length !== 1 ? "s" : ""} in progress`}
+          />
+          <StatCard
+            label="Collected"
+            value={formatCurrency(totalCollected)}
+            sub={`${paidInvoices.length} paid invoices`}
+          />
+          <StatCard
+            label="Outstanding"
+            value={formatCurrency(totalOutstanding)}
+            sub={`${outstandingInvoices.length} invoices`}
+          />
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Needs attention — hazard-striped subsection heading; each tile
+          swaps to a neutral all-clear variant when its underlying value is
+          zero, never showing red urgency at £0. */}
+      <div>
+        <div className="flex items-center gap-2.5 mb-3">
+          <span
+            className="w-3.5 h-3.5 flex-shrink-0"
+            style={{
+              backgroundImage:
+                "repeating-linear-gradient(135deg, var(--danger) 0 3px, var(--ink-navy) 3px 6px)",
+            }}
+          />
+          <h2
+            className="text-xs font-bold uppercase tracking-widest"
+            style={{ color: "var(--danger)", fontFamily: "var(--font-heading)" }}
+          >
+            Needs attention
+          </h2>
+          <div className="flex-1 h-px" style={{ backgroundColor: "var(--border)" }} />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {overdueInvoices.length > 0 ? (
+            <AttentionTile
+              variant="danger"
+              icon={AlertTriangle}
+              label="Overdue"
+              value={formatCurrency(totalOverdue)}
+              sub={`${overdueInvoices.length} invoice${overdueInvoices.length !== 1 ? "s" : ""} past due date`}
+              ctaLabel="Chase now"
+              ctaHref="/invoices"
+            />
+          ) : (
+            <AttentionTile
+              variant="neutral"
+              icon={CheckCircle}
+              label="Overdue"
+              value={formatCurrency(0)}
+              sub="Nothing overdue right now"
+            />
+          )}
+
+          {agedDebtorInvoices.length > 0 ? (
+            <AttentionTile
+              variant="warning"
+              icon={Clock}
+              label="Aged debtors 90+"
+              value={formatCurrency(totalAgedDebtors)}
+              sub={`${agedDebtorInvoices.length} invoice${agedDebtorInvoices.length !== 1 ? "s" : ""} 90+ days overdue`}
+              ctaLabel="Open ledger"
+              ctaHref="/invoices"
+            />
+          ) : (
+            <AttentionTile
+              variant="neutral"
+              icon={CheckCircle}
+              label="Aged debtors 90+"
+              value={formatCurrency(0)}
+              sub="No debt aged past 90 days"
+            />
+          )}
+
+          <AttentionTile
+            variant={complianceDocs.length > 0 ? "warning" : "neutral"}
+            icon={complianceDocs.length > 0 ? ShieldAlert : ShieldCheck}
+            label="Compliance"
+            value={String(complianceDocs.length)}
+            sub={
+              complianceDocs.length > 0
+                ? `${expiredDocs.length} expired · ${expiringDocs.length} expiring soon`
+                : "All documents in date"
+            }
+          />
+        </div>
+      </div>
+
+      {/* Quick-glance operational counts */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <Link href="/jobs">
           <div
-            className="flex items-center gap-3 px-4 py-3.5 rounded-xl cursor-pointer transition-colors hover:opacity-80"
+            className="flex items-center gap-3 px-4 py-3.5 cursor-pointer transition-colors hover:opacity-80"
             style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border)" }}
           >
             <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+              className="w-8 h-8 flex items-center justify-center flex-shrink-0"
               style={{ backgroundColor: "var(--accent-bg)" }}
             >
-              <Briefcase className="w-4 h-4" style={{ color: "var(--accent)" }} />
+              <Briefcase className="w-4 h-4" style={{ color: "var(--accent)" }} strokeWidth={1.5} />
             </div>
             <div>
               <div
                 className="text-xs font-medium uppercase tracking-widest mb-0.5"
                 style={{
                   color: "var(--muted)",
-                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontFamily: "var(--font-heading)",
                 }}
               >
                 Quotes Pending
@@ -282,7 +558,7 @@ export function DashboardPage() {
                 className="text-xl font-bold"
                 style={{
                   color: "var(--ink)",
-                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontFamily: "var(--font-heading)",
                 }}
               >
                 {extraStats
@@ -294,21 +570,21 @@ export function DashboardPage() {
         </Link>
         <Link href="/subcontractors">
           <div
-            className="flex items-center gap-3 px-4 py-3.5 rounded-xl cursor-pointer transition-colors hover:opacity-80"
+            className="flex items-center gap-3 px-4 py-3.5 cursor-pointer transition-colors hover:opacity-80"
             style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border)" }}
           >
             <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-              style={{ backgroundColor: "#f0fdf4" }}
+              className="w-8 h-8 flex items-center justify-center flex-shrink-0"
+              style={{ backgroundColor: "var(--success-bg)" }}
             >
-              <Users className="w-4 h-4" style={{ color: "#2a6e45" }} />
+              <Users className="w-4 h-4" style={{ color: "var(--success)" }} strokeWidth={1.5} />
             </div>
             <div>
               <div
                 className="text-xs font-medium uppercase tracking-widest mb-0.5"
                 style={{
                   color: "var(--muted)",
-                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontFamily: "var(--font-heading)",
                 }}
               >
                 Active Subcons
@@ -317,7 +593,7 @@ export function DashboardPage() {
                 className="text-xl font-bold"
                 style={{
                   color: "var(--ink)",
-                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontFamily: "var(--font-heading)",
                 }}
               >
                 {extraStats?.activeSubcons ?? "—"}
@@ -327,21 +603,21 @@ export function DashboardPage() {
         </Link>
         <Link href="/plant">
           <div
-            className="flex items-center gap-3 px-4 py-3.5 rounded-xl cursor-pointer transition-colors hover:opacity-80"
+            className="flex items-center gap-3 px-4 py-3.5 cursor-pointer transition-colors hover:opacity-80"
             style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border)" }}
           >
             <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-              style={{ backgroundColor: "#fef9f0" }}
+              className="w-8 h-8 flex items-center justify-center flex-shrink-0"
+              style={{ backgroundColor: "var(--warning-bg)" }}
             >
-              <Truck className="w-4 h-4" style={{ color: "var(--warning)" }} />
+              <Truck className="w-4 h-4" style={{ color: "var(--warning)" }} strokeWidth={1.5} />
             </div>
             <div>
               <div
                 className="text-xs font-medium uppercase tracking-widest mb-0.5"
                 style={{
                   color: "var(--muted)",
-                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontFamily: "var(--font-heading)",
                 }}
               >
                 Plant Items
@@ -350,51 +626,10 @@ export function DashboardPage() {
                 className="text-xl font-bold"
                 style={{
                   color: "var(--ink)",
-                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontFamily: "var(--font-heading)",
                 }}
               >
                 {extraStats?.plantCount ?? "—"}
-              </div>
-            </div>
-          </div>
-        </Link>
-        <Link href="/documents">
-          <div
-            className="flex items-center gap-3 px-4 py-3.5 rounded-xl cursor-pointer transition-colors hover:opacity-80"
-            style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border)" }}
-          >
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-              style={{
-                backgroundColor:
-                  complianceDocs.length > 0 ? "#fff5f5" : "#f0fdf4",
-              }}
-            >
-              <FileWarning
-                className="w-4 h-4"
-                style={{
-                  color: complianceDocs.length > 0 ? "var(--danger)" : "#2a6e45",
-                }}
-              />
-            </div>
-            <div>
-              <div
-                className="text-xs font-medium uppercase tracking-widest mb-0.5"
-                style={{
-                  color: "var(--muted)",
-                  fontFamily: "'Space Grotesk', sans-serif",
-                }}
-              >
-                Doc Alerts
-              </div>
-              <div
-                className="text-xl font-bold"
-                style={{
-                  color: complianceDocs.length > 0 ? "var(--danger)" : "var(--ink)",
-                  fontFamily: "'Space Grotesk', sans-serif",
-                }}
-              >
-                {complianceDocs.length}
               </div>
             </div>
           </div>
@@ -404,98 +639,192 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <Panel
-            title="Revenue vs Collected — Last 6 Months"
+            title="Revenue vs collected — last 6 months"
             actions={
               <Link href="/reports">
                 <Btn variant="ghost" size="sm">
-                  Reports <ArrowRight className="w-3 h-3" />
+                  Reports <ArrowRight className="w-3 h-3" strokeWidth={1.5} />
                 </Btn>
               </Link>
             }
           >
-            <div style={{ height: 240 }} className="mt-1">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={revenueData}
-                  barGap={6}
-                  barCategoryGap="30%"
-                  margin={{ top: 8, right: 4, left: 0, bottom: 0 }}
+            {invoices.length === 0 ? (
+              <ChartEmptyState
+                icon={BarChart3}
+                ctaLabel="Raise your first invoice"
+                onCta={() => (window.location.href = `${BASE}/invoices`)}
+              />
+            ) : (
+              <>
+                <div style={{ height: 240 }} className="mt-1">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={revenueData}
+                      barGap={6}
+                      barCategoryGap="30%"
+                      margin={{ top: 8, right: 4, left: 0, bottom: 0 }}
+                    >
+                      <CartesianGrid
+                        vertical={false}
+                        stroke="var(--surface-3)"
+                        strokeDasharray="3 3"
+                      />
+                      <XAxis
+                        dataKey="month"
+                        tick={{
+                          fill: "var(--muted)",
+                          fontSize: 11,
+                          fontFamily: "var(--font-heading)",
+                        }}
+                        axisLine={false}
+                        tickLine={false}
+                        dy={6}
+                      />
+                      <YAxis
+                        tick={{
+                          fill: "var(--muted)",
+                          fontSize: 10,
+                          fontFamily: "var(--font-heading)",
+                        }}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(v) =>
+                          v === 0 ? "" : `£${(v / 1000).toFixed(0)}k`
+                        }
+                        width={40}
+                      />
+                      <Tooltip
+                        content={<CustomTooltip />}
+                        cursor={{ fill: "var(--surface-2)", opacity: 0.5 }}
+                      />
+                      <Bar
+                        dataKey="invoiced"
+                        name="Invoiced"
+                        fill="var(--border-2)"
+                        maxBarSize={44}
+                      />
+                      <Bar
+                        dataKey="collected"
+                        name="Collected"
+                        fill="var(--accent)"
+                        maxBarSize={44}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div
+                  className="flex items-center gap-6 mt-5 pt-4"
+                  style={{ borderTop: "1px solid var(--border)" }}
                 >
-                  <CartesianGrid
-                    vertical={false}
-                    stroke="var(--surface-3)"
-                    strokeDasharray="3 3"
-                  />
-                  <XAxis
-                    dataKey="month"
-                    tick={{
-                      fill: "var(--muted)",
-                      fontSize: 11,
-                      fontFamily: "'JetBrains Mono', monospace",
+                  <div
+                    className="flex items-center gap-2 text-xs"
+                    style={{ color: "var(--muted)" }}
+                  >
+                    <span
+                      className="w-3 h-3 inline-block"
+                      style={{ backgroundColor: "var(--border-2)" }}
+                    />{" "}
+                    Invoiced
+                  </div>
+                  <div
+                    className="flex items-center gap-2 text-xs"
+                    style={{ color: "var(--muted)" }}
+                  >
+                    <span
+                      className="w-3 h-3 inline-block"
+                      style={{ backgroundColor: "var(--accent)" }}
+                    />{" "}
+                    Collected
+                  </div>
+                </div>
+              </>
+            )}
+          </Panel>
+
+          <Panel title="Aged debtors">
+            {outstandingInvoices.length === 0 ? (
+              <ChartEmptyState
+                icon={Clock}
+                title="No data yet"
+                description="Outstanding invoices will appear here once you send your first one."
+                ctaLabel="Raise your first invoice"
+                onCta={() => (window.location.href = `${BASE}/invoices`)}
+              />
+            ) : (
+              <>
+                <div style={{ height: 190 }} className="mt-1">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={agedBands}
+                      layout="vertical"
+                      margin={{ top: 4, right: 24, left: 4, bottom: 0 }}
+                      barCategoryGap="28%"
+                    >
+                      <CartesianGrid
+                        horizontal={false}
+                        stroke="var(--surface-3)"
+                        strokeDasharray="3 3"
+                      />
+                      <XAxis
+                        type="number"
+                        tick={{
+                          fill: "var(--muted)",
+                          fontSize: 10,
+                          fontFamily: "var(--font-heading)",
+                        }}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(v) =>
+                          v === 0 ? "" : `£${(v / 1000).toFixed(0)}k`
+                        }
+                      />
+                      <YAxis
+                        type="category"
+                        dataKey="label"
+                        tick={{
+                          fill: "var(--ink-2)",
+                          fontSize: 12,
+                          fontFamily: "var(--font-heading)",
+                          fontWeight: 600,
+                        }}
+                        axisLine={false}
+                        tickLine={false}
+                        width={56}
+                      />
+                      <Tooltip
+                        content={<CustomTooltip />}
+                        cursor={{ fill: "var(--surface-2)", opacity: 0.5 }}
+                      />
+                      <Bar dataKey="value" name="Outstanding" maxBarSize={26}>
+                        {agedBands.map((band) => (
+                          <Cell key={band.key} fill={band.color} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                {riskCalloutText && (
+                  <div
+                    className="flex items-start gap-2 mt-4 pt-4 text-xs"
+                    style={{
+                      borderTop: "1px solid var(--border)",
+                      color:
+                        largestRiskBand.key === "90+"
+                          ? "var(--danger-ink)"
+                          : largestRiskBand.key === "61-90"
+                            ? "var(--warning-ink)"
+                            : "var(--muted)",
                     }}
-                    axisLine={false}
-                    tickLine={false}
-                    dy={6}
-                  />
-                  <YAxis
-                    tick={{
-                      fill: "var(--muted)",
-                      fontSize: 10,
-                      fontFamily: "'JetBrains Mono', monospace",
-                    }}
-                    axisLine={false}
-                    tickLine={false}
-                    tickFormatter={(v) =>
-                      v === 0 ? "" : `£${(v / 1000).toFixed(0)}k`
-                    }
-                    width={40}
-                  />
-                  <Tooltip
-                    content={<CustomTooltip />}
-                    cursor={{ fill: "var(--surface-2)", opacity: 0.5 }}
-                  />
-                  <Bar
-                    dataKey="invoiced"
-                    name="Invoiced"
-                    fill="#e0dbd5"
-                    radius={[4, 4, 0, 0]}
-                    maxBarSize={44}
-                  />
-                  <Bar
-                    dataKey="collected"
-                    name="Collected"
-                    fill="#2a6e45"
-                    radius={[4, 4, 0, 0]}
-                    maxBarSize={44}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            <div
-              className="flex items-center gap-6 mt-5 pt-4"
-              style={{ borderTop: "1px solid var(--border)" }}
-            >
-              <div
-                className="flex items-center gap-2 text-xs"
-                style={{ color: "var(--muted)" }}
-              >
-                <span
-                  className="w-3 h-3 rounded-sm inline-block"
-                  style={{ backgroundColor: "#e0dbd5" }}
-                />{" "}
-                Invoiced
-              </div>
-              <div
-                className="flex items-center gap-2 text-xs"
-                style={{ color: "var(--muted)" }}
-              >
-                <span
-                  className="w-3 h-3 rounded-sm inline-block"
-                  style={{ backgroundColor: "#2a6e45" }}
-                />{" "}
-                Collected
-              </div>
-            </div>
+                  >
+                    <AlertTriangle
+                      className="w-3.5 h-3.5 flex-shrink-0 mt-0.5"
+                      strokeWidth={1.5}
+                    />
+                    <span>{riskCalloutText}</span>
+                  </div>
+                )}
+              </>
+            )}
           </Panel>
 
           <Panel
@@ -503,7 +832,7 @@ export function DashboardPage() {
             actions={
               <Link href="/jobs">
                 <Btn variant="ghost" size="sm">
-                  All jobs <ArrowRight className="w-3 h-3" />
+                  All jobs <ArrowRight className="w-3 h-3" strokeWidth={1.5} />
                 </Btn>
               </Link>
             }
@@ -555,7 +884,7 @@ export function DashboardPage() {
                         >
                           <span className="font-mono">{job.job_number}</span>
                           <span className="flex items-center gap-1">
-                            <MapPin className="w-3 h-3" />{" "}
+                            <MapPin className="w-3 h-3" strokeWidth={1.5} />{" "}
                             {job.site_address
                               ? job.site_address.split(",")[0]
                               : "Site active"}
@@ -572,20 +901,20 @@ export function DashboardPage() {
                           </span>
                           <span
                             className="text-xs font-bold font-mono"
-                            style={{ color: "#2a6e45" }}
+                            style={{ color: "var(--success)" }}
                           >
                             {job.progress_percent}%
                           </span>
                         </div>
                         <div
-                          className="h-1.5 rounded-full overflow-hidden"
+                          className="h-1.5 overflow-hidden"
                           style={{ backgroundColor: "var(--surface-3)" }}
                         >
                           <div
-                            className="h-full rounded-full"
+                            className="h-full"
                             style={{
                               width: `${job.progress_percent}%`,
-                              backgroundColor: "#2a6e45",
+                              backgroundColor: "var(--success)",
                             }}
                           />
                         </div>
@@ -607,6 +936,7 @@ export function DashboardPage() {
                       <ChevronRight
                         className="w-4 h-4 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
                         style={{ color: "var(--muted)" }}
+                        strokeWidth={1.5}
                       />
                     </div>
                   </Link>
@@ -636,12 +966,13 @@ export function DashboardPage() {
                   className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest mb-3"
                   style={{
                     color: "var(--muted)",
-                    fontFamily: "'Space Grotesk', sans-serif",
+                    fontFamily: "var(--font-heading)",
                   }}
                 >
                   <AlertTriangle
                     className="w-3.5 h-3.5"
                     style={{ color: "var(--danger)" }}
+                    strokeWidth={1.5}
                   />{" "}
                   Overdue Invoices
                 </h4>
@@ -649,7 +980,7 @@ export function DashboardPage() {
                   {overdueInvoices.slice(0, 4).map((inv) => (
                     <Link key={inv.id} href="/invoices">
                       <div
-                        className="flex items-center justify-between p-3 rounded-lg cursor-pointer group transition-colors"
+                        className="flex items-center justify-between p-3 cursor-pointer group transition-colors"
                         style={{
                           backgroundColor: "var(--surface-2)",
                           border: "1px solid rgba(178,58,38,0.18)",
@@ -681,7 +1012,7 @@ export function DashboardPage() {
                             style={{ color: "var(--danger)" }}
                           >
                             Review{" "}
-                            <ArrowRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <ArrowRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={1.5} />
                           </div>
                         </div>
                       </div>
@@ -697,12 +1028,13 @@ export function DashboardPage() {
                   className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest mb-3"
                   style={{
                     color: "var(--muted)",
-                    fontFamily: "'Space Grotesk', sans-serif",
+                    fontFamily: "var(--font-heading)",
                   }}
                 >
                   <ShieldAlert
                     className="w-3.5 h-3.5"
                     style={{ color: "var(--warning)" }}
+                    strokeWidth={1.5}
                   />{" "}
                   Compliance Lapsing
                 </h4>
@@ -710,11 +1042,11 @@ export function DashboardPage() {
                   {complianceDocs.slice(0, 4).map((doc) => (
                     <Link key={doc.id} href="/documents">
                       <div
-                        className="flex items-start gap-3 p-3 rounded-lg cursor-pointer group transition-colors hover:bg-[var(--surface-2)]"
+                        className="flex items-start gap-3 p-3 cursor-pointer group transition-colors hover:bg-[var(--surface-2)]"
                         style={{ border: "1px solid var(--border)" }}
                       >
                         <span
-                          className="mt-1.5 w-2 h-2 rounded-full flex-shrink-0"
+                          className="mt-1.5 w-2 h-2 flex-shrink-0"
                           style={{
                             backgroundColor:
                               doc.status === "expired" ? "var(--danger)" : "var(--warning)",
@@ -736,7 +1068,7 @@ export function DashboardPage() {
                                   : "var(--warning)",
                             }}
                           >
-                            <Clock className="w-3 h-3" />
+                            <Clock className="w-3 h-3" strokeWidth={1.5} />
                             {doc.status === "expired"
                               ? "Expired"
                               : "Expiring"}{" "}
@@ -757,7 +1089,7 @@ export function DashboardPage() {
               actions={
                 <Link href="/audit">
                   <Btn variant="ghost" size="sm">
-                    Full log <ArrowRight className="w-3 h-3" />
+                    Full log <ArrowRight className="w-3 h-3" strokeWidth={1.5} />
                   </Btn>
                 </Link>
               }
@@ -776,6 +1108,7 @@ export function DashboardPage() {
                       <Activity
                         className="w-3.5 h-3.5"
                         style={{ color: "var(--muted)" }}
+                        strokeWidth={1.5}
                       />
                     );
                     const color = ACTION_COLOR[entry.action] ?? "var(--muted)";
@@ -794,7 +1127,7 @@ export function DashboardPage() {
                         }}
                       >
                         <div
-                          className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center mt-0.5"
+                          className="flex-shrink-0 w-6 h-6 flex items-center justify-center mt-0.5"
                           style={{ backgroundColor: `${color}18` }}
                         >
                           {icon}

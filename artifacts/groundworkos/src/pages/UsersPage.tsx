@@ -227,7 +227,7 @@ export function UsersPage() {
         >
           <p
             style={{
-              fontFamily: "'Space Grotesk', sans-serif",
+              fontFamily: "var(--font-heading)",
               fontWeight: 700,
               fontSize: 18,
               color: "var(--ink)",
@@ -239,7 +239,7 @@ export function UsersPage() {
             style={{
               color: "var(--muted)",
               fontSize: 13,
-              fontFamily: "'Inter', sans-serif",
+              fontFamily: "var(--font-body)",
               lineHeight: 1.5,
             }}
           >
@@ -254,7 +254,7 @@ export function UsersPage() {
               borderRadius: 8,
               backgroundColor: "var(--accent)",
               color: "#fff",
-              fontFamily: "'Space Grotesk', sans-serif",
+              fontFamily: "var(--font-heading)",
               fontWeight: 600,
               fontSize: 13,
               border: "none",
@@ -273,7 +273,7 @@ export function UsersPage() {
           style={{
             color: "var(--muted)",
             fontSize: 14,
-            fontFamily: "'Inter', sans-serif",
+            fontFamily: "var(--font-body)",
           }}
         >
           Admin access required
@@ -287,7 +287,7 @@ export function UsersPage() {
       <div className="mb-6">
         <h1
           style={{
-            fontFamily: "'Space Grotesk', sans-serif",
+            fontFamily: "var(--font-heading)",
             fontWeight: 700,
             fontSize: 22,
             color: "var(--ink)",
@@ -301,7 +301,7 @@ export function UsersPage() {
           style={{
             color: "var(--muted)",
             fontSize: 13,
-            fontFamily: "'Inter', sans-serif",
+            fontFamily: "var(--font-body)",
           }}
         >
           Manage team access and roles. Changes take effect on next sign-in.
@@ -326,7 +326,7 @@ export function UsersPage() {
         <div style={{ flex: "1 1 220px", display: "grid", gap: 4 }}>
           <label
             style={{
-              fontFamily: "'Space Grotesk', sans-serif",
+              fontFamily: "var(--font-heading)",
               fontWeight: 600,
               fontSize: 11,
               color: "var(--muted)",
@@ -343,7 +343,7 @@ export function UsersPage() {
             value={inviteEmail}
             onChange={(e) => setInviteEmail(e.target.value)}
             style={{
-              fontFamily: "'Inter', sans-serif",
+              fontFamily: "var(--font-body)",
               fontSize: 13,
               padding: "8px 10px",
               borderRadius: 6,
@@ -357,7 +357,7 @@ export function UsersPage() {
           value={inviteRole}
           onChange={(e) => setInviteRole(e.target.value as Role)}
           style={{
-            fontFamily: "'Space Grotesk', sans-serif",
+            fontFamily: "var(--font-heading)",
             fontSize: 12,
             padding: "9px 8px",
             borderRadius: 6,
@@ -379,7 +379,7 @@ export function UsersPage() {
             borderRadius: 6,
             backgroundColor: "var(--accent)",
             color: "#fff",
-            fontFamily: "'Space Grotesk', sans-serif",
+            fontFamily: "var(--font-heading)",
             fontWeight: 600,
             fontSize: 12,
             border: "none",
@@ -409,7 +409,7 @@ export function UsersPage() {
           >
             <span
               style={{
-                fontFamily: "'Space Grotesk', sans-serif",
+                fontFamily: "var(--font-heading)",
                 fontWeight: 600,
                 fontSize: 11,
                 color: "var(--muted)",
@@ -435,7 +435,7 @@ export function UsersPage() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <span
                   style={{
-                    fontFamily: "'JetBrains Mono', monospace",
+                    fontFamily: "var(--font-body)",
                     fontSize: 12,
                     color: "var(--ink)",
                   }}
@@ -449,7 +449,7 @@ export function UsersPage() {
                   borderRadius: 99,
                   fontSize: 11,
                   fontWeight: 600,
-                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontFamily: "var(--font-heading)",
                   backgroundColor: ROLE_COLORS[inv.role].bg,
                   color: ROLE_COLORS[inv.role].text,
                   border: `1px solid ${ROLE_COLORS[inv.role].border}`,
@@ -465,7 +465,7 @@ export function UsersPage() {
                   borderRadius: 6,
                   backgroundColor: "transparent",
                   color: "var(--danger)",
-                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontFamily: "var(--font-heading)",
                   fontWeight: 600,
                   fontSize: 11,
                   border: "1px solid rgba(178,58,38,0.3)",
@@ -515,7 +515,7 @@ export function UsersPage() {
           >
             <span
               style={{
-                fontFamily: "'Space Grotesk', sans-serif",
+                fontFamily: "var(--font-heading)",
                 fontWeight: 600,
                 fontSize: 11,
                 color: "var(--muted)",
@@ -561,7 +561,7 @@ export function UsersPage() {
                       color: "#fff",
                       fontWeight: 700,
                       fontSize: 14,
-                      fontFamily: "'Space Grotesk', sans-serif",
+                      fontFamily: "var(--font-heading)",
                     }}
                   >
                     {initials}
@@ -573,7 +573,7 @@ export function UsersPage() {
                   >
                     <span
                       style={{
-                        fontFamily: "'Space Grotesk', sans-serif",
+                        fontFamily: "var(--font-heading)",
                         fontWeight: 600,
                         fontSize: 13,
                         color: "var(--ink)",
@@ -584,7 +584,7 @@ export function UsersPage() {
                     {isSelf && (
                       <span
                         style={{
-                          fontFamily: "'JetBrains Mono', monospace",
+                          fontFamily: "var(--font-body)",
                           fontSize: 10,
                           color: "var(--muted-2)",
                         }}
@@ -599,7 +599,7 @@ export function UsersPage() {
                           borderRadius: 99,
                           fontSize: 10,
                           fontWeight: 600,
-                          fontFamily: "'Space Grotesk', sans-serif",
+                          fontFamily: "var(--font-heading)",
                           backgroundColor: "#f3e8e8",
                           color: "var(--danger)",
                           border: "1px solid rgba(178,58,38,0.2)",
@@ -611,7 +611,7 @@ export function UsersPage() {
                   </div>
                   <span
                     style={{
-                      fontFamily: "'JetBrains Mono', monospace",
+                      fontFamily: "var(--font-body)",
                       fontSize: 11,
                       color: "var(--muted)",
                     }}
@@ -626,7 +626,7 @@ export function UsersPage() {
                       borderRadius: 99,
                       fontSize: 11,
                       fontWeight: 600,
-                      fontFamily: "'Space Grotesk', sans-serif",
+                      fontFamily: "var(--font-heading)",
                       backgroundColor: colors.bg,
                       color: colors.text,
                       border: `1px solid ${colors.border}`,
@@ -641,7 +641,7 @@ export function UsersPage() {
                       handleRoleChange(u.id, e.target.value as Role)
                     }
                     style={{
-                      fontFamily: "'Space Grotesk', sans-serif",
+                      fontFamily: "var(--font-heading)",
                       fontSize: 12,
                       padding: "5px 8px",
                       borderRadius: 6,
@@ -665,7 +665,7 @@ export function UsersPage() {
                         borderRadius: 6,
                         backgroundColor: "transparent",
                         color: u.active ? "var(--danger)" : "var(--accent)",
-                        fontFamily: "'Space Grotesk', sans-serif",
+                        fontFamily: "var(--font-heading)",
                         fontWeight: 600,
                         fontSize: 11,
                         border: `1px solid ${
@@ -704,7 +704,7 @@ export function UsersPage() {
       >
         <p
           style={{
-            fontFamily: "'Space Grotesk', sans-serif",
+            fontFamily: "var(--font-heading)",
             fontWeight: 600,
             fontSize: 12,
             color: "var(--ink)",
@@ -730,7 +730,7 @@ export function UsersPage() {
             >
               <span
                 style={{
-                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontFamily: "var(--font-heading)",
                   fontWeight: 600,
                   fontSize: 11,
                   color: "var(--muted)",
@@ -741,7 +741,7 @@ export function UsersPage() {
               </span>
               <span
                 style={{
-                  fontFamily: "'Inter', sans-serif",
+                  fontFamily: "var(--font-body)",
                   fontSize: 12,
                   color: "var(--muted)",
                   lineHeight: 1.5,

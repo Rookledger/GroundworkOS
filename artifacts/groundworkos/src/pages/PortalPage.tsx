@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import { useParams } from "wouter";
 import { CheckCircle, XCircle, FileText, Building2 } from "lucide-react";
+import { Panel } from "../components/ui/Panel";
+import { StatCard } from "../components/ui/StatCard";
+import { Btn } from "../components/ui/Btn";
+import { CornerMarks } from "../components/ui/Blueprint";
 
 interface LineItem {
   id: string;
@@ -45,6 +49,21 @@ function fmt(n: number) {
     style: "currency",
     currency: "GBP",
   }).format(n);
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  draft: "Draft",
+  sent: "Awaiting response",
+  approved: "Approved",
+  accepted: "Approved",
+  declined: "Declined",
+  expired: "Expired",
+};
+
+function scrollToDetail() {
+  document
+    .getElementById("quote-detail")
+    ?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 export function PortalPage() {
@@ -96,25 +115,88 @@ export function PortalPage() {
     }
   }
 
-  if (loading) {
-    return (
+  const brandMark = (
+    <span
+      className="flex-shrink-0"
+      style={{
+        width: 22,
+        height: 22,
+        background:
+          "repeating-linear-gradient(135deg,#f0a11e 0 4px,#1d2d3d 4px 8px)",
+        border: "1px solid rgba(255,255,255,.35)",
+      }}
+    />
+  );
+
+  const header = (
+    <header style={{ backgroundColor: "var(--ink-navy)" }}>
       <div
         style={{
-          minHeight: "100dvh",
-          backgroundColor: "var(--bg)",
+          maxWidth: 820,
+          margin: "0 auto",
+          padding: "0 24px",
+          minHeight: 60,
           display: "flex",
           alignItems: "center",
-          justifyContent: "center",
+          gap: 10,
+          flexWrap: "wrap",
         }}
       >
-        <div
+        {brandMark}
+        <span
           style={{
-            fontFamily: "'Space Grotesk', sans-serif",
-            color: "var(--muted)",
-            fontSize: 14,
+            fontFamily: "var(--font-heading)",
+            fontWeight: 600,
+            fontSize: 15,
+            color: "#ffffff",
+            letterSpacing: "0.02em",
           }}
         >
-          Loading quote…
+          GROUNDWORK<span style={{ color: "var(--amber)" }}>OS</span>
+        </span>
+        <span
+          style={{
+            marginLeft: "auto",
+            display: "inline-flex",
+            alignItems: "center",
+            padding: "3px 9px",
+            fontFamily: "var(--font-heading)",
+            fontWeight: 700,
+            fontSize: 10,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: "#ffffff",
+            backgroundColor: "rgba(255,255,255,0.08)",
+            border: "1px solid rgba(255,255,255,0.25)",
+          }}
+        >
+          Read only
+        </span>
+      </div>
+    </header>
+  );
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: "100dvh", backgroundColor: "var(--bg)" }}>
+        {header}
+        <div
+          style={{
+            minHeight: "calc(100dvh - 60px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <div
+            style={{
+              fontFamily: "var(--font-heading)",
+              color: "var(--muted)",
+              fontSize: 14,
+            }}
+          >
+            Loading quote…
+          </div>
         </div>
       </div>
     );
@@ -122,44 +204,48 @@ export function PortalPage() {
 
   if (error || !quote) {
     return (
-      <div
-        style={{
-          minHeight: "100dvh",
-          backgroundColor: "var(--bg)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <div style={{ textAlign: "center" }}>
-          <XCircle
-            style={{
-              width: 40,
-              height: 40,
-              color: "var(--danger)",
-              margin: "0 auto 12px",
-            }}
-          />
-          <p
-            style={{
-              fontFamily: "'Space Grotesk', sans-serif",
-              fontWeight: 600,
-              fontSize: 16,
-              color: "var(--ink)",
-            }}
-          >
-            Quote not found
-          </p>
-          <p
-            style={{
-              fontFamily: "'Inter', sans-serif",
-              fontSize: 13,
-              color: "var(--muted)",
-              marginTop: 4,
-            }}
-          >
-            {error ?? "This link may have expired."}
-          </p>
+      <div style={{ minHeight: "100dvh", backgroundColor: "var(--bg)" }}>
+        {header}
+        <div
+          style={{
+            minHeight: "calc(100dvh - 60px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 24,
+          }}
+        >
+          <div style={{ textAlign: "center" }}>
+            <XCircle
+              strokeWidth={1.5}
+              style={{
+                width: 40,
+                height: 40,
+                color: "var(--danger)",
+                margin: "0 auto 12px",
+              }}
+            />
+            <p
+              style={{
+                fontFamily: "var(--font-heading)",
+                fontWeight: 600,
+                fontSize: 16,
+                color: "var(--ink)",
+              }}
+            >
+              Quote not found
+            </p>
+            <p
+              style={{
+                fontFamily: "var(--font-body)",
+                fontSize: 13,
+                color: "var(--muted)",
+                marginTop: 4,
+              }}
+            >
+              {error ?? "This link may have expired."}
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -167,80 +253,46 @@ export function PortalPage() {
 
   const isResolved = quote.status === "approved" || quote.status === "declined";
   const resolvedByAction = outcome;
+  const needsAction = !isResolved && quote.status === "sent";
+  const statusLabel = STATUS_LABELS[quote.status] ?? quote.status;
 
   return (
     <div style={{ minHeight: "100dvh", backgroundColor: "var(--bg)" }}>
-      <header
-        style={{
-          backgroundColor: "var(--surface)",
-          borderBottom: "1px solid var(--border)",
-        }}
-      >
-        <div
-          style={{
-            maxWidth: 760,
-            margin: "0 auto",
-            padding: "0 24px",
-            height: 56,
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-          }}
-        >
-          <span
-            style={{
-              fontFamily: "'Space Grotesk', sans-serif",
-              fontWeight: 700,
-              fontSize: 13,
-              color: "var(--ink)",
-              letterSpacing: "0.04em",
-            }}
-          >
-            GROUNDWORK<span style={{ color: "var(--accent)" }}>OS</span>
-          </span>
-          <span
-            style={{
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: 11,
-              color: "var(--muted-2)",
-              marginLeft: "auto",
-            }}
-          >
-            Client Quote Portal
-          </span>
-        </div>
-      </header>
+      {header}
 
       <div
-        style={{ maxWidth: 760, margin: "0 auto", padding: "32px 24px 64px" }}
+        style={{ maxWidth: 820, margin: "0 auto", padding: "32px 24px 64px" }}
       >
         {resolvedByAction && (
           <div
+            className="blueprint relative"
             style={{
               marginBottom: 24,
               padding: "16px 20px",
-              borderRadius: 10,
-              border: `1px solid ${resolvedByAction === "approved" ? "rgba(42,110,69,0.25)" : "rgba(178,58,38,0.25)"}`,
+              border: `1px solid ${resolvedByAction === "approved" ? "rgba(42,110,69,0.3)" : "rgba(178,58,38,0.3)"}`,
               backgroundColor:
                 resolvedByAction === "approved"
-                  ? "rgba(42,110,69,0.06)"
-                  : "rgba(178,58,38,0.06)",
+                  ? "var(--success-bg)"
+                  : "var(--danger-bg)",
               display: "flex",
               gap: 12,
               alignItems: "center",
             }}
           >
+            <CornerMarks />
             {resolvedByAction === "approved" ? (
               <CheckCircle
+                strokeWidth={1.5}
                 style={{
                   width: 20,
                   height: 20,
-                  color: "#2a6e45",
+                  color: "var(--success)",
                   flexShrink: 0,
                 }}
               />
             ) : (
               <XCircle
+                strokeWidth={1.5}
                 style={{
                   width: 20,
                   height: 20,
@@ -252,11 +304,13 @@ export function PortalPage() {
             <div>
               <p
                 style={{
-                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontFamily: "var(--font-heading)",
                   fontWeight: 600,
                   fontSize: 14,
                   color:
-                    resolvedByAction === "approved" ? "#2a6e45" : "var(--danger)",
+                    resolvedByAction === "approved"
+                      ? "var(--success)"
+                      : "var(--danger)",
                 }}
               >
                 {resolvedByAction === "approved"
@@ -265,7 +319,7 @@ export function PortalPage() {
               </p>
               <p
                 style={{
-                  fontFamily: "'Inter', sans-serif",
+                  fontFamily: "var(--font-body)",
                   fontSize: 12,
                   color: "var(--muted)",
                   marginTop: 2,
@@ -280,13 +334,83 @@ export function PortalPage() {
         )}
 
         <div
+          className="grid grid-cols-1 sm:grid-cols-3 gap-4"
+          style={{ marginBottom: 24 }}
+        >
+          <StatCard label="Quote value" value={fmt(quote.totalAmount)} />
+          <StatCard label="Line items" value={quote.lineItems.length} />
+          <StatCard
+            label="Status"
+            value={statusLabel}
+            accent={needsAction}
+          />
+        </div>
+
+        <Panel title="Shared with you" noPad className="mb-6">
+          <div
+            className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 px-5 py-4"
+            style={{
+              backgroundColor: needsAction ? "var(--warning-bg)" : undefined,
+              borderLeft: needsAction
+                ? "3px solid var(--warning)"
+                : "3px solid transparent",
+            }}
+          >
+            <FileText
+              strokeWidth={1.5}
+              className="w-4 h-4 flex-shrink-0"
+              style={{ color: needsAction ? "var(--warning-ink)" : "var(--accent)" }}
+            />
+            <div className="flex-1 min-w-0">
+              <p
+                className="truncate"
+                style={{
+                  fontFamily: "var(--font-heading)",
+                  fontWeight: 600,
+                  fontSize: 14,
+                  color: "var(--ink)",
+                }}
+              >
+                {quote.quoteNumber} — {quote.title || "Quote"}
+              </p>
+              <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
+                {needsAction
+                  ? "Your response is needed on this quote"
+                  : `Status: ${statusLabel}`}
+              </p>
+            </div>
+            {needsAction ? (
+              <Btn size="sm" onClick={scrollToDetail} className="flex-shrink-0">
+                Review
+              </Btn>
+            ) : (
+              <button
+                onClick={scrollToDetail}
+                className="text-sm flex-shrink-0"
+                style={{
+                  color: "var(--accent)",
+                  fontFamily: "var(--font-heading)",
+                  fontWeight: 600,
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                Open →
+              </button>
+            )}
+          </div>
+        </Panel>
+
+        <div
+          id="quote-detail"
+          className="blueprint relative"
           style={{
             backgroundColor: "var(--surface)",
-            border: "1px solid var(--border)",
-            borderRadius: 12,
             overflow: "hidden",
           }}
         >
+          <CornerMarks />
           <div
             style={{
               padding: "28px 32px",
@@ -305,12 +429,14 @@ export function PortalPage() {
                   alignItems: "center",
                   gap: 8,
                   marginBottom: 6,
+                  flexWrap: "wrap",
                 }}
               >
-                <FileText style={{ width: 16, height: 16, color: "var(--accent)" }} />
+                <FileText strokeWidth={1.5} style={{ width: 16, height: 16, color: "var(--accent)" }} />
                 <span
+                  className="tnum"
                   style={{
-                    fontFamily: "'JetBrains Mono', monospace",
+                    fontFamily: "var(--font-heading)",
                     fontSize: 12,
                     color: "var(--accent)",
                     fontWeight: 700,
@@ -322,7 +448,7 @@ export function PortalPage() {
               </div>
               <h1
                 style={{
-                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontFamily: "var(--font-heading)",
                   fontWeight: 700,
                   fontSize: 22,
                   color: "var(--ink)",
@@ -335,7 +461,7 @@ export function PortalPage() {
               {quote.validUntil && (
                 <p
                   style={{
-                    fontFamily: "'Inter', sans-serif",
+                    fontFamily: "var(--font-body)",
                     fontSize: 12,
                     color: "var(--muted)",
                     marginTop: 4,
@@ -361,11 +487,12 @@ export function PortalPage() {
                 }}
               >
                 <Building2
+                  strokeWidth={1.5}
                   style={{ width: 12, height: 12, color: "var(--muted)" }}
                 />
                 <span
                   style={{
-                    fontFamily: "'Space Grotesk', sans-serif",
+                    fontFamily: "var(--font-heading)",
                     fontWeight: 600,
                     fontSize: 13,
                     color: "var(--ink)",
@@ -377,7 +504,7 @@ export function PortalPage() {
               {quote.company.address && (
                 <p
                   style={{
-                    fontFamily: "'Inter', sans-serif",
+                    fontFamily: "var(--font-body)",
                     fontSize: 12,
                     color: "var(--muted)",
                     lineHeight: 1.5,
@@ -388,8 +515,9 @@ export function PortalPage() {
               )}
               {quote.company.vatNumber && (
                 <p
+                  className="tnum"
                   style={{
-                    fontFamily: "'JetBrains Mono', monospace",
+                    fontFamily: "var(--font-heading)",
                     fontSize: 11,
                     color: "var(--muted-2)",
                   }}
@@ -405,12 +533,12 @@ export function PortalPage() {
               style={{
                 padding: "16px 32px",
                 borderBottom: "1px solid var(--surface-3)",
-                backgroundColor: "#f7f4f0",
+                backgroundColor: "var(--surface-2)",
               }}
             >
               <p
                 style={{
-                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontFamily: "var(--font-heading)",
                   fontSize: 11,
                   fontWeight: 600,
                   color: "var(--muted)",
@@ -423,7 +551,7 @@ export function PortalPage() {
               </p>
               <p
                 style={{
-                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontFamily: "var(--font-heading)",
                   fontWeight: 600,
                   fontSize: 14,
                   color: "var(--ink)",
@@ -434,7 +562,7 @@ export function PortalPage() {
               {quote.client.address && (
                 <p
                   style={{
-                    fontFamily: "'Inter', sans-serif",
+                    fontFamily: "var(--font-body)",
                     fontSize: 12,
                     color: "var(--muted)",
                   }}
@@ -445,8 +573,8 @@ export function PortalPage() {
             </div>
           )}
 
-          <div style={{ padding: "0 32px" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <div style={{ padding: "0 32px", overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 480 }}>
               <thead>
                 <tr style={{ borderBottom: "1px solid var(--surface-3)" }}>
                   {["Description", "Qty", "Unit", "Unit Price", "Total"].map(
@@ -455,7 +583,7 @@ export function PortalPage() {
                         key={h}
                         style={{
                           padding: "12px 8px 10px",
-                          fontFamily: "'Space Grotesk', sans-serif",
+                          fontFamily: "var(--font-heading)",
                           fontSize: 11,
                           fontWeight: 600,
                           color: "var(--muted)",
@@ -484,7 +612,7 @@ export function PortalPage() {
                     <td
                       style={{
                         padding: "11px 8px",
-                        fontFamily: "'Inter', sans-serif",
+                        fontFamily: "var(--font-body)",
                         fontSize: 13,
                         color: "var(--ink)",
                         textAlign: "left",
@@ -493,9 +621,10 @@ export function PortalPage() {
                       {li.description}
                     </td>
                     <td
+                      className="tnum"
                       style={{
                         padding: "11px 8px",
-                        fontFamily: "'JetBrains Mono', monospace",
+                        fontFamily: "var(--font-heading)",
                         fontSize: 12,
                         color: "var(--ink-2)",
                         textAlign: "right",
@@ -506,7 +635,7 @@ export function PortalPage() {
                     <td
                       style={{
                         padding: "11px 8px",
-                        fontFamily: "'JetBrains Mono', monospace",
+                        fontFamily: "var(--font-body)",
                         fontSize: 12,
                         color: "var(--muted)",
                         textAlign: "right",
@@ -515,9 +644,10 @@ export function PortalPage() {
                       {li.unit}
                     </td>
                     <td
+                      className="tnum"
                       style={{
                         padding: "11px 8px",
-                        fontFamily: "'JetBrains Mono', monospace",
+                        fontFamily: "var(--font-heading)",
                         fontSize: 12,
                         color: "var(--ink-2)",
                         textAlign: "right",
@@ -526,9 +656,10 @@ export function PortalPage() {
                       {fmt(li.unitPrice)}
                     </td>
                     <td
+                      className="tnum"
                       style={{
                         padding: "11px 8px",
-                        fontFamily: "'JetBrains Mono', monospace",
+                        fontFamily: "var(--font-heading)",
                         fontSize: 13,
                         color: "var(--ink)",
                         fontWeight: 600,
@@ -574,7 +705,7 @@ export function PortalPage() {
             >
               <p
                 style={{
-                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontFamily: "var(--font-heading)",
                   fontSize: 11,
                   fontWeight: 600,
                   color: "var(--muted)",
@@ -587,7 +718,7 @@ export function PortalPage() {
               </p>
               <p
                 style={{
-                  fontFamily: "'Inter', sans-serif",
+                  fontFamily: "var(--font-body)",
                   fontSize: 13,
                   color: "var(--ink-2)",
                   lineHeight: 1.65,
@@ -601,17 +732,17 @@ export function PortalPage() {
 
         {!isResolved && (
           <div
+            className="blueprint relative"
             style={{
               marginTop: 24,
               backgroundColor: "var(--surface)",
-              border: "1px solid var(--border)",
-              borderRadius: 12,
               padding: "24px 32px",
             }}
           >
+            <CornerMarks />
             <h2
               style={{
-                fontFamily: "'Space Grotesk', sans-serif",
+                fontFamily: "var(--font-heading)",
                 fontWeight: 700,
                 fontSize: 15,
                 color: "var(--ink)",
@@ -622,7 +753,7 @@ export function PortalPage() {
             </h2>
             <p
               style={{
-                fontFamily: "'Inter', sans-serif",
+                fontFamily: "var(--font-body)",
                 fontSize: 13,
                 color: "var(--muted)",
                 marginBottom: 16,
@@ -634,7 +765,7 @@ export function PortalPage() {
               <label
                 style={{
                   display: "block",
-                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontFamily: "var(--font-heading)",
                   fontSize: 11,
                   fontWeight: 600,
                   color: "var(--ink-2)",
@@ -653,10 +784,9 @@ export function PortalPage() {
                 style={{
                   width: "100%",
                   padding: "9px 12px",
-                  borderRadius: 6,
                   border: "1px solid var(--border)",
                   backgroundColor: "#ffffff",
-                  fontFamily: "'Inter', sans-serif",
+                  fontFamily: "var(--font-body)",
                   fontSize: 14,
                   color: "var(--ink)",
                   outline: "none",
@@ -664,72 +794,50 @@ export function PortalPage() {
                 }}
               />
             </div>
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <button
+            <div className="flex flex-col sm:flex-row" style={{ gap: 10 }}>
+              <Btn
+                variant="primary"
                 disabled={!approverName.trim() || !!submitting}
                 onClick={() => handleAction("approve")}
+                className="justify-center"
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "10px 20px",
-                  borderRadius: 7,
-                  backgroundColor: "#2a6e45",
+                  backgroundColor: "var(--success)",
                   color: "#ffffff",
-                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontFamily: "var(--font-heading)",
                   fontWeight: 600,
-                  fontSize: 13,
-                  border: "none",
-                  cursor:
-                    !approverName.trim() || !!submitting
-                      ? "not-allowed"
-                      : "pointer",
-                  opacity: !approverName.trim() || !!submitting ? 0.6 : 1,
+                  letterSpacing: "0.01em",
                 }}
               >
-                <CheckCircle style={{ width: 14, height: 14 }} />
+                <CheckCircle strokeWidth={1.5} className="w-3.5 h-3.5" />
                 {submitting === "approve" ? "Approving…" : "Approve quote"}
-              </button>
-              <button
+              </Btn>
+              <Btn
+                variant="danger"
                 disabled={!!submitting}
                 onClick={() => handleAction("decline")}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "10px 20px",
-                  borderRadius: 7,
-                  backgroundColor: "transparent",
-                  color: "var(--danger)",
-                  fontFamily: "'Space Grotesk', sans-serif",
-                  fontWeight: 600,
-                  fontSize: 13,
-                  border: "1px solid rgba(178,58,38,0.3)",
-                  cursor: submitting ? "not-allowed" : "pointer",
-                  opacity: submitting ? 0.6 : 1,
-                }}
+                className="justify-center"
               >
-                <XCircle style={{ width: 14, height: 14 }} />
+                <XCircle strokeWidth={1.5} className="w-3.5 h-3.5" />
                 {submitting === "decline" ? "Declining…" : "Decline"}
-              </button>
+              </Btn>
             </div>
           </div>
         )}
 
         {isResolved && !resolvedByAction && (
           <div
+            className="blueprint relative"
             style={{
               marginTop: 20,
               padding: "14px 20px",
-              borderRadius: 8,
               backgroundColor: "var(--surface)",
-              border: "1px solid var(--border)",
               textAlign: "center",
             }}
           >
+            <CornerMarks />
             <p
               style={{
-                fontFamily: "'Inter', sans-serif",
+                fontFamily: "var(--font-body)",
                 fontSize: 13,
                 color: "var(--muted)",
               }}
@@ -743,7 +851,7 @@ export function PortalPage() {
         <div style={{ marginTop: 32, textAlign: "center" }}>
           <p
             style={{
-              fontFamily: "'JetBrains Mono', monospace",
+              fontFamily: "var(--font-heading)",
               fontSize: 11,
               color: "var(--muted-2)",
             }}
@@ -776,7 +884,7 @@ function Row({
     >
       <span
         style={{
-          fontFamily: "'Inter', sans-serif",
+          fontFamily: "var(--font-body)",
           fontSize: 13,
           color: "var(--muted)",
         }}
@@ -784,8 +892,9 @@ function Row({
         {label}
       </span>
       <span
+        className="tnum"
         style={{
-          fontFamily: "'JetBrains Mono', monospace",
+          fontFamily: "var(--font-heading)",
           fontSize: bold ? 15 : 13,
           color: "var(--ink)",
           fontWeight: bold ? 700 : 400,
@@ -799,21 +908,20 @@ function Row({
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; bg: string; color: string }> = {
-    draft: { label: "Draft", bg: "#f3f4f6", color: "var(--ink-2)" },
+    draft: { label: "Draft", bg: "var(--surface-3)", color: "var(--ink-2)" },
     sent: { label: "Sent", bg: "var(--accent-bg)", color: "var(--accent)" },
-    approved: { label: "Approved", bg: "#dcfce7", color: "#2a6e45" },
-    declined: { label: "Declined", bg: "#fee2e2", color: "var(--danger)" },
-    expired: { label: "Expired", bg: "#fef3c7", color: "#92400e" },
+    approved: { label: "Approved", bg: "var(--success-bg)", color: "var(--success)" },
+    declined: { label: "Declined", bg: "var(--danger-bg)", color: "var(--danger)" },
+    expired: { label: "Expired", bg: "var(--warning-bg)", color: "var(--warning-ink)" },
   };
-  const s = map[status] ?? { label: status, bg: "#f3f4f6", color: "var(--ink-2)" };
+  const s = map[status] ?? { label: status, bg: "var(--surface-3)", color: "var(--ink-2)" };
   return (
     <span
       style={{
         padding: "2px 8px",
-        borderRadius: 99,
         fontSize: 10,
         fontWeight: 700,
-        fontFamily: "'Space Grotesk', sans-serif",
+        fontFamily: "var(--font-heading)",
         backgroundColor: s.bg,
         color: s.color,
         textTransform: "uppercase",

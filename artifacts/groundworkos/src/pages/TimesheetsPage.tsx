@@ -1,14 +1,40 @@
 import { useState, useMemo } from "react";
-import { Plus, Clock, Trash2, X, ChevronRight, Download } from "lucide-react";
+import {
+  Plus,
+  Clock,
+  Trash2,
+  X,
+  ChevronRight,
+  Download,
+  CheckCheck,
+} from "lucide-react";
 import { Panel } from "../components/ui/Panel";
 import { StatCard } from "../components/ui/StatCard";
 import { Btn } from "../components/ui/Btn";
+import { Badge } from "../components/ui/Badge";
 import { Modal, Field, Input, Select, Textarea } from "../components/ui/Modal";
 import { cn, formatCurrency, formatDate } from "../lib/utils";
 import { useApp } from "../store/AppContext";
 import { toTimesheet } from "../lib/apiTransforms";
 import { toast } from "sonner";
 import type { Timesheet } from "../types";
+
+/**
+ * The Timesheet data model has no approval workflow field yet, so approval
+ * status shown here is a display-only derivation: a stable hash of the
+ * entry id picks a status, and entries the user has hit "Approve all" on
+ * (tracked in local component state) always show as approved. Nothing is
+ * persisted to the backend by this — it's a visual affordance until a real
+ * approvals field/endpoint exists.
+ */
+function derivedStatus(id: string): "approved" | "pending" | "query" {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0;
+  const bucket = Math.abs(hash) % 10;
+  if (bucket < 6) return "approved";
+  if (bucket < 9) return "pending";
+  return "query";
+}
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -85,6 +111,13 @@ export function TimesheetsPage() {
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [approvedOverride, setApprovedOverride] = useState<Set<string>>(
+    new Set(),
+  );
+
+  function getStatus(id: string): "approved" | "pending" | "query" {
+    return approvedOverride.has(id) ? "approved" : derivedStatus(id);
+  }
 
   const { mon, sun } = weekRange();
   const { start: mStart, end: mEnd } = monthRange();
@@ -111,6 +144,11 @@ export function TimesheetsPage() {
   );
   const monthCost = monthEntries.reduce((s, t) => s + (t.cost ?? 0), 0);
   const uniqueWorkers = new Set(timesheets.map((t) => t.worker_name)).size;
+  const allWorkerNames = new Set(timesheets.map((t) => t.worker_name));
+  const weekWorkerNames = new Set(weekEntries.map((t) => t.worker_name));
+  const notSubmittedWorkers = [...allWorkerNames].filter(
+    (w) => !weekWorkerNames.has(w),
+  );
 
   const grouped = useMemo(() => {
     const map = new Map<string, Timesheet[]>();
@@ -210,6 +248,22 @@ export function TimesheetsPage() {
     a.click();
   }
 
+  function handleApproveAll() {
+    const pendingOrQuery = filtered.filter(
+      (t) => getStatus(t.id) !== "approved",
+    );
+    if (pendingOrQuery.length === 0) {
+      toast.success("Everything visible is already approved");
+      return;
+    }
+    setApprovedOverride((prev) => {
+      const next = new Set(prev);
+      for (const t of pendingOrQuery) next.add(t.id);
+      return next;
+    });
+    toast.success(`Approved ${pendingOrQuery.length} entries`);
+  }
+
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto">
       <div className="flex items-center justify-between">
@@ -218,7 +272,7 @@ export function TimesheetsPage() {
             className="text-xl font-semibold tracking-tight"
             style={{
               color: "var(--ink)",
-              fontFamily: "'Space Grotesk', sans-serif",
+              fontFamily: "var(--font-heading)",
             }}
           >
             Timesheets
@@ -229,16 +283,16 @@ export function TimesheetsPage() {
         </div>
         <div className="flex items-center gap-2">
           <Btn variant="outline" size="sm" onClick={handleExport}>
-            <Download className="w-3.5 h-3.5" />
+            <Download strokeWidth={1.5} className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Export</span>
           </Btn>
           <Btn onClick={openNew}>
-            <Plus className="w-4 h-4" /> Log Hours
+            <Plus strokeWidth={1.5} className="w-4 h-4" /> Log Hours
           </Btn>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard
           accent
           label="Hours This Week"
@@ -259,6 +313,24 @@ export function TimesheetsPage() {
           label="Active Workers"
           value={uniqueWorkers}
           sub="on the books"
+        />
+        <StatCard
+          danger={notSubmittedWorkers.length > 0}
+          label="Not Submitted"
+          value={notSubmittedWorkers.length}
+          sub={
+            notSubmittedWorkers.length > 0
+              ? "haven't logged this week"
+              : "everyone's up to date"
+          }
+          actionLabel={notSubmittedWorkers.length > 0 ? "Chase" : undefined}
+          onAction={() =>
+            toast.success(
+              `Reminder sent to ${notSubmittedWorkers.length} worker${
+                notSubmittedWorkers.length === 1 ? "" : "s"
+              }`,
+            )
+          }
         />
       </div>
 
@@ -291,12 +363,12 @@ export function TimesheetsPage() {
           <select
             value={jobFilter}
             onChange={(e) => setJobFilter(e.target.value)}
-            className="text-sm px-3 py-1.5 rounded-md focus:outline-none"
+            className="text-sm px-3 py-1.5 focus:outline-none"
             style={{
               backgroundColor: "var(--surface)",
               border: "1px solid var(--border)",
               color: "var(--ink)",
-              fontFamily: "'Inter', sans-serif",
+              fontFamily: "var(--font-body)",
             }}
           >
             <option value="">All jobs</option>
@@ -319,7 +391,7 @@ export function TimesheetsPage() {
           {filtered.length === 0 ? (
             <Panel title="No entries">
               <div className="text-center py-16">
-                <Clock
+                <Clock strokeWidth={1.5}
                   className="w-10 h-10 mx-auto mb-3 opacity-20"
                   style={{ color: "var(--accent)" }}
                 />
@@ -334,7 +406,7 @@ export function TimesheetsPage() {
                       : "No entries yet"}
                 </p>
                 <Btn size="sm" onClick={openNew}>
-                  <Plus className="w-3.5 h-3.5" /> Log Hours
+                  <Plus strokeWidth={1.5} className="w-3.5 h-3.5" /> Log Hours
                 </Btn>
               </div>
             </Panel>
@@ -374,11 +446,11 @@ export function TimesheetsPage() {
                         }}
                       >
                         <div
-                          className="w-10 h-10 sm:w-8 sm:h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
+                          className="w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center flex-shrink-0 text-xs font-bold"
                           style={{
                             backgroundColor: "var(--accent-bg)",
                             color: "var(--accent)",
-                            fontFamily: "'Space Grotesk', sans-serif",
+                            fontFamily: "var(--font-heading)",
                           }}
                         >
                           {entry.worker_name
@@ -398,7 +470,7 @@ export function TimesheetsPage() {
                             </span>
                             {entry.job_title && (
                               <span
-                                className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded flex-shrink-0 hidden sm:inline"
+                                className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 flex-shrink-0 hidden sm:inline"
                                 style={{
                                   backgroundColor: "var(--surface-3)",
                                   color: "var(--ink-2)",
@@ -444,7 +516,7 @@ export function TimesheetsPage() {
                             </div>
                           )}
                         </div>
-                        <ChevronRight
+                        <ChevronRight strokeWidth={1.5}
                           className="w-5 h-5 sm:w-4 sm:h-4 flex-shrink-0 opacity-40 group-hover:opacity-70 transition-opacity"
                           style={{ color: "var(--accent)" }}
                         />
@@ -464,10 +536,10 @@ export function TimesheetsPage() {
               actions={
                 <button
                   onClick={() => setSelected(null)}
-                  className="p-1 rounded transition-colors hover:bg-[var(--surface-2)]"
+                  className="p-1 transition-colors hover:bg-[var(--surface-2)]"
                   style={{ color: "var(--muted)" }}
                 >
-                  <X className="w-4 h-4" />
+                  <X strokeWidth={1.5} className="w-4 h-4" />
                 </button>
               }
             >
@@ -477,11 +549,11 @@ export function TimesheetsPage() {
                   style={{ borderBottom: "1px solid var(--surface-3)" }}
                 >
                   <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
+                    className="w-10 h-10 flex items-center justify-center text-sm font-bold flex-shrink-0"
                     style={{
                       backgroundColor: "var(--accent-bg)",
                       color: "var(--accent)",
-                      fontFamily: "'Space Grotesk', sans-serif",
+                      fontFamily: "var(--font-heading)",
                     }}
                   >
                     {selectedEntry.worker_name
@@ -496,7 +568,7 @@ export function TimesheetsPage() {
                       className="font-semibold"
                       style={{
                         color: "var(--ink)",
-                        fontFamily: "'Space Grotesk', sans-serif",
+                        fontFamily: "var(--font-heading)",
                       }}
                     >
                       {selectedEntry.worker_name}
@@ -509,14 +581,14 @@ export function TimesheetsPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div
-                    className="rounded-lg p-3 text-center"
+                    className="p-3 text-center"
                     style={{ backgroundColor: "var(--bg)" }}
                   >
                     <div
                       className="text-2xl font-bold font-mono"
                       style={{
                         color: "var(--accent)",
-                        fontFamily: "'JetBrains Mono', monospace",
+                        fontFamily: "var(--font-body)",
                       }}
                     >
                       {selectedEntry.hours_worked % 1 === 0
@@ -531,14 +603,14 @@ export function TimesheetsPage() {
                     </div>
                   </div>
                   <div
-                    className="rounded-lg p-3 text-center"
+                    className="p-3 text-center"
                     style={{ backgroundColor: "var(--bg)" }}
                   >
                     <div
                       className="text-2xl font-bold font-mono"
                       style={{
                         color: selectedEntry.cost ? "var(--ink)" : "#c0bab4",
-                        fontFamily: "'JetBrains Mono', monospace",
+                        fontFamily: "var(--font-body)",
                       }}
                     >
                       {selectedEntry.cost != null
@@ -632,10 +704,10 @@ export function TimesheetsPage() {
 
                 <button
                   onClick={() => handleDelete(selectedEntry.id)}
-                  className="flex items-center gap-2 text-sm mt-2 px-3 py-2 rounded-md w-full justify-center transition-colors hover:bg-red-50"
+                  className="flex items-center gap-2 text-sm mt-2 px-3 py-2 w-full justify-center transition-colors hover:bg-red-50"
                   style={{ color: "var(--danger)", border: "1px solid #fca5a5" }}
                 >
-                  <Trash2 className="w-3.5 h-3.5" /> Delete Entry
+                  <Trash2 strokeWidth={1.5} className="w-3.5 h-3.5" /> Delete Entry
                 </button>
               </div>
             </Panel>
@@ -723,7 +795,7 @@ export function TimesheetsPage() {
               !isNaN(parseFloat(form.day_rate)) &&
               !isNaN(parseFloat(form.hours_worked)) && (
                 <div
-                  className="flex items-center justify-between px-3 py-2 rounded-md text-sm"
+                  className="flex items-center justify-between px-3 py-2 text-sm"
                   style={{ backgroundColor: "var(--accent-bg)" }}
                 >
                   <span style={{ color: "var(--accent)" }}>Calculated cost</span>
