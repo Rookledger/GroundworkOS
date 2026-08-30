@@ -274,13 +274,13 @@ export function JobsPage() {
           <h1
             className="text-xl font-semibold tracking-tight"
             style={{
-              color: "#181410",
+              color: "var(--ink)",
               fontFamily: "'Space Grotesk', sans-serif",
             }}
           >
             Jobs
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: "#7a7469" }}>
+          <p className="text-sm mt-0.5" style={{ color: "var(--muted)" }}>
             <span className="font-mono font-medium">{jobs.length}</span> total
             registered
           </p>
@@ -317,7 +317,7 @@ export function JobsPage() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div
           className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0"
-          style={{ borderBottom: "1px solid #d9d4ce" }}
+          style={{ borderBottom: "1px solid var(--border)" }}
         >
           {TABS.map((tab) => (
             <button
@@ -327,12 +327,12 @@ export function JobsPage() {
               style={
                 activeTab === tab.id
                   ? {
-                      color: "#181410",
+                      color: "var(--ink)",
                       fontWeight: 500,
-                      borderBottom: "2px solid #1b5e78",
+                      borderBottom: "2px solid var(--accent)",
                       marginBottom: "-1px",
                     }
-                  : { color: "#7a7469" }
+                  : { color: "var(--muted)" }
               }
             >
               {tab.label}
@@ -340,7 +340,7 @@ export function JobsPage() {
                 <span
                   className="text-[11px] ml-1.5 font-mono font-bold"
                   style={{
-                    color: activeTab === tab.id ? "#1b5e78" : "#c0bab4",
+                    color: activeTab === tab.id ? "var(--accent)" : "#c0bab4",
                   }}
                 >
                   {jobs.filter((j) => j.status === tab.id).length}
@@ -362,12 +362,12 @@ export function JobsPage() {
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9 pr-4 py-1.5 rounded-md text-sm w-full focus:outline-none transition-colors"
               style={{
-                backgroundColor: "#fafaf8",
-                border: "1px solid #d9d4ce",
-                color: "#181410",
+                backgroundColor: "var(--surface)",
+                border: "1px solid var(--border)",
+                color: "var(--ink)",
               }}
-              onFocus={(e) => (e.target.style.borderColor = "#1b5e78")}
-              onBlur={(e) => (e.target.style.borderColor = "#d9d4ce")}
+              onFocus={(e) => (e.target.style.borderColor = "var(--accent)")}
+              onBlur={(e) => (e.target.style.borderColor = "var(--border)")}
             />
           </div>
           <Btn
@@ -399,13 +399,13 @@ export function JobsPage() {
       {showFilters && (
         <div
           className="p-4 rounded-xl"
-          style={{ backgroundColor: "#fafaf8", border: "1px solid #d9d4ce" }}
+          style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border)" }}
         >
           <div className="flex items-center justify-between mb-3">
             <span
               className="text-[11px] font-bold uppercase tracking-widest"
               style={{
-                color: "#7a7469",
+                color: "var(--muted)",
                 fontFamily: "'Space Grotesk', sans-serif",
               }}
             >
@@ -413,8 +413,8 @@ export function JobsPage() {
             </span>
             {filterTypes.length > 0 && (
               <button
-                className="text-xs hover:text-[#181410] transition-colors"
-                style={{ color: "#8a8377" }}
+                className="text-xs hover:text-[var(--ink)] transition-colors"
+                style={{ color: "var(--muted-2)" }}
                 onClick={() => setFilterTypes([])}
               >
                 Clear all
@@ -431,10 +431,10 @@ export function JobsPage() {
                   className="relative flex items-center justify-center w-4 h-4 rounded border transition-colors"
                   style={{
                     borderColor: filterTypes.includes(t)
-                      ? "#1b5e78"
-                      : "#d9d4ce",
+                      ? "var(--accent)"
+                      : "var(--border)",
                     backgroundColor: filterTypes.includes(t)
-                      ? "#1b5e78"
+                      ? "var(--accent)"
                       : "#ffffff",
                   }}
                 >
@@ -468,9 +468,9 @@ export function JobsPage() {
                 </div>
                 <span
                   style={{
-                    color: filterTypes.includes(t) ? "#181410" : "#8a8377",
+                    color: filterTypes.includes(t) ? "var(--ink)" : "var(--muted-2)",
                   }}
-                  className="capitalize transition-colors group-hover:text-[#181410]"
+                  className="capitalize transition-colors group-hover:text-[var(--ink)]"
                 >
                   {t}
                 </span>
@@ -493,10 +493,10 @@ export function JobsPage() {
           >
             {filtered.length === 0 ? (
               <div className="text-center py-16">
-                <p className="text-sm font-medium" style={{ color: "#4a4540" }}>
+                <p className="text-sm font-medium" style={{ color: "var(--ink-2)" }}>
                   No jobs found
                 </p>
-                <p className="text-sm mt-1" style={{ color: "#a8a099" }}>
+                <p className="text-sm mt-1" style={{ color: "var(--muted-2)" }}>
                   Try adjusting your search or filters
                 </p>
               </div>
@@ -508,23 +508,23 @@ export function JobsPage() {
                     onClick={() =>
                       setSelected(selected === job.id ? null : job.id)
                     }
-                    className="flex items-center gap-4 px-5 py-4 cursor-pointer transition-colors hover:bg-[#eeeae4] group"
+                    className="flex items-center gap-4 px-5 py-4 cursor-pointer transition-colors hover:bg-[var(--surface-2)] group"
                     style={{
                       borderBottom:
-                        i < filtered.length - 1 ? "1px solid #d9d4ce" : "none",
+                        i < filtered.length - 1 ? "1px solid var(--border)" : "none",
                       backgroundColor:
-                        selected === job.id ? "#eeeae4" : undefined,
+                        selected === job.id ? "var(--surface-2)" : undefined,
                       borderLeft:
                         selected === job.id
-                          ? "3px solid #1b5e78"
+                          ? "3px solid var(--accent)"
                           : "3px solid transparent",
                     }}
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2.5 mb-1.5">
                         <span
-                          className="text-sm font-semibold truncate transition-colors group-hover:text-[#1b5e78]"
-                          style={{ color: "#181410" }}
+                          className="text-sm font-semibold truncate transition-colors group-hover:text-[var(--accent)]"
+                          style={{ color: "var(--ink)" }}
                         >
                           {job.title}
                         </span>
@@ -532,8 +532,8 @@ export function JobsPage() {
                           <span
                             className="flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"
                             style={{
-                              backgroundColor: "#e8e4dd",
-                              color: "#4a4540",
+                              backgroundColor: "var(--surface-3)",
+                              color: "var(--ink-2)",
                             }}
                           >
                             {job.client.company_name}
@@ -543,7 +543,7 @@ export function JobsPage() {
                       </div>
                       <div
                         className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs"
-                        style={{ color: "#7a7469" }}
+                        style={{ color: "var(--muted)" }}
                       >
                         <span className="font-mono font-medium">
                           {job.job_number}
@@ -564,13 +564,13 @@ export function JobsPage() {
                     <div className="w-28 hidden md:block flex-shrink-0 text-right">
                       <div
                         className="text-[10px] font-bold uppercase tracking-widest mb-1"
-                        style={{ color: "#7a7469" }}
+                        style={{ color: "var(--muted)" }}
                       >
                         Value
                       </div>
                       <div
                         className="text-sm font-medium font-mono tnum"
-                        style={{ color: "#181410" }}
+                        style={{ color: "var(--ink)" }}
                       >
                         {job.value ? formatCurrency(job.value) : "—"}
                       </div>
@@ -580,7 +580,7 @@ export function JobsPage() {
                         <div className="flex justify-between items-center mb-1.5">
                           <span
                             className="text-[10px] font-bold uppercase tracking-widest"
-                            style={{ color: "#7a7469" }}
+                            style={{ color: "var(--muted)" }}
                           >
                             Progress
                           </span>
@@ -593,7 +593,7 @@ export function JobsPage() {
                         </div>
                         <div
                           className="h-1.5 rounded-full overflow-hidden"
-                          style={{ backgroundColor: "#e8e4dd" }}
+                          style={{ backgroundColor: "var(--surface-3)" }}
                         >
                           <div
                             className="h-full rounded-full"
@@ -611,8 +611,8 @@ export function JobsPage() {
                       className={cn(
                         "w-4 h-4 flex-shrink-0 transition-all",
                         selected === job.id
-                          ? "opacity-100 text-[#1b5e78] rotate-90"
-                          : "opacity-0 group-hover:opacity-100 text-[#7a7469]",
+                          ? "opacity-100 text-[var(--accent)] rotate-90"
+                          : "opacity-0 group-hover:opacity-100 text-[var(--muted)]",
                       )}
                     />
                   </div>
@@ -629,8 +629,8 @@ export function JobsPage() {
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => openEdit(selectedJob)}
-                    className="px-2 py-1 rounded-md hover:bg-[#e8e4dd] transition-colors text-xs font-medium"
-                    style={{ color: "#1b5e78" }}
+                    className="px-2 py-1 rounded-md hover:bg-[var(--surface-3)] transition-colors text-xs font-medium"
+                    style={{ color: "var(--accent)" }}
                     title="Edit job"
                   >
                     Edit
@@ -640,15 +640,15 @@ export function JobsPage() {
                       handleDelete(selectedJob.id, selectedJob.job_number)
                     }
                     className="p-1 rounded-md hover:bg-red-50 transition-colors"
-                    style={{ color: "#c13a2a" }}
+                    style={{ color: "var(--danger)" }}
                     title="Delete job"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setSelected(null)}
-                    className="p-1 rounded-md hover:bg-[#e8e4dd] transition-colors"
-                    style={{ color: "#7a7469" }}
+                    className="p-1 rounded-md hover:bg-[var(--surface-3)] transition-colors"
+                    style={{ color: "var(--muted)" }}
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -659,8 +659,8 @@ export function JobsPage() {
                 <div>
                   <div className="flex items-center gap-2.5 mb-2">
                     <span
-                      className="text-xs font-mono font-medium px-2 py-0.5 rounded bg-[#e8e4dd]"
-                      style={{ color: "#4a4540" }}
+                      className="text-xs font-mono font-medium px-2 py-0.5 rounded bg-[var(--surface-3)]"
+                      style={{ color: "var(--ink-2)" }}
                     >
                       {selectedJob.job_number}
                     </span>
@@ -669,7 +669,7 @@ export function JobsPage() {
                   <h3
                     className="text-lg font-semibold leading-tight tracking-tight"
                     style={{
-                      color: "#181410",
+                      color: "var(--ink)",
                       fontFamily: "'Space Grotesk', sans-serif",
                     }}
                   >
@@ -681,7 +681,7 @@ export function JobsPage() {
                   <p
                     className="text-[11px] font-bold uppercase tracking-widest mb-2.5"
                     style={{
-                      color: "#7a7469",
+                      color: "var(--muted)",
                       fontFamily: "'Space Grotesk', sans-serif",
                     }}
                   >
@@ -696,14 +696,14 @@ export function JobsPage() {
                         style={
                           selectedJob.status === s
                             ? {
-                                backgroundColor: "#1b5e78",
+                                backgroundColor: "var(--accent)",
                                 color: "#ffffff",
-                                border: "1px solid #1b5e78",
+                                border: "1px solid var(--accent)",
                               }
                             : {
-                                backgroundColor: "#fafaf8",
-                                color: "#7a7469",
-                                border: "1px solid #d9d4ce",
+                                backgroundColor: "var(--surface)",
+                                color: "var(--muted)",
+                                border: "1px solid var(--border)",
                               }
                         }
                       >
@@ -715,14 +715,14 @@ export function JobsPage() {
 
                 {selectedJob.status === "active" && (
                   <div
-                    className="p-4 rounded-lg bg-[#fafaf8]"
-                    style={{ border: "1px solid #e8e4dd" }}
+                    className="p-4 rounded-lg bg-[var(--surface)]"
+                    style={{ border: "1px solid var(--surface-3)" }}
                   >
                     <div className="flex items-center justify-between mb-3">
                       <p
                         className="text-[11px] font-bold uppercase tracking-widest"
                         style={{
-                          color: "#7a7469",
+                          color: "var(--muted)",
                           fontFamily: "'Space Grotesk', sans-serif",
                         }}
                       >
@@ -741,11 +741,11 @@ export function JobsPage() {
                       onChange={(e) =>
                         updateProgress(selectedJob.id, parseInt(e.target.value))
                       }
-                      className="w-full accent-[#1b5e78] cursor-pointer"
+                      className="w-full accent-[var(--accent)] cursor-pointer"
                     />
                     <div
                       className="mt-3 h-2 rounded-full overflow-hidden"
-                      style={{ backgroundColor: "#e8e4dd" }}
+                      style={{ backgroundColor: "var(--surface-3)" }}
                     >
                       <div
                         className="h-full rounded-full transition-all"
@@ -762,7 +762,7 @@ export function JobsPage() {
                   <p
                     className="text-[11px] font-bold uppercase tracking-widest mb-3"
                     style={{
-                      color: "#7a7469",
+                      color: "var(--muted)",
                       fontFamily: "'Space Grotesk', sans-serif",
                     }}
                   >
@@ -771,7 +771,7 @@ export function JobsPage() {
                   <div
                     className="space-y-0 text-sm"
                     style={{
-                      border: "1px solid #e8e4dd",
+                      border: "1px solid var(--surface-3)",
                       borderRadius: "8px",
                       overflow: "hidden",
                     }}
@@ -832,15 +832,15 @@ export function JobsPage() {
                         className="flex justify-between items-baseline gap-4 px-4 py-2.5"
                         style={{
                           backgroundColor:
-                            idx % 2 === 0 ? "#fafaf8" : "#f5f1ec",
+                            idx % 2 === 0 ? "var(--surface)" : "#f5f1ec",
                         }}
                       >
-                        <span style={{ color: "#7a7469", flexShrink: 0 }}>
+                        <span style={{ color: "var(--muted)", flexShrink: 0 }}>
                           {label}
                         </span>
                         <span
                           className="text-right font-medium"
-                          style={{ color: "#181410" }}
+                          style={{ color: "var(--ink)" }}
                         >
                           {value}
                         </span>
@@ -853,17 +853,17 @@ export function JobsPage() {
                   <div
                     className="p-3 rounded-md text-sm flex items-start gap-3"
                     style={{
-                      backgroundColor: "#e8f3f7",
-                      border: "1px solid #1b5e78",
+                      backgroundColor: "var(--accent-bg)",
+                      border: "1px solid var(--accent)",
                     }}
                   >
                     <div className="flex-1">
-                      <div className="font-semibold text-[#1b5e78] mb-0.5">
+                      <div className="font-semibold text-[var(--accent)] mb-0.5">
                         NRSWA Street Works Required
                       </div>
-                      <div className="text-[#4a4540]">
+                      <div className="text-[var(--ink-2)]">
                         Permit Ref:{" "}
-                        <span className="font-mono font-medium text-[#181410]">
+                        <span className="font-mono font-medium text-[var(--ink)]">
                           {selectedJob.permit_number ?? "Not supplied"}
                         </span>
                       </div>
@@ -876,15 +876,15 @@ export function JobsPage() {
                     <p
                       className="text-[11px] font-bold uppercase tracking-widest mb-2"
                       style={{
-                        color: "#7a7469",
+                        color: "var(--muted)",
                         fontFamily: "'Space Grotesk', sans-serif",
                       }}
                     >
                       Scope of Works
                     </p>
                     <p
-                      className="text-sm leading-relaxed whitespace-pre-wrap p-4 rounded-lg bg-[#fafaf8]"
-                      style={{ color: "#4a4540", border: "1px solid #e8e4dd" }}
+                      className="text-sm leading-relaxed whitespace-pre-wrap p-4 rounded-lg bg-[var(--surface)]"
+                      style={{ color: "var(--ink-2)", border: "1px solid var(--surface-3)" }}
                     >
                       {selectedJob.description}
                     </p>
@@ -911,7 +911,7 @@ export function JobsPage() {
               placeholder="e.g. Drainage Installation — Plot 12"
             />
             {errors.title && (
-              <p className="mt-1 text-xs" style={{ color: "#c13a2a" }}>
+              <p className="mt-1 text-xs" style={{ color: "var(--danger)" }}>
                 {errors.title}
               </p>
             )}
@@ -1037,7 +1037,7 @@ export function JobsPage() {
                 }
                 className="w-4 h-4 accent-neutral-400"
               />
-              <span className="text-sm" style={{ color: "#8a8377" }}>
+              <span className="text-sm" style={{ color: "var(--muted-2)" }}>
                 NRSWA Street Works required
               </span>
             </label>

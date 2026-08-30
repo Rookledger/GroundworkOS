@@ -48,11 +48,11 @@ const TYPE_LABELS: Record<DocumentType, string> = {
 const TYPE_COLORS: Record<DocumentType, string> = {
   rams: "#a78bfa",
   insurance: "#2a6e45",
-  certification: "#1b5e78",
+  certification: "var(--accent)",
   permit: "#a78bfa",
   compliance: "#fb923c",
-  contract: "#181410",
-  other: "#7a7469",
+  contract: "var(--ink)",
+  other: "var(--muted)",
 };
 
 const emptyForm = {
@@ -224,13 +224,13 @@ export function DocumentsPage() {
           <h1
             className="text-2xl font-bold"
             style={{
-              color: "#181410",
+              color: "var(--ink)",
               fontFamily: "'Space Grotesk', sans-serif",
             }}
           >
             Documents
           </h1>
-          <p className="text-sm mt-1" style={{ color: "#7a7469" }}>
+          <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
             RAMS, compliance certs, permits & insurance
           </p>
         </div>
@@ -263,16 +263,16 @@ export function DocumentsPage() {
       {(expired.length > 0 || expiring.length > 0) && (
         <div
           className="flex items-start gap-3 p-4 rounded-xl"
-          style={{ backgroundColor: "#eeeae4", border: "1px solid #d9d4ce" }}
+          style={{ backgroundColor: "var(--surface-2)", border: "1px solid var(--border)" }}
         >
           <AlertTriangle
             className="w-4 h-4 flex-shrink-0 mt-0.5"
-            style={{ color: "#c13a2a" }}
+            style={{ color: "var(--danger)" }}
           />
           <div className="flex-1">
             <p
               className="text-sm font-semibold mb-1.5"
-              style={{ color: "#c13a2a" }}
+              style={{ color: "var(--danger)" }}
             >
               Attention Required
             </p>
@@ -282,9 +282,9 @@ export function DocumentsPage() {
                   key={d.id}
                   className="text-xs px-2 py-1 rounded font-mono font-medium"
                   style={{
-                    backgroundColor: "#fafaf8",
-                    border: "1px solid #d9d4ce",
-                    color: d.status === "expired" ? "#c13a2a" : "#b56918",
+                    backgroundColor: "var(--surface)",
+                    border: "1px solid var(--border)",
+                    color: d.status === "expired" ? "var(--danger)" : "var(--warning)",
                   }}
                 >
                   {d.name}{" "}
@@ -311,12 +311,12 @@ export function DocumentsPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9 pr-4 py-1.5 rounded-md text-sm w-52 focus:outline-none"
             style={{
-              backgroundColor: "#fafaf8",
-              border: "1px solid #d9d4ce",
-              color: "#181410",
+              backgroundColor: "var(--surface)",
+              border: "1px solid var(--border)",
+              color: "var(--ink)",
             }}
-            onFocus={(e) => (e.target.style.borderColor = "#1b5e78")}
-            onBlur={(e) => (e.target.style.borderColor = "#d9d4ce")}
+            onFocus={(e) => (e.target.style.borderColor = "var(--accent)")}
+            onBlur={(e) => (e.target.style.borderColor = "var(--border)")}
           />
         </div>
         <select
@@ -326,9 +326,9 @@ export function DocumentsPage() {
           }
           className="py-1.5 px-3 rounded-md text-sm focus:outline-none"
           style={{
-            backgroundColor: "#fafaf8",
-            border: "1px solid #d9d4ce",
-            color: "#8a8377",
+            backgroundColor: "var(--surface)",
+            border: "1px solid var(--border)",
+            color: "var(--muted-2)",
           }}
         >
           <option value="all">All Types</option>
@@ -345,9 +345,9 @@ export function DocumentsPage() {
           }
           className="py-1.5 px-3 rounded-md text-sm focus:outline-none"
           style={{
-            backgroundColor: "#fafaf8",
-            border: "1px solid #d9d4ce",
-            color: "#8a8377",
+            backgroundColor: "var(--surface)",
+            border: "1px solid var(--border)",
+            color: "var(--muted-2)",
           }}
         >
           <option value="all">All Categories</option>
@@ -379,15 +379,15 @@ export function DocumentsPage() {
                     onClick={() =>
                       setSelected(selected === doc.id ? null : doc.id)
                     }
-                    className="flex items-center gap-4 px-5 py-4 cursor-pointer group transition-colors hover:bg-[#eeeae4]"
+                    className="flex items-center gap-4 px-5 py-4 cursor-pointer group transition-colors hover:bg-[var(--surface-2)]"
                     style={{
                       borderBottom:
-                        i < filtered.length - 1 ? "1px solid #d9d4ce" : "none",
+                        i < filtered.length - 1 ? "1px solid var(--border)" : "none",
                       backgroundColor:
-                        selected === doc.id ? "#eeeae4" : undefined,
+                        selected === doc.id ? "var(--surface-2)" : undefined,
                       borderLeft:
                         selected === doc.id
-                          ? "2px solid #1b5e78"
+                          ? "2px solid var(--accent)"
                           : "2px solid transparent",
                     }}
                   >
@@ -398,26 +398,26 @@ export function DocumentsPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span
-                          className="text-sm font-semibold truncate group-hover:text-[#1b5e78] transition-colors"
-                          style={{ color: "#181410" }}
+                          className="text-sm font-semibold truncate group-hover:text-[var(--accent)] transition-colors"
+                          style={{ color: "var(--ink)" }}
                         >
                           {doc.name}
                         </span>
                         {(isExpired || isExpiringSoon) && (
                           <AlertTriangle
                             className="w-3.5 h-3.5 flex-shrink-0"
-                            style={{ color: isExpired ? "#c13a2a" : "#e07b39" }}
+                            style={{ color: isExpired ? "var(--danger)" : "#e07b39" }}
                           />
                         )}
                         {doc.file_path && (
                           <Paperclip
                             className="w-3 h-3 flex-shrink-0"
-                            style={{ color: "#a8a099" }}
+                            style={{ color: "var(--muted-2)" }}
                             aria-label="File attached"
                           />
                         )}
                       </div>
-                      <div className="text-xs" style={{ color: "#7a7469" }}>
+                      <div className="text-xs" style={{ color: "var(--muted)" }}>
                         <span className="font-medium">
                           {TYPE_LABELS[doc.type]}
                         </span>
@@ -427,16 +427,16 @@ export function DocumentsPage() {
                     <Badge status={doc.status} />
                     <div
                       className="text-right text-xs hidden md:block flex-shrink-0 ml-4 font-mono"
-                      style={{ color: "#7a7469", minWidth: "90px" }}
+                      style={{ color: "var(--muted)", minWidth: "90px" }}
                     >
                       {doc.expiry_date ? (
                         <span
                           style={{
                             color: isExpired
-                              ? "#c13a2a"
+                              ? "var(--danger)"
                               : isExpiringSoon
                                 ? "#e07b39"
-                                : "#7a7469",
+                                : "var(--muted)",
                           }}
                         >
                           {formatDate(doc.expiry_date)}
@@ -447,7 +447,7 @@ export function DocumentsPage() {
                     </div>
                     <ChevronRight
                       className="w-4 h-4 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ml-2"
-                      style={{ color: "#7a7469" }}
+                      style={{ color: "var(--muted)" }}
                     />
                   </div>
                 );
@@ -463,8 +463,8 @@ export function DocumentsPage() {
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => openEdit(selectedDoc)}
-                    className="p-1 rounded transition-colors hover:bg-[#e8e4dd]"
-                    style={{ color: "#7a7469" }}
+                    className="p-1 rounded transition-colors hover:bg-[var(--surface-3)]"
+                    style={{ color: "var(--muted)" }}
                     title="Edit document"
                   >
                     <Pencil className="w-4 h-4" />
@@ -474,13 +474,13 @@ export function DocumentsPage() {
                       handleDelete(selectedDoc.id, selectedDoc.name)
                     }
                     className="p-1 rounded transition-colors hover:bg-red-50"
-                    style={{ color: "#c13a2a" }}
+                    style={{ color: "var(--danger)" }}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setSelected(null)}
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -506,7 +506,7 @@ export function DocumentsPage() {
                   </div>
                   <h3
                     className="text-base font-semibold leading-snug mb-2"
-                    style={{ color: "#181410" }}
+                    style={{ color: "var(--ink)" }}
                   >
                     {selectedDoc.name}
                   </h3>
@@ -515,7 +515,7 @@ export function DocumentsPage() {
 
                 <div
                   className="space-y-3 pt-1"
-                  style={{ borderTop: "1px solid #d9d4ce" }}
+                  style={{ borderTop: "1px solid var(--border)" }}
                 >
                   {[
                     {
@@ -534,17 +534,17 @@ export function DocumentsPage() {
                     <div
                       key={label}
                       className="flex justify-between items-baseline gap-3 pt-3"
-                      style={{ borderTop: "1px solid #ece8e3" }}
+                      style={{ borderTop: "1px solid var(--surface-3)" }}
                     >
                       <span
                         className="text-xs flex-shrink-0 capitalize"
-                        style={{ color: "#7a7469" }}
+                        style={{ color: "var(--muted)" }}
                       >
                         {label}
                       </span>
                       <span
                         className={`text-sm text-right ${label === "Issued" || label === "Expiry" ? "font-mono" : ""}`}
-                        style={{ color: "#181410" }}
+                        style={{ color: "var(--ink)" }}
                       >
                         {value}
                       </span>
@@ -558,7 +558,7 @@ export function DocumentsPage() {
                     if (days === null) return null;
                     const color =
                       days <= 0
-                        ? "#c13a2a"
+                        ? "var(--danger)"
                         : days <= 30
                           ? "#e07b39"
                           : "#2a6e45";
@@ -566,7 +566,7 @@ export function DocumentsPage() {
                       <div
                         className="p-3 rounded-md text-xs font-mono font-medium"
                         style={{
-                          backgroundColor: "#eeeae4",
+                          backgroundColor: "var(--surface-2)",
                           border: `1px solid ${color}30`,
                           color,
                         }}
@@ -587,8 +587,8 @@ export function DocumentsPage() {
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-colors hover:opacity-80"
                     style={{
-                      backgroundColor: "#e8f3f7",
-                      color: "#1b5e78",
+                      backgroundColor: "var(--accent-bg)",
+                      color: "var(--accent)",
                       border: "1px solid #b8d8e8",
                     }}
                   >
@@ -601,13 +601,13 @@ export function DocumentsPage() {
                   <div>
                     <p
                       className="text-xs font-medium uppercase tracking-widest mb-2"
-                      style={{ color: "#7a7469", letterSpacing: "0.08em" }}
+                      style={{ color: "var(--muted)", letterSpacing: "0.08em" }}
                     >
                       Notes
                     </p>
                     <p
                       className="text-sm leading-relaxed"
-                      style={{ color: "#8a8377" }}
+                      style={{ color: "var(--muted-2)" }}
                     >
                       {selectedDoc.notes}
                     </p>
@@ -632,7 +632,7 @@ export function DocumentsPage() {
               placeholder="e.g. RAMS — Drain Installation Plot 4"
             />
             {errors.name && (
-              <p className="mt-1 text-xs" style={{ color: "#c13a2a" }}>
+              <p className="mt-1 text-xs" style={{ color: "var(--danger)" }}>
                 {errors.name}
               </p>
             )}
@@ -724,24 +724,24 @@ export function DocumentsPage() {
               <div
                 className="flex items-center justify-between px-3 py-2.5 rounded-lg"
                 style={{
-                  backgroundColor: "#e8f3f7",
+                  backgroundColor: "var(--accent-bg)",
                   border: "1px solid #b8d8e8",
                 }}
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <Paperclip
                     className="w-3.5 h-3.5 flex-shrink-0"
-                    style={{ color: "#1b5e78" }}
+                    style={{ color: "var(--accent)" }}
                   />
                   <span
                     className="text-sm truncate font-medium"
-                    style={{ color: "#1b5e78" }}
+                    style={{ color: "var(--accent)" }}
                   >
                     {selectedFile.name}
                   </span>
                   <span
                     className="text-xs flex-shrink-0"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     ({(selectedFile.size / 1024).toFixed(0)} KB)
                   </span>
@@ -752,7 +752,7 @@ export function DocumentsPage() {
                     if (fileInputRef.current) fileInputRef.current.value = "";
                   }}
                   className="ml-2 flex-shrink-0"
-                  style={{ color: "#7a7469" }}
+                  style={{ color: "var(--muted)" }}
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -765,7 +765,7 @@ export function DocumentsPage() {
                 style={{
                   backgroundColor: "#f5f3ef",
                   border: "1px dashed #c0bab4",
-                  color: "#7a7469",
+                  color: "var(--muted)",
                 }}
               >
                 <Upload className="w-4 h-4" />

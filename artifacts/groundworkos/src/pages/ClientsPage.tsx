@@ -160,7 +160,7 @@ export function ClientsPage() {
           className="text-2xl font-bold"
           style={{
             fontFamily: "'Space Grotesk', sans-serif",
-            color: "#181410",
+            color: "var(--ink)",
             letterSpacing: "-0.02em",
           }}
         >
@@ -212,23 +212,23 @@ export function ClientsPage() {
                 className={cn(
                   "flex items-center gap-5 px-5 py-4 cursor-pointer transition-colors group",
                   selected === client.id
-                    ? "bg-[#eeeae4]"
-                    : "hover:bg-[#eeeae4]",
+                    ? "bg-[var(--surface-2)]"
+                    : "hover:bg-[var(--surface-2)]",
                 )}
                 style={{
-                  borderBottom: i < total - 1 ? "1px solid #d9d4ce" : "none",
+                  borderBottom: i < total - 1 ? "1px solid var(--border)" : "none",
                   borderLeft:
                     selected === client.id
-                      ? "3px solid #1b5e78"
+                      ? "3px solid var(--accent)"
                       : "3px solid transparent",
                 }}
               >
                 <div
                   className="w-10 h-10 rounded flex items-center justify-center text-sm font-bold flex-shrink-0"
                   style={{
-                    backgroundColor: "#e8e4dd",
-                    color: "#4a4540",
-                    border: "1px solid #d9d4ce",
+                    backgroundColor: "var(--surface-3)",
+                    color: "var(--ink-2)",
+                    border: "1px solid var(--border)",
                   }}
                 >
                   {client.company_name[0]}
@@ -236,13 +236,13 @@ export function ClientsPage() {
                 <div className="flex-1 min-w-0">
                   <div
                     className="text-sm font-semibold truncate"
-                    style={{ color: "#181410" }}
+                    style={{ color: "var(--ink)" }}
                   >
                     {client.company_name}
                   </div>
                   <div
                     className="text-xs mt-0.5 truncate"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     {client.contact_name ?? "No contact"}
                   </div>
@@ -250,7 +250,7 @@ export function ClientsPage() {
                 {client.email && (
                   <div
                     className="hidden md:flex items-center gap-1.5 w-48 flex-shrink-0 text-xs"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     <Mail className="w-3.5 h-3.5" />
                     <span className="truncate font-mono">{client.email}</span>
@@ -259,13 +259,13 @@ export function ClientsPage() {
                 <div className="text-right hidden sm:block w-28 flex-shrink-0">
                   <div
                     className="text-[10px] font-bold uppercase tracking-widest mb-1"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     Jobs
                   </div>
                   <div
                     className="text-sm font-medium font-mono tnum"
-                    style={{ color: "#181410" }}
+                    style={{ color: "var(--ink)" }}
                   >
                     {client.total_jobs}
                   </div>
@@ -273,13 +273,13 @@ export function ClientsPage() {
                 <div className="text-right hidden sm:block w-28 flex-shrink-0">
                   <div
                     className="text-[10px] font-bold uppercase tracking-widest mb-1"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     Value
                   </div>
                   <div
                     className="text-sm font-medium font-mono tnum"
-                    style={{ color: "#181410" }}
+                    style={{ color: "var(--ink)" }}
                   >
                     {formatCurrency(client.total_value)}
                   </div>
@@ -291,7 +291,7 @@ export function ClientsPage() {
                       ? "opacity-100"
                       : "opacity-0 group-hover:opacity-100",
                   )}
-                  style={{ color: "#7a7469" }}
+                  style={{ color: "var(--muted)" }}
                 />
               </div>
             )}
@@ -305,8 +305,8 @@ export function ClientsPage() {
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => openEdit(selectedClient)}
-                    className="p-1.5 rounded transition-colors hover:bg-[#e8e4dd]"
-                    style={{ color: "#7a7469" }}
+                    className="p-1.5 rounded transition-colors hover:bg-[var(--surface-3)]"
+                    style={{ color: "var(--muted)" }}
                     title="Edit client"
                   >
                     <Pencil className="w-4 h-4" />
@@ -319,15 +319,15 @@ export function ClientsPage() {
                       )
                     }
                     className="p-1.5 rounded transition-colors hover:bg-red-50"
-                    style={{ color: "#c13a2a" }}
+                    style={{ color: "var(--danger)" }}
                     title="Delete client"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setSelected(null)}
-                    className="hover:bg-[#e8e4dd] p-1.5 rounded transition-colors"
-                    style={{ color: "#7a7469" }}
+                    className="hover:bg-[var(--surface-3)] p-1.5 rounded transition-colors"
+                    style={{ color: "var(--muted)" }}
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -339,9 +339,9 @@ export function ClientsPage() {
                   <div
                     className="w-12 h-12 rounded flex items-center justify-center text-lg font-bold flex-shrink-0"
                     style={{
-                      backgroundColor: "#e8e4dd",
-                      color: "#181410",
-                      border: "1px solid #d9d4ce",
+                      backgroundColor: "var(--surface-3)",
+                      color: "var(--ink)",
+                      border: "1px solid var(--border)",
                     }}
                   >
                     {selectedClient.company_name[0]}
@@ -351,14 +351,14 @@ export function ClientsPage() {
                       className="text-xl font-bold leading-none mb-1.5"
                       style={{
                         fontFamily: "'Space Grotesk', sans-serif",
-                        color: "#181410",
+                        color: "var(--ink)",
                       }}
                     >
                       {selectedClient.company_name}
                     </h2>
                     <div
                       className="flex items-center gap-2 text-sm"
-                      style={{ color: "#7a7469" }}
+                      style={{ color: "var(--muted)" }}
                     >
                       <span className="font-medium">
                         {selectedClient.contact_name ?? "No contact"}
@@ -371,19 +371,19 @@ export function ClientsPage() {
                   <div
                     className="p-4 rounded-lg"
                     style={{
-                      backgroundColor: "#eeeae4",
-                      border: "1px solid #d9d4ce",
+                      backgroundColor: "var(--surface-2)",
+                      border: "1px solid var(--border)",
                     }}
                   >
                     <div
                       className="text-[11px] font-bold uppercase tracking-widest mb-1"
-                      style={{ color: "#7a7469" }}
+                      style={{ color: "var(--muted)" }}
                     >
                       Total Jobs
                     </div>
                     <div
                       className="text-2xl font-bold font-mono tnum"
-                      style={{ color: "#181410" }}
+                      style={{ color: "var(--ink)" }}
                     >
                       {selectedClient.total_jobs}
                     </div>
@@ -391,19 +391,19 @@ export function ClientsPage() {
                   <div
                     className="p-4 rounded-lg"
                     style={{
-                      backgroundColor: "#eeeae4",
-                      border: "1px solid #d9d4ce",
+                      backgroundColor: "var(--surface-2)",
+                      border: "1px solid var(--border)",
                     }}
                   >
                     <div
                       className="text-[11px] font-bold uppercase tracking-widest mb-1"
-                      style={{ color: "#7a7469" }}
+                      style={{ color: "var(--muted)" }}
                     >
                       Total Value
                     </div>
                     <div
                       className="text-2xl font-bold font-mono tnum"
-                      style={{ color: "#1b5e78" }}
+                      style={{ color: "var(--accent)" }}
                     >
                       {formatCurrency(selectedClient.total_value)}
                     </div>
@@ -414,7 +414,7 @@ export function ClientsPage() {
                   <h3
                     className="text-[11px] font-bold uppercase tracking-widest"
                     style={{
-                      color: "#7a7469",
+                      color: "var(--muted)",
                       fontFamily: "'Space Grotesk', sans-serif",
                     }}
                   >
@@ -423,7 +423,7 @@ export function ClientsPage() {
                   <div
                     className="space-y-3"
                     style={{
-                      borderTop: "1px solid #d9d4ce",
+                      borderTop: "1px solid var(--border)",
                       paddingTop: "12px",
                     }}
                   >
@@ -452,14 +452,14 @@ export function ClientsPage() {
                       <div key={label} className="flex gap-3">
                         <div
                           className="w-6 flex-shrink-0 flex items-center justify-center mt-0.5"
-                          style={{ color: "#7a7469" }}
+                          style={{ color: "var(--muted)" }}
                         >
                           {icon}
                         </div>
                         <div className="min-w-0">
                           <div
                             className="text-[10px] font-bold uppercase tracking-widest mb-0.5"
-                            style={{ color: "#7a7469" }}
+                            style={{ color: "var(--muted)" }}
                           >
                             {label}
                           </div>
@@ -467,7 +467,7 @@ export function ClientsPage() {
                             <div
                               className="text-sm font-medium truncate"
                               style={{
-                                color: "#181410",
+                                color: "var(--ink)",
                                 fontFamily:
                                   label === "Email" ||
                                   label === "Phone" ||
@@ -481,7 +481,7 @@ export function ClientsPage() {
                           ) : (
                             <div
                               className="text-sm italic"
-                              style={{ color: "#a8a099" }}
+                              style={{ color: "var(--muted-2)" }}
                             >
                               Not provided
                             </div>
@@ -497,7 +497,7 @@ export function ClientsPage() {
                     <h3
                       className="text-[11px] font-bold uppercase tracking-widest mb-3"
                       style={{
-                        color: "#7a7469",
+                        color: "var(--muted)",
                         fontFamily: "'Space Grotesk', sans-serif",
                       }}
                     >
@@ -506,9 +506,9 @@ export function ClientsPage() {
                     <div
                       className="p-4 rounded-lg text-sm leading-relaxed whitespace-pre-wrap"
                       style={{
-                        backgroundColor: "#fafaf8",
-                        border: "1px solid #d9d4ce",
-                        color: "#4a4540",
+                        backgroundColor: "var(--surface)",
+                        border: "1px solid var(--border)",
+                        color: "var(--ink-2)",
                       }}
                     >
                       {selectedClient.notes}
@@ -536,7 +536,7 @@ export function ClientsPage() {
               placeholder="e.g. Midlands Groundworks Ltd"
             />
             {errors.company_name && (
-              <p className="mt-1 text-xs" style={{ color: "#c13a2a" }}>
+              <p className="mt-1 text-xs" style={{ color: "var(--danger)" }}>
                 {errors.company_name}
               </p>
             )}

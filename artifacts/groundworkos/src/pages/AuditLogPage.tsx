@@ -19,8 +19,8 @@ interface AuditLog {
 
 const ACTION_CONFIG = {
   create: { label: "Created", color: "#2a6e45", bg: "rgba(42,110,69,0.1)" },
-  update: { label: "Updated", color: "#1b5e78", bg: "#e8f3f7" },
-  delete: { label: "Deleted", color: "#c13a2a", bg: "rgba(193,58,42,0.1)" },
+  update: { label: "Updated", color: "var(--accent)", bg: "var(--accent-bg)" },
+  delete: { label: "Deleted", color: "var(--danger)", bg: "rgba(178,58,38,0.1)" },
 };
 
 const ENTITY_LABELS: Record<string, string> = {
@@ -118,7 +118,7 @@ export function AuditLogPage() {
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3">
         <p
           style={{
-            color: "#7a7469",
+            color: "var(--muted)",
             fontSize: 14,
             fontFamily: "'Inter', sans-serif",
           }}
@@ -135,13 +135,13 @@ export function AuditLogPage() {
         <h1
           className="text-xl font-semibold"
           style={{
-            color: "#181410",
+            color: "var(--ink)",
             fontFamily: "'Space Grotesk', sans-serif",
           }}
         >
           Audit Trail
         </h1>
-        <p className="text-sm mt-0.5" style={{ color: "#7a7469" }}>
+        <p className="text-sm mt-0.5" style={{ color: "var(--muted)" }}>
           Full history of who changed what and when
         </p>
       </div>
@@ -169,18 +169,18 @@ export function AuditLogPage() {
       <div className="flex flex-wrap gap-3">
         <div
           className="flex items-center gap-2 flex-1 min-w-[200px] max-w-sm px-3 py-2 rounded-lg"
-          style={{ backgroundColor: "#fafaf8", border: "1px solid #d9d4ce" }}
+          style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border)" }}
         >
           <Search
             className="w-3.5 h-3.5 flex-shrink-0"
-            style={{ color: "#a8a099" }}
+            style={{ color: "var(--muted-2)" }}
           />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search user, entity…"
-            className="flex-1 text-sm bg-transparent focus:outline-none placeholder:text-[#a8a099]"
-            style={{ color: "#181410" }}
+            className="flex-1 text-sm bg-transparent focus:outline-none placeholder:text-[var(--muted-2)]"
+            style={{ color: "var(--ink)" }}
           />
         </div>
         <select
@@ -188,9 +188,9 @@ export function AuditLogPage() {
           onChange={(e) => setEntityFilter(e.target.value)}
           className="py-2 px-3 rounded-lg text-sm focus:outline-none"
           style={{
-            backgroundColor: "#fafaf8",
-            border: "1px solid #d9d4ce",
-            color: "#4a4540",
+            backgroundColor: "var(--surface)",
+            border: "1px solid var(--border)",
+            color: "var(--ink-2)",
           }}
         >
           <option value="all">All entities</option>
@@ -205,9 +205,9 @@ export function AuditLogPage() {
           onChange={(e) => setActionFilter(e.target.value)}
           className="py-2 px-3 rounded-lg text-sm focus:outline-none"
           style={{
-            backgroundColor: "#fafaf8",
-            border: "1px solid #d9d4ce",
-            color: "#4a4540",
+            backgroundColor: "var(--surface)",
+            border: "1px solid var(--border)",
+            color: "var(--ink-2)",
           }}
         >
           <option value="all">All actions</option>
@@ -220,9 +220,9 @@ export function AuditLogPage() {
           onChange={(e) => setDays(e.target.value)}
           className="py-2 px-3 rounded-lg text-sm focus:outline-none"
           style={{
-            backgroundColor: "#fafaf8",
-            border: "1px solid #d9d4ce",
-            color: "#4a4540",
+            backgroundColor: "var(--surface)",
+            border: "1px solid var(--border)",
+            color: "var(--ink-2)",
           }}
         >
           <option value="7">Last 7 days</option>
@@ -238,19 +238,19 @@ export function AuditLogPage() {
             <div className="py-16 flex flex-col items-center gap-3">
               <Clock
                 className="w-6 h-6 animate-pulse"
-                style={{ color: "#d9d4ce" }}
+                style={{ color: "var(--border)" }}
               />
-              <p className="text-sm" style={{ color: "#7a7469" }}>
+              <p className="text-sm" style={{ color: "var(--muted)" }}>
                 Loading audit log…
               </p>
             </div>
           ) : filtered.length === 0 ? (
             <div className="py-16 flex flex-col items-center gap-3">
-              <Filter className="w-6 h-6" style={{ color: "#d9d4ce" }} />
-              <p className="text-sm font-medium" style={{ color: "#7a7469" }}>
+              <Filter className="w-6 h-6" style={{ color: "var(--border)" }} />
+              <p className="text-sm font-medium" style={{ color: "var(--muted)" }}>
                 No entries found
               </p>
-              <p className="text-xs" style={{ color: "#a8a099" }}>
+              <p className="text-xs" style={{ color: "var(--muted-2)" }}>
                 Audit entries are recorded as you use the system
               </p>
             </div>
@@ -260,8 +260,8 @@ export function AuditLogPage() {
                 <thead>
                   <tr
                     style={{
-                      borderBottom: "1px solid #d9d4ce",
-                      backgroundColor: "#fafaf8",
+                      borderBottom: "1px solid var(--border)",
+                      backgroundColor: "var(--surface)",
                     }}
                   >
                     {["When", "User", "Action", "Entity", "Changes"].map(
@@ -269,7 +269,7 @@ export function AuditLogPage() {
                         <th
                           key={h}
                           className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-widest"
-                          style={{ color: "#7a7469" }}
+                          style={{ color: "var(--muted)" }}
                         >
                           {h}
                         </th>
@@ -286,19 +286,19 @@ export function AuditLogPage() {
                       <tr
                         key={log.id}
                         onClick={() => setSelected(isSelected ? null : log)}
-                        className="cursor-pointer transition-colors hover:bg-[#eeeae4]"
+                        className="cursor-pointer transition-colors hover:bg-[var(--surface-2)]"
                         style={{
                           borderBottom:
                             i < filtered.length - 1
-                              ? "1px solid #e8e4dd"
+                              ? "1px solid var(--surface-3)"
                               : "none",
-                          backgroundColor: isSelected ? "#eeeae4" : undefined,
+                          backgroundColor: isSelected ? "var(--surface-2)" : undefined,
                         }}
                       >
                         <td className="py-3 px-4">
                           <div
                             className="text-xs font-mono"
-                            style={{ color: "#181410" }}
+                            style={{ color: "var(--ink)" }}
                           >
                             {new Date(log.createdAt).toLocaleDateString(
                               "en-GB",
@@ -307,7 +307,7 @@ export function AuditLogPage() {
                           </div>
                           <div
                             className="text-[10px] font-mono"
-                            style={{ color: "#a8a099" }}
+                            style={{ color: "var(--muted-2)" }}
                           >
                             {new Date(log.createdAt).toLocaleTimeString(
                               "en-GB",
@@ -320,7 +320,7 @@ export function AuditLogPage() {
                             <div
                               className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
                               style={{
-                                backgroundColor: "#1b5e78",
+                                backgroundColor: "var(--accent)",
                                 color: "#ffffff",
                               }}
                             >
@@ -329,14 +329,14 @@ export function AuditLogPage() {
                             <div>
                               <div
                                 className="text-xs font-medium"
-                                style={{ color: "#181410" }}
+                                style={{ color: "var(--ink)" }}
                               >
                                 {log.userName ?? "System"}
                               </div>
                               {log.userEmail && (
                                 <div
                                   className="text-[10px] font-mono"
-                                  style={{ color: "#a8a099" }}
+                                  style={{ color: "var(--muted-2)" }}
                                 >
                                   {log.userEmail}
                                 </div>
@@ -358,20 +358,20 @@ export function AuditLogPage() {
                         <td className="py-3 px-4">
                           <div
                             className="text-sm font-medium"
-                            style={{ color: "#181410" }}
+                            style={{ color: "var(--ink)" }}
                           >
                             {ENTITY_LABELS[log.entityType] ?? log.entityType}
                           </div>
                           <div
                             className="text-[10px] font-mono"
-                            style={{ color: "#a8a099" }}
+                            style={{ color: "var(--muted-2)" }}
                           >
                             {log.entityId.slice(0, 8)}…
                           </div>
                         </td>
                         <td
                           className="py-3 px-4 text-xs max-w-[200px] truncate"
-                          style={{ color: "#7a7469" }}
+                          style={{ color: "var(--muted)" }}
                         >
                           {formatChanges(log.changes)}
                         </td>
@@ -391,11 +391,11 @@ export function AuditLogPage() {
                 <div>
                   <div
                     className="text-[10px] font-bold uppercase tracking-widest mb-1"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     When
                   </div>
-                  <div style={{ color: "#181410" }}>
+                  <div style={{ color: "var(--ink)" }}>
                     {new Date(selected.createdAt).toLocaleString("en-GB", {
                       dateStyle: "long",
                       timeStyle: "short",
@@ -405,17 +405,17 @@ export function AuditLogPage() {
                 <div>
                   <div
                     className="text-[10px] font-bold uppercase tracking-widest mb-1"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     By
                   </div>
-                  <div style={{ color: "#181410" }}>
+                  <div style={{ color: "var(--ink)" }}>
                     {selected.userName ?? "System"}
                   </div>
                   {selected.userEmail && (
                     <div
                       className="text-xs font-mono"
-                      style={{ color: "#7a7469" }}
+                      style={{ color: "var(--muted)" }}
                     >
                       {selected.userEmail}
                     </div>
@@ -424,7 +424,7 @@ export function AuditLogPage() {
                 <div>
                   <div
                     className="text-[10px] font-bold uppercase tracking-widest mb-1"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     Action
                   </div>
@@ -441,16 +441,16 @@ export function AuditLogPage() {
                 <div>
                   <div
                     className="text-[10px] font-bold uppercase tracking-widest mb-1"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     Entity
                   </div>
-                  <div style={{ color: "#181410" }}>
+                  <div style={{ color: "var(--ink)" }}>
                     {ENTITY_LABELS[selected.entityType] ?? selected.entityType}
                   </div>
                   <div
                     className="text-xs font-mono mt-0.5"
-                    style={{ color: "#a8a099" }}
+                    style={{ color: "var(--muted-2)" }}
                   >
                     {selected.entityId}
                   </div>
@@ -460,7 +460,7 @@ export function AuditLogPage() {
                     <div>
                       <div
                         className="text-[10px] font-bold uppercase tracking-widest mb-1.5"
-                        style={{ color: "#7a7469" }}
+                        style={{ color: "var(--muted)" }}
                       >
                         Changed fields
                       </div>
@@ -469,17 +469,17 @@ export function AuditLogPage() {
                           <div
                             key={k}
                             className="p-2 rounded text-xs"
-                            style={{ backgroundColor: "#f0ede8" }}
+                            style={{ backgroundColor: "var(--bg)" }}
                           >
                             <div
                               className="font-mono font-bold mb-0.5"
-                              style={{ color: "#7a7469" }}
+                              style={{ color: "var(--muted)" }}
                             >
                               {k.replace(/_/g, " ")}
                             </div>
                             <div
                               className="font-mono truncate"
-                              style={{ color: "#181410" }}
+                              style={{ color: "var(--ink)" }}
                             >
                               {typeof v === "object"
                                 ? JSON.stringify(v)

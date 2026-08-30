@@ -226,13 +226,13 @@ export function ImportPage() {
           <h1
             className="text-xl font-semibold"
             style={{
-              color: "#181410",
+              color: "var(--ink)",
               fontFamily: "'Space Grotesk', sans-serif",
             }}
           >
             Bulk Import
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: "#7a7469" }}>
+          <p className="text-sm mt-0.5" style={{ color: "var(--muted)" }}>
             Import clients and jobs from a CSV file
           </p>
         </div>
@@ -240,7 +240,7 @@ export function ImportPage() {
 
       <div
         className="flex items-center gap-1"
-        style={{ borderBottom: "1px solid #d9d4ce" }}
+        style={{ borderBottom: "1px solid var(--border)" }}
       >
         {[
           { id: "clients" as const, label: "Clients", icon: Users },
@@ -256,12 +256,12 @@ export function ImportPage() {
             style={
               tab === t.id
                 ? {
-                    color: "#181410",
+                    color: "var(--ink)",
                     fontWeight: 500,
-                    borderBottom: "2px solid #1b5e78",
+                    borderBottom: "2px solid var(--accent)",
                     marginBottom: "-1px",
                   }
-                : { color: "#7a7469" }
+                : { color: "var(--muted)" }
             }
           >
             <t.icon className="w-3.5 h-3.5" />
@@ -283,8 +283,8 @@ export function ImportPage() {
               onClick={() => fileRef.current?.click()}
               className="cursor-pointer rounded-xl flex flex-col items-center justify-center gap-4 py-16 transition-all"
               style={{
-                border: `2px dashed ${dragging ? "#1b5e78" : "#d9d4ce"}`,
-                backgroundColor: dragging ? "#e8f3f7" : "#fafaf8",
+                border: `2px dashed ${dragging ? "var(--accent)" : "var(--border)"}`,
+                backgroundColor: dragging ? "var(--accent-bg)" : "var(--surface)",
               }}
             >
               <input
@@ -298,15 +298,15 @@ export function ImportPage() {
               />
               <div
                 className="w-12 h-12 rounded-xl flex items-center justify-center"
-                style={{ backgroundColor: "#eeeae4" }}
+                style={{ backgroundColor: "var(--surface-2)" }}
               >
-                <Upload className="w-6 h-6" style={{ color: "#7a7469" }} />
+                <Upload className="w-6 h-6" style={{ color: "var(--muted)" }} />
               </div>
               <div className="text-center">
-                <p className="text-sm font-medium" style={{ color: "#181410" }}>
+                <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>
                   Drop your CSV here or click to browse
                 </p>
-                <p className="text-xs mt-1" style={{ color: "#7a7469" }}>
+                <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
                   Must match the expected column format below
                 </p>
               </div>
@@ -321,15 +321,15 @@ export function ImportPage() {
                     <div className="flex items-center gap-3 text-xs font-mono">
                       <span style={{ color: "#2a6e45" }}>✓ {success}</span>
                       {errors > 0 && (
-                        <span style={{ color: "#c13a2a" }}>✗ {errors}</span>
+                        <span style={{ color: "var(--danger)" }}>✗ {errors}</span>
                       )}
                     </div>
                   )}
                   <button
                     onClick={reset}
-                    className="p-1 rounded hover:bg-[#eeeae4]"
+                    className="p-1 rounded hover:bg-[var(--surface-2)]"
                   >
-                    <X className="w-4 h-4" style={{ color: "#7a7469" }} />
+                    <X className="w-4 h-4" style={{ color: "var(--muted)" }} />
                   </button>
                 </div>
               }
@@ -339,15 +339,15 @@ export function ImportPage() {
                   <thead>
                     <tr
                       style={{
-                        borderBottom: "1px solid #d9d4ce",
-                        backgroundColor: "#fafaf8",
+                        borderBottom: "1px solid var(--border)",
+                        backgroundColor: "var(--surface)",
                         position: "sticky",
                         top: 0,
                       }}
                     >
                       <th
                         className="py-2 px-3 font-bold uppercase tracking-widest"
-                        style={{ color: "#7a7469", width: 32 }}
+                        style={{ color: "var(--muted)", width: 32 }}
                       >
                         #
                       </th>
@@ -355,14 +355,14 @@ export function ImportPage() {
                         <th
                           key={h}
                           className="py-2 px-3 font-bold uppercase tracking-widest"
-                          style={{ color: "#7a7469" }}
+                          style={{ color: "var(--muted)" }}
                         >
                           {h}
                         </th>
                       ))}
                       <th
                         className="py-2 px-3 font-bold uppercase tracking-widest"
-                        style={{ color: "#7a7469" }}
+                        style={{ color: "var(--muted)" }}
                       >
                         Status
                       </th>
@@ -374,18 +374,18 @@ export function ImportPage() {
                         key={i}
                         className="transition-colors"
                         style={{
-                          borderBottom: "1px solid #e8e4dd",
+                          borderBottom: "1px solid var(--surface-3)",
                           backgroundColor:
                             row.status === "success"
                               ? "rgba(42,110,69,0.04)"
                               : row.status === "error"
-                                ? "rgba(193,58,42,0.04)"
+                                ? "rgba(178,58,38,0.04)"
                                 : undefined,
                         }}
                       >
                         <td
                           className="py-2 px-3 font-mono"
-                          style={{ color: "#a8a099" }}
+                          style={{ color: "var(--muted-2)" }}
                         >
                           {i + 1}
                         </td>
@@ -393,17 +393,17 @@ export function ImportPage() {
                           <td
                             key={h}
                             className="py-2 px-3 max-w-[160px] truncate"
-                            style={{ color: "#4a4540" }}
+                            style={{ color: "var(--ink-2)" }}
                             title={row.data[h]}
                           >
                             {row.data[h] || (
-                              <span style={{ color: "#d9d4ce" }}>—</span>
+                              <span style={{ color: "var(--border)" }}>—</span>
                             )}
                           </td>
                         ))}
                         <td className="py-2 px-3">
                           {row.status === "pending" && (
-                            <span style={{ color: "#a8a099" }}>Pending</span>
+                            <span style={{ color: "var(--muted-2)" }}>Pending</span>
                           )}
                           {row.status === "success" && (
                             <span
@@ -416,7 +416,7 @@ export function ImportPage() {
                           {row.status === "error" && (
                             <span
                               className="flex items-center gap-1"
-                              style={{ color: "#c13a2a" }}
+                              style={{ color: "var(--danger)" }}
                               title={row.error}
                             >
                               <AlertCircle className="w-3 h-3" />{" "}
@@ -430,7 +430,7 @@ export function ImportPage() {
                 </table>
               </div>
               {!done && pending > 0 && (
-                <div className="p-4" style={{ borderTop: "1px solid #e8e4dd" }}>
+                <div className="p-4" style={{ borderTop: "1px solid var(--surface-3)" }}>
                   <Btn
                     className="w-full justify-center"
                     onClick={runImport}
@@ -443,7 +443,7 @@ export function ImportPage() {
                 </div>
               )}
               {done && errors > 0 && (
-                <div className="p-4" style={{ borderTop: "1px solid #e8e4dd" }}>
+                <div className="p-4" style={{ borderTop: "1px solid var(--surface-3)" }}>
                   <Btn
                     className="w-full justify-center"
                     onClick={runImport}
@@ -459,7 +459,7 @@ export function ImportPage() {
 
         <div className="space-y-4">
           <Panel title="Download template">
-            <p className="text-sm mb-3" style={{ color: "#7a7469" }}>
+            <p className="text-sm mb-3" style={{ color: "var(--muted)" }}>
               Start from our sample CSV to make sure your columns match the
               expected format.
             </p>
@@ -479,24 +479,24 @@ export function ImportPage() {
                 <div key={f} className="flex items-center gap-2">
                   <FileText
                     className="w-3 h-3 flex-shrink-0"
-                    style={{ color: "#a8a099" }}
+                    style={{ color: "var(--muted-2)" }}
                   />
                   <code
                     className="text-xs font-mono"
-                    style={{ color: "#4a4540" }}
+                    style={{ color: "var(--ink-2)" }}
                   >
                     {f}
                   </code>
                 </div>
               ))}
             </div>
-            <p className="text-[11px] mt-3" style={{ color: "#a8a099" }}>
+            <p className="text-[11px] mt-3" style={{ color: "var(--muted-2)" }}>
               Column order doesn't matter — headers are matched by name.
             </p>
           </Panel>
 
           <Panel title="Tips">
-            <ul className="space-y-2 text-sm" style={{ color: "#7a7469" }}>
+            <ul className="space-y-2 text-sm" style={{ color: "var(--muted)" }}>
               <li>• First row must be column headers</li>
               <li>• Wrap values containing commas in double quotes</li>
               <li>• Dates must be in YYYY-MM-DD format</li>

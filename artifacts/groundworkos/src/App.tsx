@@ -106,8 +106,8 @@ function AutoAdminBootstrap() {
 const authCardStyle: React.CSSProperties = {
   width: 400,
   maxWidth: "100%",
-  backgroundColor: "#fafaf8",
-  border: "1px solid #d9d4ce",
+  backgroundColor: "var(--surface)",
+  border: "1px solid var(--border)",
   borderRadius: 12,
   padding: 32,
   boxShadow: "0 8px 32px rgba(24,20,16,0.08)",
@@ -117,7 +117,7 @@ const authLabelStyle: React.CSSProperties = {
   fontFamily: "'Space Grotesk', sans-serif",
   fontWeight: 600,
   fontSize: 11,
-  color: "#7a7469",
+  color: "var(--muted)",
   textTransform: "uppercase",
   letterSpacing: "0.06em",
 };
@@ -127,16 +127,16 @@ const authInputStyle: React.CSSProperties = {
   fontSize: 14,
   padding: "10px 12px",
   borderRadius: 6,
-  border: "1px solid #d9d4ce",
+  border: "1px solid var(--border)",
   backgroundColor: "#ffffff",
-  color: "#181410",
+  color: "var(--ink)",
   width: "100%",
 };
 
 const authButtonStyle = (disabled: boolean): React.CSSProperties => ({
   padding: "10px 20px",
   borderRadius: 6,
-  backgroundColor: "#1b5e78",
+  backgroundColor: "var(--accent)",
   color: "#fff",
   fontFamily: "'Space Grotesk', sans-serif",
   fontWeight: 600,
@@ -205,7 +205,7 @@ function SignInPage() {
   return (
     <div
       className="flex min-h-dvh items-center justify-center px-4"
-      style={{ backgroundColor: "#f0ede8" }}
+      style={{ backgroundColor: "var(--bg)" }}
     >
       <form onSubmit={handleSubmit} style={authCardStyle}>
         <h1
@@ -213,14 +213,14 @@ function SignInPage() {
             fontFamily: "'Space Grotesk', sans-serif",
             fontWeight: 700,
             fontSize: 20,
-            color: "#181410",
+            color: "var(--ink)",
             letterSpacing: "-0.02em",
             marginBottom: 4,
           }}
         >
           Welcome back
         </h1>
-        <p style={{ color: "#7a7469", fontSize: 13, marginBottom: 24 }}>
+        <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 24 }}>
           Sign in to GroundworkOS
         </p>
         <div style={{ display: "grid", gap: 16 }}>
@@ -247,7 +247,7 @@ function SignInPage() {
             />
           </div>
           {error && (
-            <p style={{ color: "#c13a2a", fontSize: 12 }}>{error}</p>
+            <p style={{ color: "var(--danger)", fontSize: 12 }}>{error}</p>
           )}
           <button type="submit" disabled={loading} style={authButtonStyle(loading)}>
             {loading ? "Signing in..." : "Sign in"}
@@ -257,7 +257,7 @@ function SignInPage() {
           style={{
             marginTop: 20,
             fontSize: 12,
-            color: "#a8a099",
+            color: "var(--muted-2)",
             textAlign: "center",
             lineHeight: 1.6,
           }}
@@ -265,7 +265,7 @@ function SignInPage() {
           {setupOpen ? (
             <>
               No account yet?{" "}
-              <Link to="/setup" style={{ color: "#1b5e78" }}>
+              <Link to="/setup" style={{ color: "var(--accent)" }}>
                 Set up GroundworkOS
               </Link>{" "}
               to create the first (admin) account.
@@ -329,7 +329,7 @@ function SetupPage() {
   return (
     <div
       className="flex min-h-dvh items-center justify-center px-4"
-      style={{ backgroundColor: "#f0ede8" }}
+      style={{ backgroundColor: "var(--bg)" }}
     >
       <form onSubmit={handleSubmit} style={authCardStyle}>
         <h1
@@ -337,14 +337,14 @@ function SetupPage() {
             fontFamily: "'Space Grotesk', sans-serif",
             fontWeight: 700,
             fontSize: 20,
-            color: "#181410",
+            color: "var(--ink)",
             letterSpacing: "-0.02em",
             marginBottom: 4,
           }}
         >
           Set up GroundworkOS
         </h1>
-        <p style={{ color: "#7a7469", fontSize: 13, marginBottom: 24 }}>
+        <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 24 }}>
           Create the first account. It becomes the admin - everyone after
           this signs up by invitation only.
         </p>
@@ -384,7 +384,7 @@ function SetupPage() {
             />
           </div>
           {error && (
-            <p style={{ color: "#c13a2a", fontSize: 12 }}>{error}</p>
+            <p style={{ color: "var(--danger)", fontSize: 12 }}>{error}</p>
           )}
           <button type="submit" disabled={loading} style={authButtonStyle(loading)}>
             {loading ? "Creating account..." : "Create admin account"}
@@ -447,10 +447,10 @@ function AcceptInvitePage() {
     return (
       <div
         className="flex min-h-dvh items-center justify-center px-4"
-        style={{ backgroundColor: "#f0ede8" }}
+        style={{ backgroundColor: "var(--bg)" }}
       >
         <div style={authCardStyle}>
-          <p style={{ color: "#c13a2a", fontSize: 14 }}>
+          <p style={{ color: "var(--danger)", fontSize: 14 }}>
             This invitation link is missing its token. Ask your admin to
             resend the invitation.
           </p>
@@ -462,7 +462,7 @@ function AcceptInvitePage() {
   return (
     <div
       className="flex min-h-dvh items-center justify-center px-4"
-      style={{ backgroundColor: "#f0ede8" }}
+      style={{ backgroundColor: "var(--bg)" }}
     >
       <form onSubmit={handleSubmit} style={authCardStyle}>
         <h1
@@ -470,14 +470,14 @@ function AcceptInvitePage() {
             fontFamily: "'Space Grotesk', sans-serif",
             fontWeight: 700,
             fontSize: 20,
-            color: "#181410",
+            color: "var(--ink)",
             letterSpacing: "-0.02em",
             marginBottom: 4,
           }}
         >
           Accept your invitation
         </h1>
-        <p style={{ color: "#7a7469", fontSize: 13, marginBottom: 24 }}>
+        <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 24 }}>
           Set your name and password to finish joining GroundworkOS
         </p>
         <div style={{ display: "grid", gap: 16 }}>
@@ -505,7 +505,7 @@ function AcceptInvitePage() {
             />
           </div>
           {error && (
-            <p style={{ color: "#c13a2a", fontSize: 12 }}>{error}</p>
+            <p style={{ color: "var(--danger)", fontSize: 12 }}>{error}</p>
           )}
           <button type="submit" disabled={loading} style={authButtonStyle(loading)}>
             {loading ? "Setting up..." : "Accept and sign in"}
@@ -552,7 +552,7 @@ function ForemanRedirect({ children }: { children: React.ReactNode }) {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          color: "#7a7469",
+          color: "var(--muted)",
           fontFamily: "'Inter', sans-serif",
           fontSize: 14,
         }}
@@ -638,7 +638,7 @@ function RouteGuard() {
     return (
       <div
         className="flex min-h-dvh items-center justify-center"
-        style={{ backgroundColor: "#f0ede8", color: "#7a7469" }}
+        style={{ backgroundColor: "var(--bg)", color: "var(--muted)" }}
       >
         Loading…
       </div>

@@ -19,14 +19,14 @@ export default function NotFound() {
             height: 56,
             margin: "0 auto 20px",
             borderRadius: 12,
-            border: "1.5px solid #1b5e78",
+            border: "1.5px solid var(--accent)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: "#e8f3f7",
+            backgroundColor: "var(--accent-bg)",
           }}
         >
-          <Compass style={{ width: 26, height: 26, color: "#1b5e78" }} />
+          <Compass style={{ width: 26, height: 26, color: "var(--accent)" }} />
         </div>
 
         <p
@@ -35,7 +35,7 @@ export default function NotFound() {
             fontSize: 12,
             fontWeight: 700,
             letterSpacing: "0.12em",
-            color: "#1b5e78",
+            color: "var(--accent)",
             marginBottom: 10,
           }}
         >
@@ -48,7 +48,7 @@ export default function NotFound() {
             fontWeight: 700,
             fontSize: 24,
             letterSpacing: "-0.01em",
-            color: "#181410",
+            color: "var(--ink)",
             marginBottom: 10,
           }}
         >
@@ -60,7 +60,7 @@ export default function NotFound() {
             fontFamily: "'Inter', sans-serif",
             fontSize: 14,
             lineHeight: 1.6,
-            color: "#7a7469",
+            color: "var(--muted)",
             marginBottom: 28,
           }}
         >
@@ -76,7 +76,7 @@ export default function NotFound() {
             gap: 8,
             padding: "10px 20px",
             borderRadius: 7,
-            backgroundColor: "#1b5e78",
+            backgroundColor: "var(--accent)",
             color: "#ffffff",
             fontFamily: "'Space Grotesk', sans-serif",
             fontWeight: 600,

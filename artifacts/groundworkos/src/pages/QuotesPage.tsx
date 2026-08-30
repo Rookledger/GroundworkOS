@@ -312,13 +312,13 @@ export function QuotesPage() {
           <h1
             className="text-2xl font-semibold"
             style={{
-              color: "#181410",
+              color: "var(--ink)",
               fontFamily: "'Space Grotesk', sans-serif",
             }}
           >
             Quotes
           </h1>
-          <p className="text-sm mt-1" style={{ color: "#7a7469" }}>
+          <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
             Create and manage quotations
           </p>
         </div>
@@ -352,7 +352,7 @@ export function QuotesPage() {
       <div className="flex items-center justify-between gap-4">
         <div
           className="flex items-center gap-1"
-          style={{ borderBottom: "1px solid #d9d4ce" }}
+          style={{ borderBottom: "1px solid var(--border)" }}
         >
           {TABS.map((t) => (
             <button
@@ -361,15 +361,15 @@ export function QuotesPage() {
               className="px-4 py-2.5 text-sm transition-colors relative"
               style={
                 tab === t.id
-                  ? { color: "#181410", fontWeight: 600 }
-                  : { color: "#7a7469", fontWeight: 500 }
+                  ? { color: "var(--ink)", fontWeight: 600 }
+                  : { color: "var(--muted)", fontWeight: 500 }
               }
             >
               {t.label}
               {tab === t.id && (
                 <div
                   className="absolute bottom-[-1px] left-0 w-full h-[2px]"
-                  style={{ backgroundColor: "#1b5e78" }}
+                  style={{ backgroundColor: "var(--accent)" }}
                 />
               )}
             </button>
@@ -378,7 +378,7 @@ export function QuotesPage() {
         <div className="relative">
           <Search
             className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
-            style={{ color: "#a8a099" }}
+            style={{ color: "var(--muted-2)" }}
           />
           <input
             type="text"
@@ -387,12 +387,12 @@ export function QuotesPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9 pr-4 py-2 rounded-md text-sm w-64 focus:outline-none transition-colors"
             style={{
-              backgroundColor: "#fafaf8",
-              border: "1px solid #d9d4ce",
-              color: "#181410",
+              backgroundColor: "var(--surface)",
+              border: "1px solid var(--border)",
+              color: "var(--ink)",
             }}
-            onFocus={(e) => (e.target.style.borderColor = "#1b5e78")}
-            onBlur={(e) => (e.target.style.borderColor = "#d9d4ce")}
+            onFocus={(e) => (e.target.style.borderColor = "var(--accent)")}
+            onBlur={(e) => (e.target.style.borderColor = "var(--border)")}
           />
         </div>
       </div>
@@ -403,7 +403,7 @@ export function QuotesPage() {
             {filtered.length === 0 ? (
               <p
                 className="text-center py-12 text-sm"
-                style={{ color: "#a8a099" }}
+                style={{ color: "var(--muted-2)" }}
               >
                 No quotes found
               </p>
@@ -412,33 +412,33 @@ export function QuotesPage() {
                 <div
                   key={q.id}
                   onClick={() => setSelected(selected === q.id ? null : q.id)}
-                  className="flex items-center gap-4 px-5 py-4 cursor-pointer transition-colors hover:bg-[#eeeae4] group"
+                  className="flex items-center gap-4 px-5 py-4 cursor-pointer transition-colors hover:bg-[var(--surface-2)] group"
                   style={{
                     borderBottom:
-                      i < filtered.length - 1 ? "1px solid #d9d4ce" : "none",
-                    backgroundColor: selected === q.id ? "#eeeae4" : undefined,
+                      i < filtered.length - 1 ? "1px solid var(--border)" : "none",
+                    backgroundColor: selected === q.id ? "var(--surface-2)" : undefined,
                     borderLeft:
                       selected === q.id
-                        ? "2px solid #1b5e78"
+                        ? "2px solid var(--accent)"
                         : "2px solid transparent",
                   }}
                 >
                   <span
                     className="text-xs w-28 flex-shrink-0 font-mono tnum"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     {q.quote_number}
                   </span>
                   <div className="flex-1 min-w-0">
                     <div
                       className="text-sm font-semibold truncate"
-                      style={{ color: "#181410" }}
+                      style={{ color: "var(--ink)" }}
                     >
                       {q.title ?? "—"}
                     </div>
                     <div
                       className="text-xs mt-0.5"
-                      style={{ color: "#7a7469" }}
+                      style={{ color: "var(--muted)" }}
                     >
                       {q.client?.company_name ?? "—"}
                     </div>
@@ -447,14 +447,14 @@ export function QuotesPage() {
                   <div className="text-right flex-shrink-0 w-28">
                     <div
                       className="text-sm font-semibold font-mono tnum"
-                      style={{ color: "#181410" }}
+                      style={{ color: "var(--ink)" }}
                     >
                       {formatCurrency(q.total_amount)}
                     </div>
                     {q.valid_until && (
                       <div
                         className="text-[11px] font-mono tnum mt-0.5"
-                        style={{ color: "#7a7469" }}
+                        style={{ color: "var(--muted)" }}
                       >
                         Until {formatDate(q.valid_until)}
                       </div>
@@ -462,7 +462,7 @@ export function QuotesPage() {
                   </div>
                   <ChevronRight
                     className="w-4 h-4 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   />
                 </div>
               ))
@@ -480,14 +480,14 @@ export function QuotesPage() {
                       handleDelete(selectedQuote.id, selectedQuote.quote_number)
                     }
                     className="p-1 rounded hover:bg-red-50 transition-colors"
-                    style={{ color: "#c13a2a" }}
+                    style={{ color: "var(--danger)" }}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setSelected(null)}
-                    className="p-1 rounded hover:bg-[#e8e4dd] transition-colors"
-                    style={{ color: "#7a7469" }}
+                    className="p-1 rounded hover:bg-[var(--surface-3)] transition-colors"
+                    style={{ color: "var(--muted)" }}
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -499,7 +499,7 @@ export function QuotesPage() {
                   <div className="flex items-center justify-between mb-2">
                     <span
                       className="text-xs font-mono tnum"
-                      style={{ color: "#7a7469" }}
+                      style={{ color: "var(--muted)" }}
                     >
                       {selectedQuote.quote_number}
                     </span>
@@ -508,7 +508,7 @@ export function QuotesPage() {
                   <h3
                     className="text-lg font-semibold leading-snug"
                     style={{
-                      color: "#181410",
+                      color: "var(--ink)",
                       fontFamily: "'Space Grotesk', sans-serif",
                     }}
                   >
@@ -518,7 +518,7 @@ export function QuotesPage() {
 
                 <div
                   className="space-y-3 pt-4"
-                  style={{ borderTop: "1px solid #d9d4ce" }}
+                  style={{ borderTop: "1px solid var(--border)" }}
                 >
                   {[
                     {
@@ -534,11 +534,11 @@ export function QuotesPage() {
                     <div
                       key={label}
                       className="flex justify-between items-baseline gap-3 pt-3"
-                      style={{ borderTop: "1px solid #ece8e3" }}
+                      style={{ borderTop: "1px solid var(--surface-3)" }}
                     >
                       <span
                         className="text-[11px] font-bold uppercase tracking-widest flex-shrink-0"
-                        style={{ color: "#7a7469" }}
+                        style={{ color: "var(--muted)" }}
                       >
                         {label}
                       </span>
@@ -547,7 +547,7 @@ export function QuotesPage() {
                           "text-sm text-right",
                           label !== "Client" && "font-mono tnum",
                         )}
-                        style={{ color: "#181410" }}
+                        style={{ color: "var(--ink)" }}
                       >
                         {value}
                       </span>
@@ -560,7 +560,7 @@ export function QuotesPage() {
                     <p
                       className="text-[11px] font-bold uppercase tracking-widest mb-3"
                       style={{
-                        color: "#7a7469",
+                        color: "var(--muted)",
                         fontFamily: "'Space Grotesk', sans-serif",
                       }}
                     >
@@ -571,18 +571,18 @@ export function QuotesPage() {
                         <div
                           key={li.id}
                           className="flex items-start justify-between gap-3 text-xs pb-3"
-                          style={{ borderBottom: "1px solid #ece8e3" }}
+                          style={{ borderBottom: "1px solid var(--surface-3)" }}
                         >
                           <div className="flex-1">
                             <div
                               className="mb-1 font-medium"
-                              style={{ color: "#181410" }}
+                              style={{ color: "var(--ink)" }}
                             >
                               {li.description}
                             </div>
                             <div
                               className="font-mono tnum"
-                              style={{ color: "#7a7469" }}
+                              style={{ color: "var(--muted)" }}
                             >
                               {li.quantity} {li.unit} ×{" "}
                               {formatCurrency(li.unit_price)}
@@ -590,7 +590,7 @@ export function QuotesPage() {
                           </div>
                           <div
                             className="font-semibold flex-shrink-0 font-mono tnum mt-0.5"
-                            style={{ color: "#181410" }}
+                            style={{ color: "var(--ink)" }}
                           >
                             {formatCurrency(li.total)}
                           </div>
@@ -602,7 +602,7 @@ export function QuotesPage() {
 
                 <div
                   className="pt-4 space-y-2"
-                  style={{ borderTop: "1px solid #d9d4ce" }}
+                  style={{ borderTop: "1px solid var(--border)" }}
                 >
                   {[
                     {
@@ -617,13 +617,13 @@ export function QuotesPage() {
                     <div key={label} className="flex justify-between text-sm">
                       <span
                         className="text-[11px] font-bold uppercase tracking-widest"
-                        style={{ color: "#7a7469" }}
+                        style={{ color: "var(--muted)" }}
                       >
                         {label}
                       </span>
                       <span
                         className="font-mono tnum"
-                        style={{ color: "#8a8377" }}
+                        style={{ color: "var(--muted-2)" }}
                       >
                         {value}
                       </span>
@@ -631,17 +631,17 @@ export function QuotesPage() {
                   ))}
                   <div
                     className="flex justify-between items-center pt-3 mt-1"
-                    style={{ borderTop: "1px solid #d9d4ce" }}
+                    style={{ borderTop: "1px solid var(--border)" }}
                   >
                     <span
                       className="text-[11px] font-bold uppercase tracking-widest"
-                      style={{ color: "#181410" }}
+                      style={{ color: "var(--ink)" }}
                     >
                       Total
                     </span>
                     <span
                       className="font-mono tnum font-bold text-xl"
-                      style={{ color: "#181410" }}
+                      style={{ color: "var(--ink)" }}
                     >
                       {formatCurrency(selectedQuote.total_amount)}
                     </span>
@@ -653,7 +653,7 @@ export function QuotesPage() {
                     <p
                       className="text-[11px] font-bold uppercase tracking-widest mb-2"
                       style={{
-                        color: "#7a7469",
+                        color: "var(--muted)",
                         fontFamily: "'Space Grotesk', sans-serif",
                       }}
                     >
@@ -661,7 +661,7 @@ export function QuotesPage() {
                     </p>
                     <p
                       className="text-sm leading-relaxed"
-                      style={{ color: "#4a4540" }}
+                      style={{ color: "var(--ink-2)" }}
                     >
                       {selectedQuote.notes}
                     </p>
@@ -753,7 +753,7 @@ export function QuotesPage() {
                 ))}
               </Select>
               {errors.client_id && (
-                <p className="mt-1 text-xs" style={{ color: "#c13a2a" }}>
+                <p className="mt-1 text-xs" style={{ color: "var(--danger)" }}>
                   {errors.client_id}
                 </p>
               )}
@@ -778,7 +778,7 @@ export function QuotesPage() {
               placeholder="e.g. Drainage Installation — New Estate Phase 2"
             />
             {errors.title && (
-              <p className="mt-1 text-xs" style={{ color: "#c13a2a" }}>
+              <p className="mt-1 text-xs" style={{ color: "var(--danger)" }}>
                 {errors.title}
               </p>
             )}
@@ -788,7 +788,7 @@ export function QuotesPage() {
               <span
                 className="text-[11px] font-bold uppercase tracking-widest"
                 style={{
-                  color: "#7a7469",
+                  color: "var(--muted)",
                   fontFamily: "'Space Grotesk', sans-serif",
                 }}
               >
@@ -796,8 +796,8 @@ export function QuotesPage() {
               </span>
               <button
                 onClick={addLineItem}
-                className="text-xs flex items-center gap-1 font-medium transition-colors hover:text-[#1b5e78]"
-                style={{ color: "#4a4540" }}
+                className="text-xs flex items-center gap-1 font-medium transition-colors hover:text-[var(--accent)]"
+                style={{ color: "var(--ink-2)" }}
               >
                 <Plus className="w-3.5 h-3.5" /> Add Item
               </button>
@@ -808,22 +808,22 @@ export function QuotesPage() {
                   key={li.id}
                   className="p-4 rounded-lg space-y-3"
                   style={{
-                    backgroundColor: "#eeeae4",
-                    border: "1px solid #d9d4ce",
+                    backgroundColor: "var(--surface-2)",
+                    border: "1px solid var(--border)",
                   }}
                 >
                   <div className="flex items-center justify-between">
                     <span
                       className="text-[11px] font-bold uppercase tracking-widest"
-                      style={{ color: "#7a7469" }}
+                      style={{ color: "var(--muted)" }}
                     >
                       Item {idx + 1}
                     </span>
                     {form.line_items.length > 1 && (
                       <button
                         onClick={() => removeLineItem(li.id)}
-                        className="transition-colors hover:text-[#c13a2a]"
-                        style={{ color: "#7a7469" }}
+                        className="transition-colors hover:text-[var(--danger)]"
+                        style={{ color: "var(--muted)" }}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -874,9 +874,9 @@ export function QuotesPage() {
                     <div
                       className="py-2 px-3 rounded-md text-sm text-right font-mono tnum font-medium"
                       style={{
-                        backgroundColor: "#fafaf8",
-                        color: "#181410",
-                        border: "1px solid #d9d4ce",
+                        backgroundColor: "var(--surface)",
+                        color: "var(--ink)",
+                        border: "1px solid var(--border)",
                       }}
                     >
                       {formatCurrency(li.total)}
@@ -890,8 +890,8 @@ export function QuotesPage() {
             <div
               className="p-4 rounded-lg space-y-2 mt-4"
               style={{
-                backgroundColor: "#eeeae4",
-                border: "1px solid #d9d4ce",
+                backgroundColor: "var(--surface-2)",
+                border: "1px solid var(--border)",
               }}
             >
               {[
@@ -902,7 +902,7 @@ export function QuotesPage() {
                 <div key={label} className="flex justify-between text-sm">
                   <span
                     className="text-[11px] font-bold uppercase tracking-widest"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     {label}
                   </span>
@@ -911,7 +911,7 @@ export function QuotesPage() {
                       "font-mono tnum",
                       label === "Total" && "font-bold text-base",
                     )}
-                    style={{ color: label === "Total" ? "#181410" : "#4a4540" }}
+                    style={{ color: label === "Total" ? "var(--ink)" : "var(--ink-2)" }}
                   >
                     {value}
                   </span>
@@ -953,38 +953,38 @@ export function QuotesPage() {
         >
           <div
             className="w-full max-w-md rounded-xl shadow-2xl overflow-hidden"
-            style={{ backgroundColor: "#fafaf8", border: "1px solid #d9d4ce" }}
+            style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border)" }}
           >
             <div
               className="flex items-center justify-between px-6 py-4"
-              style={{ borderBottom: "1px solid #e8e4dd" }}
+              style={{ borderBottom: "1px solid var(--surface-3)" }}
             >
               <div>
                 <h2
                   className="text-base font-semibold"
                   style={{
-                    color: "#181410",
+                    color: "var(--ink)",
                     fontFamily: "'Space Grotesk', sans-serif",
                   }}
                 >
                   Send Quote by Email
                 </h2>
-                <p className="text-xs mt-0.5" style={{ color: "#7a7469" }}>
+                <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
                   {selectedQuote.quote_number}
                 </p>
               </div>
               <button
                 onClick={() => setShowEmailModal(false)}
-                className="p-1.5 rounded hover:bg-[#eeeae4]"
+                className="p-1.5 rounded hover:bg-[var(--surface-2)]"
               >
-                <X className="w-4 h-4" style={{ color: "#7a7469" }} />
+                <X className="w-4 h-4" style={{ color: "var(--muted)" }} />
               </button>
             </div>
             <div className="px-6 py-5 space-y-4">
               <div>
                 <label
                   className="block text-[10px] font-bold uppercase tracking-widest mb-1.5"
-                  style={{ color: "#7a7469" }}
+                  style={{ color: "var(--muted)" }}
                 >
                   Recipient Email *
                 </label>
@@ -996,8 +996,8 @@ export function QuotesPage() {
                   className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
                   style={{
                     backgroundColor: "#ffffff",
-                    border: "1.5px solid #d9d4ce",
-                    color: "#181410",
+                    border: "1.5px solid var(--border)",
+                    color: "var(--ink)",
                   }}
                   autoFocus
                 />
@@ -1005,7 +1005,7 @@ export function QuotesPage() {
               <div>
                 <label
                   className="block text-[10px] font-bold uppercase tracking-widest mb-1.5"
-                  style={{ color: "#7a7469" }}
+                  style={{ color: "var(--muted)" }}
                 >
                   Subject (optional)
                 </label>
@@ -1016,14 +1016,14 @@ export function QuotesPage() {
                   className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
                   style={{
                     backgroundColor: "#ffffff",
-                    border: "1.5px solid #d9d4ce",
-                    color: "#181410",
+                    border: "1.5px solid var(--border)",
+                    color: "var(--ink)",
                   }}
                 />
               </div>
               <div
                 className="flex items-start gap-2 p-3 rounded-lg text-xs"
-                style={{ backgroundColor: "#e8f3f7", color: "#1b5e78" }}
+                style={{ backgroundColor: "var(--accent-bg)", color: "var(--accent)" }}
               >
                 <Mail className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
                 <span>
@@ -1034,7 +1034,7 @@ export function QuotesPage() {
             </div>
             <div
               className="flex gap-3 px-6 py-4"
-              style={{ borderTop: "1px solid #e8e4dd" }}
+              style={{ borderTop: "1px solid var(--surface-3)" }}
             >
               <Btn
                 variant="outline"

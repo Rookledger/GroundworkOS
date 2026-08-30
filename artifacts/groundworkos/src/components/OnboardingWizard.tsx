@@ -119,8 +119,8 @@ export function OnboardingWizard({ onComplete }: Props) {
     "w-full py-2.5 px-3 rounded-lg text-sm focus:outline-none transition-all";
   const inputStyle = {
     backgroundColor: "#ffffff",
-    border: "1.5px solid #d9d4ce",
-    color: "#181410",
+    border: "1.5px solid var(--border)",
+    color: "var(--ink)",
   };
   const labelCls =
     "block text-[10px] font-bold uppercase tracking-widest mb-1.5";
@@ -128,7 +128,7 @@ export function OnboardingWizard({ onComplete }: Props) {
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-      style={{ backgroundColor: "#f0ede8" }}
+      style={{ backgroundColor: "var(--bg)" }}
     >
       <div className="w-full max-w-xl">
         {/* Header */}
@@ -139,11 +139,11 @@ export function OnboardingWizard({ onComplete }: Props) {
                 fontFamily: "'Space Grotesk', sans-serif",
                 fontWeight: 700,
                 fontSize: "15px",
-                color: "#181410",
+                color: "var(--ink)",
                 letterSpacing: "0.04em",
               }}
             >
-              GROUNDWORK<span style={{ color: "#1b5e78" }}>OS</span>
+              GROUNDWORK<span style={{ color: "var(--accent)" }}>OS</span>
             </span>
           </div>
           <h1
@@ -151,13 +151,13 @@ export function OnboardingWizard({ onComplete }: Props) {
               fontFamily: "'Space Grotesk', sans-serif",
               fontWeight: 700,
               fontSize: "24px",
-              color: "#181410",
+              color: "var(--ink)",
               letterSpacing: "-0.02em",
             }}
           >
             Let's get you set up
           </h1>
-          <p style={{ color: "#7a7469", fontSize: "14px", marginTop: "6px" }}>
+          <p style={{ color: "var(--muted)", fontSize: "14px", marginTop: "6px" }}>
             Takes about 2 minutes — you can change everything in Settings later.
           </p>
         </div>
@@ -173,15 +173,15 @@ export function OnboardingWizard({ onComplete }: Props) {
                     i < step
                       ? { backgroundColor: "#2a6e45", color: "#ffffff" }
                       : i === step
-                        ? { backgroundColor: "#1b5e78", color: "#ffffff" }
-                        : { backgroundColor: "#e0dbd5", color: "#a8a099" }
+                        ? { backgroundColor: "var(--accent)", color: "#ffffff" }
+                        : { backgroundColor: "#e0dbd5", color: "var(--muted-2)" }
                   }
                 >
                   {i < step ? <CheckCircle className="w-3.5 h-3.5" /> : i + 1}
                 </div>
                 <span
                   className="hidden sm:block text-xs font-medium"
-                  style={{ color: i === step ? "#181410" : "#a8a099" }}
+                  style={{ color: i === step ? "var(--ink)" : "var(--muted-2)" }}
                 >
                   {s.title}
                 </span>
@@ -189,7 +189,7 @@ export function OnboardingWizard({ onComplete }: Props) {
               {i < STEP_CONFIG.length - 1 && (
                 <div
                   className="w-8 h-px"
-                  style={{ backgroundColor: i < step ? "#2a6e45" : "#d9d4ce" }}
+                  style={{ backgroundColor: i < step ? "#2a6e45" : "var(--border)" }}
                 />
               )}
             </div>
@@ -200,23 +200,23 @@ export function OnboardingWizard({ onComplete }: Props) {
         <div
           className="rounded-xl overflow-hidden"
           style={{
-            backgroundColor: "#fafaf8",
-            border: "1px solid #d9d4ce",
+            backgroundColor: "var(--surface)",
+            border: "1px solid var(--border)",
             boxShadow: "0 8px 32px rgba(24,20,16,0.08)",
           }}
         >
           <div
             className="px-6 py-5"
             style={{
-              borderBottom: "1px solid #e8e4dd",
-              backgroundColor: "#fafaf8",
+              borderBottom: "1px solid var(--surface-3)",
+              backgroundColor: "var(--surface)",
             }}
           >
             <div className="flex items-center gap-3">
               {(() => {
                 const Icon = STEP_CONFIG[step].icon;
                 return (
-                  <Icon className="w-5 h-5" style={{ color: "#1b5e78" }} />
+                  <Icon className="w-5 h-5" style={{ color: "var(--accent)" }} />
                 );
               })()}
               <div>
@@ -225,12 +225,12 @@ export function OnboardingWizard({ onComplete }: Props) {
                     fontFamily: "'Space Grotesk', sans-serif",
                     fontWeight: 600,
                     fontSize: "16px",
-                    color: "#181410",
+                    color: "var(--ink)",
                   }}
                 >
                   {STEP_CONFIG[step].title}
                 </h2>
-                <p style={{ fontSize: "12px", color: "#7a7469" }}>
+                <p style={{ fontSize: "12px", color: "var(--muted)" }}>
                   {STEP_CONFIG[step].desc}
                 </p>
               </div>
@@ -241,7 +241,7 @@ export function OnboardingWizard({ onComplete }: Props) {
             {step === 0 && (
               <>
                 <div>
-                  <label className={labelCls} style={{ color: "#7a7469" }}>
+                  <label className={labelCls} style={{ color: "var(--muted)" }}>
                     Company name *
                   </label>
                   <input
@@ -255,7 +255,7 @@ export function OnboardingWizard({ onComplete }: Props) {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className={labelCls} style={{ color: "#7a7469" }}>
+                    <label className={labelCls} style={{ color: "var(--muted)" }}>
                       Company number
                     </label>
                     <input
@@ -267,7 +267,7 @@ export function OnboardingWizard({ onComplete }: Props) {
                     />
                   </div>
                   <div>
-                    <label className={labelCls} style={{ color: "#7a7469" }}>
+                    <label className={labelCls} style={{ color: "var(--muted)" }}>
                       VAT number
                     </label>
                     <input
@@ -279,7 +279,7 @@ export function OnboardingWizard({ onComplete }: Props) {
                     />
                   </div>
                   <div>
-                    <label className={labelCls} style={{ color: "#7a7469" }}>
+                    <label className={labelCls} style={{ color: "var(--muted)" }}>
                       UTR number
                     </label>
                     <input
@@ -291,7 +291,7 @@ export function OnboardingWizard({ onComplete }: Props) {
                     />
                   </div>
                   <div>
-                    <label className={labelCls} style={{ color: "#7a7469" }}>
+                    <label className={labelCls} style={{ color: "var(--muted)" }}>
                       CIS reference
                     </label>
                     <input
@@ -318,7 +318,7 @@ export function OnboardingWizard({ onComplete }: Props) {
                     { k: "jobPrefix" as const, label: "Job prefix", ph: "GW" },
                   ].map(({ k, label, ph }) => (
                     <div key={k}>
-                      <label className={labelCls} style={{ color: "#7a7469" }}>
+                      <label className={labelCls} style={{ color: "var(--muted)" }}>
                         {label}
                       </label>
                       <input
@@ -337,7 +337,7 @@ export function OnboardingWizard({ onComplete }: Props) {
             {step === 1 && (
               <>
                 <div>
-                  <label className={labelCls} style={{ color: "#7a7469" }}>
+                  <label className={labelCls} style={{ color: "var(--muted)" }}>
                     Registered address
                   </label>
                   <textarea
@@ -351,7 +351,7 @@ export function OnboardingWizard({ onComplete }: Props) {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className={labelCls} style={{ color: "#7a7469" }}>
+                    <label className={labelCls} style={{ color: "var(--muted)" }}>
                       Phone
                     </label>
                     <input
@@ -363,7 +363,7 @@ export function OnboardingWizard({ onComplete }: Props) {
                     />
                   </div>
                   <div>
-                    <label className={labelCls} style={{ color: "#7a7469" }}>
+                    <label className={labelCls} style={{ color: "var(--muted)" }}>
                       Email
                     </label>
                     <input
@@ -377,7 +377,7 @@ export function OnboardingWizard({ onComplete }: Props) {
                   </div>
                 </div>
                 <div>
-                  <label className={labelCls} style={{ color: "#7a7469" }}>
+                  <label className={labelCls} style={{ color: "var(--muted)" }}>
                     Website (optional)
                   </label>
                   <input
@@ -389,7 +389,7 @@ export function OnboardingWizard({ onComplete }: Props) {
                   />
                 </div>
                 <div>
-                  <label className={labelCls} style={{ color: "#7a7469" }}>
+                  <label className={labelCls} style={{ color: "var(--muted)" }}>
                     Default payment terms
                   </label>
                   <select
@@ -412,13 +412,13 @@ export function OnboardingWizard({ onComplete }: Props) {
               <>
                 <div
                   className="p-3 rounded-lg text-sm"
-                  style={{ backgroundColor: "#e8f3f7", color: "#1b5e78" }}
+                  style={{ backgroundColor: "var(--accent-bg)", color: "var(--accent)" }}
                 >
                   These details appear on your invoices so clients know where to
                   send payment.
                 </div>
                 <div>
-                  <label className={labelCls} style={{ color: "#7a7469" }}>
+                  <label className={labelCls} style={{ color: "var(--muted)" }}>
                     Bank name
                   </label>
                   <input
@@ -431,7 +431,7 @@ export function OnboardingWizard({ onComplete }: Props) {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className={labelCls} style={{ color: "#7a7469" }}>
+                    <label className={labelCls} style={{ color: "var(--muted)" }}>
                       Sort code
                     </label>
                     <input
@@ -443,7 +443,7 @@ export function OnboardingWizard({ onComplete }: Props) {
                     />
                   </div>
                   <div>
-                    <label className={labelCls} style={{ color: "#7a7469" }}>
+                    <label className={labelCls} style={{ color: "var(--muted)" }}>
                       Account number
                     </label>
                     <input
@@ -461,13 +461,13 @@ export function OnboardingWizard({ onComplete }: Props) {
 
           <div
             className="flex items-center justify-between px-6 py-4"
-            style={{ borderTop: "1px solid #e8e4dd" }}
+            style={{ borderTop: "1px solid var(--surface-3)" }}
           >
             <button
               onClick={() => setStep((s) => s - 1)}
               disabled={step === 0}
               className="text-sm font-medium transition-opacity disabled:opacity-30"
-              style={{ color: "#7a7469" }}
+              style={{ color: "var(--muted)" }}
             >
               ← Back
             </button>
@@ -478,7 +478,7 @@ export function OnboardingWizard({ onComplete }: Props) {
                   <button
                     onClick={() => setStep((s) => s + 1)}
                     className="text-sm"
-                    style={{ color: "#a8a099" }}
+                    style={{ color: "var(--muted-2)" }}
                   >
                     Skip for now
                   </button>
@@ -504,7 +504,7 @@ export function OnboardingWizard({ onComplete }: Props) {
           </div>
         </div>
 
-        <p className="text-center text-xs mt-4" style={{ color: "#a8a099" }}>
+        <p className="text-center text-xs mt-4" style={{ color: "var(--muted-2)" }}>
           All details can be changed later in Settings
         </p>
       </div>

@@ -20,7 +20,7 @@ export function SearchInput({
     <div className={cn("relative", wrapperClassName)}>
       <Search
         className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
-        style={{ color: "#7a7469" }}
+        style={{ color: "var(--muted)" }}
       />
       <input
         type="text"
@@ -29,12 +29,12 @@ export function SearchInput({
         onChange={(e) => onChange(e.target.value)}
         className={cn("pl-9 pr-4", className)}
         style={{
-          backgroundColor: "#fafaf8",
-          border: "1px solid #d9d4ce",
-          color: "#181410",
+          backgroundColor: "var(--surface)",
+          border: "1px solid var(--border)",
+          color: "var(--ink)",
         }}
-        onFocus={(e) => (e.target.style.borderColor = "#1b5e78")}
-        onBlur={(e) => (e.target.style.borderColor = "#d9d4ce")}
+        onFocus={(e) => (e.target.style.borderColor = "var(--accent)")}
+        onBlur={(e) => (e.target.style.borderColor = "var(--border)")}
       />
     </div>
   );

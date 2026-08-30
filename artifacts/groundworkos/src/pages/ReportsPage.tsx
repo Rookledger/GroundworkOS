@@ -22,11 +22,11 @@ import { useApp } from "../store/AppContext";
 
 type ReportTab = "overview" | "pl" | "cis" | "ratebook";
 
-const YELLOW = "#1b5e78";
-const RED = "#c13a2a";
+const YELLOW = "var(--accent)";
+const RED = "var(--danger)";
 const GREEN = "#2a6e45";
-const ORANGE = "#b56918";
-const BLUE = "#1b5e78";
+const ORANGE = "var(--warning)";
+const BLUE = "var(--accent)";
 
 function downloadCSV(
   filename: string,
@@ -56,11 +56,11 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return (
     <div
       className="px-3 py-2.5 rounded-lg gw-shadow text-xs"
-      style={{ backgroundColor: "#fafaf8", border: "1px solid #d9d4ce" }}
+      style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border)" }}
     >
       <div
         className="font-medium mb-1.5"
-        style={{ color: "#181410", fontFamily: "'Inter', sans-serif" }}
+        style={{ color: "var(--ink)", fontFamily: "'Inter', sans-serif" }}
       >
         {label}
       </div>
@@ -74,12 +74,12 @@ const CustomTooltip = ({ active, payload, label }: any) => {
               className="w-1.5 h-1.5 rounded-full flex-shrink-0"
               style={{ backgroundColor: p.color }}
             />
-            <span style={{ color: "#7a7469" }}>{p.name}</span>
+            <span style={{ color: "var(--muted)" }}>{p.name}</span>
           </div>
           <span
             className="tnum"
             style={{
-              color: "#181410",
+              color: "var(--ink)",
               fontFamily: "'JetBrains Mono', monospace",
             }}
           >
@@ -176,14 +176,14 @@ export function ReportsPage() {
     .sort((a, b) => b.value - a.value);
 
   const TYPE_COLORS = [
-    "#1b5e78",
-    "#b56918",
+    "var(--accent)",
+    "var(--warning)",
     "#2a6e45",
-    "#4a4540",
-    "#7a7469",
-    "#d9d4ce",
-    "#c13a2a",
-    "#e8e4dd",
+    "var(--ink-2)",
+    "var(--muted)",
+    "var(--border)",
+    "var(--danger)",
+    "var(--surface-3)",
   ];
 
   const agingBuckets = [
@@ -384,13 +384,13 @@ export function ReportsPage() {
           <h1
             className="text-xl font-semibold"
             style={{
-              color: "#181410",
+              color: "var(--ink)",
               fontFamily: "'Space Grotesk', sans-serif",
             }}
           >
             Reports
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: "#7a7469" }}>
+          <p className="text-sm mt-0.5" style={{ color: "var(--muted)" }}>
             Financial reports, CIS returns & rate book
           </p>
         </div>
@@ -401,7 +401,7 @@ export function ReportsPage() {
 
       <div
         className="flex items-center gap-1"
-        style={{ borderBottom: "1px solid #d9d4ce" }}
+        style={{ borderBottom: "1px solid var(--border)" }}
       >
         {(
           [
@@ -418,12 +418,12 @@ export function ReportsPage() {
             style={
               tab === t.id
                 ? {
-                    color: "#181410",
+                    color: "var(--ink)",
                     fontWeight: 500,
-                    borderBottom: "2px solid #1b5e78",
+                    borderBottom: "2px solid var(--accent)",
                     marginBottom: "-1px",
                   }
-                : { color: "#7a7469" }
+                : { color: "var(--muted)" }
             }
           >
             {t.label}
@@ -471,13 +471,13 @@ export function ReportsPage() {
                     >
                       <CartesianGrid
                         vertical={false}
-                        stroke="#e8e4dd"
+                        stroke="var(--surface-3)"
                         strokeDasharray="3 3"
                       />
                       <XAxis
                         dataKey="month"
                         tick={{
-                          fill: "#7a7469",
+                          fill: "var(--muted)",
                           fontSize: 11,
                           fontFamily: "'JetBrains Mono', monospace",
                         }}
@@ -487,7 +487,7 @@ export function ReportsPage() {
                       />
                       <YAxis
                         tick={{
-                          fill: "#7a7469",
+                          fill: "var(--muted)",
                           fontSize: 10,
                           fontFamily: "'JetBrains Mono', monospace",
                         }}
@@ -500,7 +500,7 @@ export function ReportsPage() {
                       />
                       <Tooltip
                         content={<CustomTooltip />}
-                        cursor={{ fill: "#eeeae4", opacity: 0.5 }}
+                        cursor={{ fill: "var(--surface-2)", opacity: 0.5 }}
                       />
                       <Bar
                         dataKey="invoiced"
@@ -521,11 +521,11 @@ export function ReportsPage() {
                 </div>
                 <div
                   className="flex items-center gap-6 mt-5 pt-4"
-                  style={{ borderTop: "1px solid #d9d4ce" }}
+                  style={{ borderTop: "1px solid var(--border)" }}
                 >
                   <div
                     className="flex items-center gap-2 text-xs"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     <span
                       className="w-3 h-3 rounded-sm inline-block"
@@ -535,7 +535,7 @@ export function ReportsPage() {
                   </div>
                   <div
                     className="flex items-center gap-2 text-xs"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     <span
                       className="w-3 h-3 rounded-sm inline-block"
@@ -585,11 +585,11 @@ export function ReportsPage() {
                         backgroundColor: TYPE_COLORS[i % TYPE_COLORS.length],
                       }}
                     />
-                    <span style={{ color: "#7a7469" }}>
+                    <span style={{ color: "var(--muted)" }}>
                       {d.name}{" "}
                       <span
                         className="font-mono ml-0.5"
-                        style={{ color: "#181410" }}
+                        style={{ color: "var(--ink)" }}
                       >
                         ({d.value})
                       </span>
@@ -616,13 +616,13 @@ export function ReportsPage() {
                     </defs>
                     <CartesianGrid
                       vertical={false}
-                      stroke="#e8e4dd"
+                      stroke="var(--surface-3)"
                       strokeDasharray="3 3"
                     />
                     <XAxis
                       dataKey="month"
                       tick={{
-                        fill: "#7a7469",
+                        fill: "var(--muted)",
                         fontSize: 11,
                         fontFamily: "'JetBrains Mono', monospace",
                       }}
@@ -632,7 +632,7 @@ export function ReportsPage() {
                     />
                     <YAxis
                       tick={{
-                        fill: "#7a7469",
+                        fill: "var(--muted)",
                         fontSize: 10,
                         fontFamily: "'JetBrains Mono', monospace",
                       }}
@@ -658,7 +658,7 @@ export function ReportsPage() {
                         fill: GREEN,
                         r: 3,
                         strokeWidth: 2,
-                        stroke: "#fafaf8",
+                        stroke: "var(--surface)",
                       }}
                       activeDot={{ r: 5, strokeWidth: 0 }}
                     />
@@ -677,13 +677,13 @@ export function ReportsPage() {
                   >
                     <CartesianGrid
                       vertical={false}
-                      stroke="#e8e4dd"
+                      stroke="var(--surface-3)"
                       strokeDasharray="3 3"
                     />
                     <XAxis
                       dataKey="label"
                       tick={{
-                        fill: "#7a7469",
+                        fill: "var(--muted)",
                         fontSize: 11,
                         fontFamily: "'JetBrains Mono', monospace",
                       }}
@@ -693,7 +693,7 @@ export function ReportsPage() {
                     />
                     <YAxis
                       tick={{
-                        fill: "#7a7469",
+                        fill: "var(--muted)",
                         fontSize: 10,
                         fontFamily: "'JetBrains Mono', monospace",
                       }}
@@ -706,7 +706,7 @@ export function ReportsPage() {
                     />
                     <Tooltip
                       content={<CustomTooltip />}
-                      cursor={{ fill: "#eeeae4", opacity: 0.5 }}
+                      cursor={{ fill: "var(--surface-2)", opacity: 0.5 }}
                     />
                     <Bar
                       dataKey="value"
@@ -723,13 +723,13 @@ export function ReportsPage() {
               </div>
               <div
                 className="grid grid-cols-4 gap-2 mt-5 pt-4"
-                style={{ borderTop: "1px solid #d9d4ce" }}
+                style={{ borderTop: "1px solid var(--border)" }}
               >
                 {agingBuckets.map((b, i) => (
                   <div key={b.label} className="text-center">
                     <div
                       className="text-[10px] font-bold uppercase tracking-widest"
-                      style={{ color: "#7a7469" }}
+                      style={{ color: "var(--muted)" }}
                     >
                       {b.label}
                     </div>
@@ -741,7 +741,7 @@ export function ReportsPage() {
                     </div>
                     <div
                       className="text-[10px] mt-0.5"
-                      style={{ color: "#7a7469" }}
+                      style={{ color: "var(--muted)" }}
                     >
                       {b.count > 0 ? `${b.count} inv` : ""}
                     </div>
@@ -763,8 +763,8 @@ export function ReportsPage() {
                     key={label}
                     className="p-4 rounded-lg"
                     style={{
-                      backgroundColor: "#fafaf8",
-                      border: "1px solid #d9d4ce",
+                      backgroundColor: "var(--surface)",
+                      border: "1px solid var(--border)",
                     }}
                   >
                     <div className="flex items-center gap-2 mb-3">
@@ -775,7 +775,7 @@ export function ReportsPage() {
                       <span
                         className="text-[11px] font-bold uppercase tracking-widest"
                         style={{
-                          color: "#7a7469",
+                          color: "var(--muted)",
                           fontFamily: "'Space Grotesk', sans-serif",
                         }}
                       >
@@ -790,13 +790,13 @@ export function ReportsPage() {
                     </div>
                     <div
                       className="text-xs mb-3 font-mono"
-                      style={{ color: "#7a7469" }}
+                      style={{ color: "var(--muted)" }}
                     >
                       {count} jobs · {pct}% of pipeline
                     </div>
                     <div
                       className="h-1.5 rounded-full overflow-hidden"
-                      style={{ backgroundColor: "#eeeae4" }}
+                      style={{ backgroundColor: "var(--surface-2)" }}
                     >
                       <div
                         className="h-full rounded-full transition-all duration-500"
@@ -912,13 +912,13 @@ export function ReportsPage() {
                       >
                         <CartesianGrid
                           vertical={false}
-                          stroke="#e8e4dd"
+                          stroke="var(--surface-3)"
                           strokeDasharray="3 3"
                         />
                         <XAxis
                           dataKey="name"
                           tick={{
-                            fill: "#7a7469",
+                            fill: "var(--muted)",
                             fontSize: 10,
                             fontFamily: "'JetBrains Mono', monospace",
                           }}
@@ -928,7 +928,7 @@ export function ReportsPage() {
                         />
                         <YAxis
                           tick={{
-                            fill: "#7a7469",
+                            fill: "var(--muted)",
                             fontSize: 10,
                             fontFamily: "'JetBrains Mono', monospace",
                           }}
@@ -941,23 +941,23 @@ export function ReportsPage() {
                         />
                         <Tooltip
                           content={<CustomTooltip />}
-                          cursor={{ fill: "#eeeae4", opacity: 0.5 }}
+                          cursor={{ fill: "var(--surface-2)", opacity: 0.5 }}
                         />
                         <Bar
                           dataKey="Revenue"
-                          fill="#1b5e78"
+                          fill="var(--accent)"
                           radius={[3, 3, 0, 0]}
                           maxBarSize={36}
                         />
                         <Bar
                           dataKey="Labour"
-                          fill="#b56918"
+                          fill="var(--warning)"
                           radius={[3, 3, 0, 0]}
                           maxBarSize={36}
                         />
                         <Bar
                           dataKey="Materials"
-                          fill="#4a4540"
+                          fill="var(--ink-2)"
                           radius={[3, 3, 0, 0]}
                           maxBarSize={36}
                         />
@@ -966,17 +966,17 @@ export function ReportsPage() {
                   </div>
                   <div
                     className="flex items-center gap-6 mt-4 pt-4"
-                    style={{ borderTop: "1px solid #d9d4ce" }}
+                    style={{ borderTop: "1px solid var(--border)" }}
                   >
                     {[
-                      ["#1b5e78", "Revenue"],
-                      ["#b56918", "Labour"],
-                      ["#4a4540", "Materials"],
+                      ["var(--accent)", "Revenue"],
+                      ["var(--warning)", "Labour"],
+                      ["var(--ink-2)", "Materials"],
                     ].map(([color, label]) => (
                       <div
                         key={label}
                         className="flex items-center gap-2 text-xs"
-                        style={{ color: "#7a7469" }}
+                        style={{ color: "var(--muted)" }}
                       >
                         <span
                           className="w-3 h-3 rounded-sm inline-block"
@@ -995,8 +995,8 @@ export function ReportsPage() {
                     <thead>
                       <tr
                         style={{
-                          borderBottom: "1px solid #d9d4ce",
-                          backgroundColor: "#fafaf8",
+                          borderBottom: "1px solid var(--border)",
+                          backgroundColor: "var(--surface)",
                         }}
                       >
                         {[
@@ -1012,7 +1012,7 @@ export function ReportsPage() {
                           <th
                             key={h}
                             className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-widest"
-                            style={{ color: "#7a7469" }}
+                            style={{ color: "var(--muted)" }}
                           >
                             {h}
                           </th>
@@ -1024,7 +1024,7 @@ export function ReportsPage() {
                         const margin = r.margin;
                         const marginColor =
                           margin === null
-                            ? "#a8a099"
+                            ? "var(--muted-2)"
                             : margin >= 20
                               ? GREEN
                               : margin >= 0
@@ -1033,24 +1033,24 @@ export function ReportsPage() {
                         return (
                           <tr
                             key={r.job.id}
-                            className="transition-colors hover:bg-[#eeeae4]"
+                            className="transition-colors hover:bg-[var(--surface-2)]"
                             style={{
                               borderBottom:
                                 i < jobRows.length - 1
-                                  ? "1px solid #e8e4dd"
+                                  ? "1px solid var(--surface-3)"
                                   : "none",
                             }}
                           >
                             <td className="py-3 px-4">
                               <div
                                 className="text-sm font-mono font-semibold"
-                                style={{ color: "#1b5e78" }}
+                                style={{ color: "var(--accent)" }}
                               >
                                 {r.job.job_number}
                               </div>
                               <div
                                 className="text-xs mt-0.5 max-w-[180px] truncate"
-                                style={{ color: "#7a7469" }}
+                                style={{ color: "var(--muted)" }}
                               >
                                 {r.job.title}
                               </div>
@@ -1063,14 +1063,14 @@ export function ReportsPage() {
                                     r.job.status === "active"
                                       ? "rgba(42,110,69,0.1)"
                                       : r.job.status === "complete"
-                                        ? "#e8f3f7"
-                                        : "#eeeae4",
+                                        ? "var(--accent-bg)"
+                                        : "var(--surface-2)",
                                   color:
                                     r.job.status === "active"
                                       ? GREEN
                                       : r.job.status === "complete"
-                                        ? "#1b5e78"
-                                        : "#7a7469",
+                                        ? "var(--accent)"
+                                        : "var(--muted)",
                                 }}
                               >
                                 {r.job.status}
@@ -1078,7 +1078,7 @@ export function ReportsPage() {
                             </td>
                             <td
                               className="py-3 px-4 text-sm font-mono tnum font-semibold"
-                              style={{ color: "#181410" }}
+                              style={{ color: "var(--ink)" }}
                             >
                               {r.contractValue > 0
                                 ? formatCurrency(r.contractValue)
@@ -1086,7 +1086,7 @@ export function ReportsPage() {
                             </td>
                             <td
                               className="py-3 px-4 text-sm font-mono tnum"
-                              style={{ color: "#4a4540" }}
+                              style={{ color: "var(--ink-2)" }}
                             >
                               {r.invoiced > 0
                                 ? formatCurrency(r.invoiced)
@@ -1095,7 +1095,7 @@ export function ReportsPage() {
                             <td
                               className="py-3 px-4 text-sm font-mono tnum"
                               style={{
-                                color: r.labour > 0 ? "#b56918" : "#d9d4ce",
+                                color: r.labour > 0 ? "var(--warning)" : "var(--border)",
                               }}
                             >
                               {r.labour > 0 ? formatCurrency(r.labour) : "—"}
@@ -1103,7 +1103,7 @@ export function ReportsPage() {
                             <td
                               className="py-3 px-4 text-sm font-mono tnum"
                               style={{
-                                color: r.materials > 0 ? "#4a4540" : "#d9d4ce",
+                                color: r.materials > 0 ? "var(--ink-2)" : "var(--border)",
                               }}
                             >
                               {r.materials > 0
@@ -1112,7 +1112,7 @@ export function ReportsPage() {
                             </td>
                             <td
                               className="py-3 px-4 text-sm font-mono tnum font-semibold"
-                              style={{ color: "#181410" }}
+                              style={{ color: "var(--ink)" }}
                             >
                               {r.totalCost > 0
                                 ? formatCurrency(r.totalCost)
@@ -1131,7 +1131,7 @@ export function ReportsPage() {
                                     className="h-1 rounded-full mt-1.5 overflow-hidden"
                                     style={{
                                       width: 60,
-                                      backgroundColor: "#e8e4dd",
+                                      backgroundColor: "var(--surface-3)",
                                     }}
                                   >
                                     <div
@@ -1144,7 +1144,7 @@ export function ReportsPage() {
                                   </div>
                                 </div>
                               ) : (
-                                <span style={{ color: "#d9d4ce" }}>—</span>
+                                <span style={{ color: "var(--border)" }}>—</span>
                               )}
                             </td>
                           </tr>
@@ -1154,26 +1154,26 @@ export function ReportsPage() {
                     <tfoot>
                       <tr
                         style={{
-                          borderTop: "2px solid #d9d4ce",
-                          backgroundColor: "#fafaf8",
+                          borderTop: "2px solid var(--border)",
+                          backgroundColor: "var(--surface)",
                         }}
                       >
                         <td
                           colSpan={2}
                           className="py-3 px-4 text-xs font-bold uppercase tracking-widest"
-                          style={{ color: "#7a7469" }}
+                          style={{ color: "var(--muted)" }}
                         >
                           Totals
                         </td>
                         <td
                           className="py-3 px-4 text-sm font-mono font-bold tnum"
-                          style={{ color: "#181410" }}
+                          style={{ color: "var(--ink)" }}
                         >
                           {formatCurrency(totalContractValue)}
                         </td>
                         <td
                           className="py-3 px-4 text-sm font-mono tnum"
-                          style={{ color: "#4a4540" }}
+                          style={{ color: "var(--ink-2)" }}
                         >
                           {formatCurrency(
                             jobRows.reduce((s, r) => s + r.invoiced, 0),
@@ -1181,19 +1181,19 @@ export function ReportsPage() {
                         </td>
                         <td
                           className="py-3 px-4 text-sm font-mono tnum font-bold"
-                          style={{ color: "#b56918" }}
+                          style={{ color: "var(--warning)" }}
                         >
                           {formatCurrency(totalLabour)}
                         </td>
                         <td
                           className="py-3 px-4 text-sm font-mono tnum font-bold"
-                          style={{ color: "#4a4540" }}
+                          style={{ color: "var(--ink-2)" }}
                         >
                           {formatCurrency(totalMaterials)}
                         </td>
                         <td
                           className="py-3 px-4 text-sm font-mono tnum font-bold"
-                          style={{ color: "#181410" }}
+                          style={{ color: "var(--ink)" }}
                         >
                           {formatCurrency(totalCost)}
                         </td>
@@ -1224,20 +1224,20 @@ export function ReportsPage() {
           <div
             className="flex items-start gap-3 p-4 rounded-lg"
             style={{
-              backgroundColor: "#e8f3f7",
+              backgroundColor: "var(--accent-bg)",
               border: "1px solid rgba(27,94,120,0.2)",
             }}
           >
             <div className="flex-1">
               <p
                 className="text-sm font-semibold mb-1"
-                style={{ color: "#1b5e78" }}
+                style={{ color: "var(--accent)" }}
               >
                 Construction Industry Scheme (CIS)
               </p>
               <p
                 className="text-sm leading-relaxed"
-                style={{ color: "#4a4540" }}
+                style={{ color: "var(--ink-2)" }}
               >
                 Monthly returns must be filed with HMRC by the 19th of the
                 following tax month. Deductions must be made from subcontractors
@@ -1283,10 +1283,10 @@ export function ReportsPage() {
                         onClick={() =>
                           exportCIS300(monthReturns, `CIS300-${month}.csv`)
                         }
-                        className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded transition-colors hover:bg-[#e8e4dd]"
+                        className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded transition-colors hover:bg-[var(--surface-3)]"
                         style={{
-                          color: "#1b5e78",
-                          border: "1px solid #d9d4ce",
+                          color: "var(--accent)",
+                          border: "1px solid var(--border)",
                         }}
                         title="Download CIS300 CSV for HMRC submission"
                       >
@@ -1313,43 +1313,43 @@ export function ReportsPage() {
                       <thead>
                         <tr
                           style={{
-                            borderBottom: "1px solid #d9d4ce",
-                            backgroundColor: "#fafaf8",
+                            borderBottom: "1px solid var(--border)",
+                            backgroundColor: "var(--surface)",
                           }}
                         >
                           <th
                             className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-widest"
-                            style={{ color: "#7a7469" }}
+                            style={{ color: "var(--muted)" }}
                           >
                             Subcontractor
                           </th>
                           <th
                             className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-widest"
-                            style={{ color: "#7a7469" }}
+                            style={{ color: "var(--muted)" }}
                           >
                             UTR
                           </th>
                           <th
                             className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-widest text-right"
-                            style={{ color: "#7a7469" }}
+                            style={{ color: "var(--muted)" }}
                           >
                             Rate
                           </th>
                           <th
                             className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-widest text-right"
-                            style={{ color: "#7a7469" }}
+                            style={{ color: "var(--muted)" }}
                           >
                             Gross
                           </th>
                           <th
                             className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-widest text-right"
-                            style={{ color: "#7a7469" }}
+                            style={{ color: "var(--muted)" }}
                           >
                             Deduction
                           </th>
                           <th
                             className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-widest text-right"
-                            style={{ color: "#7a7469" }}
+                            style={{ color: "var(--muted)" }}
                           >
                             Net
                           </th>
@@ -1359,47 +1359,47 @@ export function ReportsPage() {
                         {monthReturns.map((r, i) => (
                           <tr
                             key={r.id}
-                            className="transition-colors hover:bg-[#eeeae4] group"
+                            className="transition-colors hover:bg-[var(--surface-2)] group"
                             style={{
                               borderBottom:
                                 i < monthReturns.length - 1
-                                  ? "1px solid #e8e4dd"
+                                  ? "1px solid var(--surface-3)"
                                   : "none",
                             }}
                           >
                             <td
                               className="py-3 px-4 text-sm font-medium"
-                              style={{ color: "#181410" }}
+                              style={{ color: "var(--ink)" }}
                             >
                               {r.subcontractor_name}
                             </td>
                             <td
                               className="py-3 px-4 text-sm font-mono tnum"
-                              style={{ color: "#7a7469" }}
+                              style={{ color: "var(--muted)" }}
                             >
                               —
                             </td>
                             <td
                               className="py-3 px-4 text-sm font-mono tnum text-right"
-                              style={{ color: "#7a7469" }}
+                              style={{ color: "var(--muted)" }}
                             >
                               {r.deduction_rate}%
                             </td>
                             <td
                               className="py-3 px-4 text-sm font-mono tnum text-right"
-                              style={{ color: "#181410" }}
+                              style={{ color: "var(--ink)" }}
                             >
                               {formatCurrency(r.gross_payment)}
                             </td>
                             <td
                               className="py-3 px-4 text-sm font-mono tnum text-right"
-                              style={{ color: "#c13a2a" }}
+                              style={{ color: "var(--danger)" }}
                             >
                               -{formatCurrency(r.deduction_amount)}
                             </td>
                             <td
                               className="py-3 px-4 text-sm font-mono tnum font-bold text-right"
-                              style={{ color: "#181410" }}
+                              style={{ color: "var(--ink)" }}
                             >
                               {formatCurrency(r.net_payment)}
                             </td>
@@ -1409,20 +1409,20 @@ export function ReportsPage() {
                       <tfoot>
                         <tr
                           style={{
-                            borderTop: "1px solid #d9d4ce",
-                            backgroundColor: "#fafaf8",
+                            borderTop: "1px solid var(--border)",
+                            backgroundColor: "var(--surface)",
                           }}
                         >
                           <td
                             colSpan={3}
                             className="py-3 px-4 text-xs font-bold uppercase tracking-widest text-right"
-                            style={{ color: "#7a7469" }}
+                            style={{ color: "var(--muted)" }}
                           >
                             Total
                           </td>
                           <td
                             className="py-3 px-4 text-sm font-mono tnum font-bold text-right"
-                            style={{ color: "#181410" }}
+                            style={{ color: "var(--ink)" }}
                           >
                             {formatCurrency(
                               monthReturns.reduce(
@@ -1433,7 +1433,7 @@ export function ReportsPage() {
                           </td>
                           <td
                             className="py-3 px-4 text-sm font-mono tnum font-bold text-right"
-                            style={{ color: "#c13a2a" }}
+                            style={{ color: "var(--danger)" }}
                           >
                             -
                             {formatCurrency(
@@ -1445,7 +1445,7 @@ export function ReportsPage() {
                           </td>
                           <td
                             className="py-3 px-4 text-sm font-mono tnum font-bold text-right"
-                            style={{ color: "#181410" }}
+                            style={{ color: "var(--ink)" }}
                           >
                             {formatCurrency(
                               monthReturns.reduce(
@@ -1469,12 +1469,12 @@ export function ReportsPage() {
         <div className="space-y-6">
           <div
             className="flex items-center justify-between p-4 rounded-lg gw-shadow"
-            style={{ backgroundColor: "#fafaf8", border: "1px solid #d9d4ce" }}
+            style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border)" }}
           >
             <div className="flex items-center gap-3">
               <span
                 className="text-sm font-medium"
-                style={{ color: "#4a4540" }}
+                style={{ color: "var(--ink-2)" }}
               >
                 Category:
               </span>
@@ -1483,9 +1483,9 @@ export function ReportsPage() {
                 onChange={(e) => setRateCategory(e.target.value)}
                 className="py-1.5 px-3 rounded-md text-sm font-medium focus:outline-none"
                 style={{
-                  backgroundColor: "#eeeae4",
-                  border: "1px solid #d9d4ce",
-                  color: "#181410",
+                  backgroundColor: "var(--surface-2)",
+                  border: "1px solid var(--border)",
+                  color: "var(--ink)",
                 }}
               >
                 {rateCategories.map((c) => (
@@ -1495,7 +1495,7 @@ export function ReportsPage() {
                 ))}
               </select>
             </div>
-            <span className="text-xs font-mono" style={{ color: "#7a7469" }}>
+            <span className="text-xs font-mono" style={{ color: "var(--muted)" }}>
               {filteredRates.length} rates
             </span>
           </div>
@@ -1519,7 +1519,7 @@ export function ReportsPage() {
                     actions={
                       <span
                         className="text-xs font-mono px-2 py-1 rounded"
-                        style={{ backgroundColor: "#eeeae4", color: "#4a4540" }}
+                        style={{ backgroundColor: "var(--surface-2)", color: "var(--ink-2)" }}
                       >
                         Avg £{avgTotal.toFixed(2)}/unit
                       </span>
@@ -1530,43 +1530,43 @@ export function ReportsPage() {
                         <thead>
                           <tr
                             style={{
-                              borderBottom: "1px solid #d9d4ce",
-                              backgroundColor: "#fafaf8",
+                              borderBottom: "1px solid var(--border)",
+                              backgroundColor: "var(--surface)",
                             }}
                           >
                             <th
                               className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-widest"
-                              style={{ color: "#7a7469" }}
+                              style={{ color: "var(--muted)" }}
                             >
                               Description
                             </th>
                             <th
                               className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-widest"
-                              style={{ color: "#7a7469" }}
+                              style={{ color: "var(--muted)" }}
                             >
                               Unit
                             </th>
                             <th
                               className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-widest text-right"
-                              style={{ color: "#7a7469" }}
+                              style={{ color: "var(--muted)" }}
                             >
                               Labour
                             </th>
                             <th
                               className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-widest text-right"
-                              style={{ color: "#7a7469" }}
+                              style={{ color: "var(--muted)" }}
                             >
                               Material
                             </th>
                             <th
                               className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-widest text-right"
-                              style={{ color: "#7a7469" }}
+                              style={{ color: "var(--muted)" }}
                             >
                               Plant
                             </th>
                             <th
                               className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-widest text-right"
-                              style={{ color: "#7a7469" }}
+                              style={{ color: "var(--muted)" }}
                             >
                               Total
                             </th>
@@ -1577,25 +1577,25 @@ export function ReportsPage() {
                           {catRates.map((r, i) => (
                             <tr
                               key={r.id}
-                              className="transition-colors hover:bg-[#eeeae4] group cursor-pointer"
+                              className="transition-colors hover:bg-[var(--surface-2)] group cursor-pointer"
                               style={{
                                 borderBottom:
                                   i < catRates.length - 1
-                                    ? "1px solid #e8e4dd"
+                                    ? "1px solid var(--surface-3)"
                                     : "none",
                               }}
                             >
                               <td className="py-3 px-4">
                                 <div
                                   className="text-sm font-medium"
-                                  style={{ color: "#181410" }}
+                                  style={{ color: "var(--ink)" }}
                                 >
                                   {r.description}
                                 </div>
                                 {r.notes && (
                                   <div
                                     className="text-xs mt-0.5"
-                                    style={{ color: "#7a7469" }}
+                                    style={{ color: "var(--muted)" }}
                                   >
                                     {r.notes}
                                   </div>
@@ -1603,38 +1603,38 @@ export function ReportsPage() {
                               </td>
                               <td
                                 className="py-3 px-4 text-sm font-mono"
-                                style={{ color: "#7a7469" }}
+                                style={{ color: "var(--muted)" }}
                               >
                                 {r.unit}
                               </td>
                               <td
                                 className="py-3 px-4 text-sm font-mono tnum text-right"
-                                style={{ color: "#7a7469" }}
+                                style={{ color: "var(--muted)" }}
                               >
                                 £{r.labour_rate.toFixed(2)}
                               </td>
                               <td
                                 className="py-3 px-4 text-sm font-mono tnum text-right"
-                                style={{ color: "#7a7469" }}
+                                style={{ color: "var(--muted)" }}
                               >
                                 £{r.material_rate.toFixed(2)}
                               </td>
                               <td
                                 className="py-3 px-4 text-sm font-mono tnum text-right"
-                                style={{ color: "#7a7469" }}
+                                style={{ color: "var(--muted)" }}
                               >
                                 £{r.plant_rate.toFixed(2)}
                               </td>
                               <td
                                 className="py-3 px-4 text-sm font-mono tnum font-bold text-right"
-                                style={{ color: "#181410" }}
+                                style={{ color: "var(--ink)" }}
                               >
                                 £{r.total_rate.toFixed(2)}
                               </td>
                               <td className="py-3 px-2 text-right">
                                 <ChevronRight
                                   className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  style={{ color: "#7a7469" }}
+                                  style={{ color: "var(--muted)" }}
                                 />
                               </td>
                             </tr>

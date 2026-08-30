@@ -31,10 +31,10 @@ const STATUS_CONFIG: Record<
   PurchaseOrderStatus,
   { label: string; color: string; bg: string; icon: React.FC<any> }
 > = {
-  draft: { label: "Draft", color: "#7a7469", bg: "#eeeae4", icon: AlertCircle },
+  draft: { label: "Draft", color: "var(--muted)", bg: "var(--surface-2)", icon: AlertCircle },
   ordered: {
     label: "Ordered",
-    color: "#b56918",
+    color: "var(--warning)",
     bg: "#fef3c7",
     icon: ShoppingCart,
   },
@@ -46,8 +46,8 @@ const STATUS_CONFIG: Record<
   },
   invoiced: {
     label: "Invoiced",
-    color: "#1b5e78",
-    bg: "#e8f3f7",
+    color: "var(--accent)",
+    bg: "var(--accent-bg)",
     icon: FileCheck,
   },
 };
@@ -319,13 +319,13 @@ export function PurchaseOrdersPage() {
           <h1
             className="text-xl font-semibold"
             style={{
-              color: "#181410",
+              color: "var(--ink)",
               fontFamily: "'Space Grotesk', sans-serif",
             }}
           >
             Purchase Orders
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: "#7a7469" }}>
+          <p className="text-sm mt-0.5" style={{ color: "var(--muted)" }}>
             Track material and plant spend against jobs
           </p>
         </div>
@@ -358,18 +358,18 @@ export function PurchaseOrdersPage() {
       <div className="flex flex-wrap gap-3">
         <div
           className="flex items-center gap-2 flex-1 min-w-[200px] max-w-sm px-3 py-2 rounded-lg"
-          style={{ backgroundColor: "#fafaf8", border: "1px solid #d9d4ce" }}
+          style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border)" }}
         >
           <Search
             className="w-3.5 h-3.5 flex-shrink-0"
-            style={{ color: "#a8a099" }}
+            style={{ color: "var(--muted-2)" }}
           />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search PO, supplier, description…"
-            className="flex-1 text-sm bg-transparent focus:outline-none placeholder:text-[#a8a099]"
-            style={{ color: "#181410" }}
+            className="flex-1 text-sm bg-transparent focus:outline-none placeholder:text-[var(--muted-2)]"
+            style={{ color: "var(--ink)" }}
           />
         </div>
         <select
@@ -377,9 +377,9 @@ export function PurchaseOrdersPage() {
           onChange={(e) => setStatusFilter(e.target.value as any)}
           className="py-2 px-3 rounded-lg text-sm focus:outline-none"
           style={{
-            backgroundColor: "#fafaf8",
-            border: "1px solid #d9d4ce",
-            color: "#4a4540",
+            backgroundColor: "var(--surface)",
+            border: "1px solid var(--border)",
+            color: "var(--ink-2)",
           }}
         >
           <option value="all">All Statuses</option>
@@ -394,9 +394,9 @@ export function PurchaseOrdersPage() {
           onChange={(e) => setJobFilter(e.target.value)}
           className="py-2 px-3 rounded-lg text-sm focus:outline-none"
           style={{
-            backgroundColor: "#fafaf8",
-            border: "1px solid #d9d4ce",
-            color: "#4a4540",
+            backgroundColor: "var(--surface)",
+            border: "1px solid var(--border)",
+            color: "var(--ink-2)",
           }}
         >
           <option value="all">All Jobs</option>
@@ -412,8 +412,8 @@ export function PurchaseOrdersPage() {
         <Panel noPad className="flex-1 min-w-0">
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 gap-3">
-              <ShoppingCart className="w-8 h-8" style={{ color: "#d9d4ce" }} />
-              <p className="text-sm font-medium" style={{ color: "#7a7469" }}>
+              <ShoppingCart className="w-8 h-8" style={{ color: "var(--border)" }} />
+              <p className="text-sm font-medium" style={{ color: "var(--muted)" }}>
                 No purchase orders found
               </p>
               <Btn size="sm" onClick={openAdd}>
@@ -426,8 +426,8 @@ export function PurchaseOrdersPage() {
                 <thead>
                   <tr
                     style={{
-                      borderBottom: "1px solid #d9d4ce",
-                      backgroundColor: "#fafaf8",
+                      borderBottom: "1px solid var(--border)",
+                      backgroundColor: "var(--surface)",
                     }}
                   >
                     {[
@@ -443,7 +443,7 @@ export function PurchaseOrdersPage() {
                       <th
                         key={h}
                         className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-widest"
-                        style={{ color: "#7a7469" }}
+                        style={{ color: "var(--muted)" }}
                       >
                         {h}
                       </th>
@@ -457,20 +457,20 @@ export function PurchaseOrdersPage() {
                       onClick={() =>
                         setSelected(selected?.id === o.id ? null : o)
                       }
-                      className="cursor-pointer transition-colors hover:bg-[#eeeae4] group"
+                      className="cursor-pointer transition-colors hover:bg-[var(--surface-2)] group"
                       style={{
                         borderBottom:
                           i < filtered.length - 1
-                            ? "1px solid #e8e4dd"
+                            ? "1px solid var(--surface-3)"
                             : "none",
                         backgroundColor:
-                          selected?.id === o.id ? "#eeeae4" : undefined,
+                          selected?.id === o.id ? "var(--surface-2)" : undefined,
                       }}
                     >
                       <td className="py-3 px-4">
                         <span
                           className="text-sm font-mono font-semibold"
-                          style={{ color: "#1b5e78" }}
+                          style={{ color: "var(--accent)" }}
                         >
                           {o.po_number}
                         </span>
@@ -478,13 +478,13 @@ export function PurchaseOrdersPage() {
                       <td className="py-3 px-4">
                         <span
                           className="text-sm font-medium"
-                          style={{ color: "#181410" }}
+                          style={{ color: "var(--ink)" }}
                         >
                           {o.supplier}
                         </span>
                       </td>
                       <td className="py-3 px-4">
-                        <span className="text-sm" style={{ color: "#4a4540" }}>
+                        <span className="text-sm" style={{ color: "var(--ink-2)" }}>
                           {o.description.length > 40
                             ? o.description.slice(0, 40) + "…"
                             : o.description}
@@ -495,14 +495,14 @@ export function PurchaseOrdersPage() {
                           <span
                             className="text-[11px] font-mono font-bold px-2 py-0.5 rounded"
                             style={{
-                              backgroundColor: "#eeeae4",
-                              color: "#4a4540",
+                              backgroundColor: "var(--surface-2)",
+                              color: "var(--ink-2)",
                             }}
                           >
                             {o.job_number}
                           </span>
                         ) : (
-                          <span style={{ color: "#d9d4ce" }}>—</span>
+                          <span style={{ color: "var(--border)" }}>—</span>
                         )}
                       </td>
                       <td className="py-3 px-4">
@@ -510,13 +510,13 @@ export function PurchaseOrdersPage() {
                       </td>
                       <td
                         className="py-3 px-4 text-sm font-mono"
-                        style={{ color: "#7a7469" }}
+                        style={{ color: "var(--muted)" }}
                       >
                         {formatDate(o.order_date)}
                       </td>
                       <td
                         className="py-3 px-4 text-sm font-mono font-semibold tnum text-right"
-                        style={{ color: "#181410" }}
+                        style={{ color: "var(--ink)" }}
                       >
                         {formatCurrency(o.total_amount)}
                       </td>
@@ -524,17 +524,17 @@ export function PurchaseOrdersPage() {
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={(e) => openEdit(o, e)}
-                            className="p-1.5 rounded hover:bg-[#d9d4ce] transition-colors"
+                            className="p-1.5 rounded hover:bg-[var(--border)] transition-colors"
                             title="Edit"
                           >
                             <Pencil
                               className="w-3 h-3"
-                              style={{ color: "#7a7469" }}
+                              style={{ color: "var(--muted)" }}
                             />
                           </button>
                           <ChevronRight
                             className="w-3.5 h-3.5"
-                            style={{ color: "#a8a099" }}
+                            style={{ color: "var(--muted-2)" }}
                           />
                         </div>
                       </td>
@@ -544,20 +544,20 @@ export function PurchaseOrdersPage() {
                 <tfoot>
                   <tr
                     style={{
-                      borderTop: "1px solid #d9d4ce",
-                      backgroundColor: "#fafaf8",
+                      borderTop: "1px solid var(--border)",
+                      backgroundColor: "var(--surface)",
                     }}
                   >
                     <td
                       colSpan={6}
                       className="py-2.5 px-4 text-xs font-bold uppercase tracking-widest text-right"
-                      style={{ color: "#7a7469" }}
+                      style={{ color: "var(--muted)" }}
                     >
                       Total ({filtered.length})
                     </td>
                     <td
                       className="py-2.5 px-4 text-sm font-mono font-bold tnum text-right"
-                      style={{ color: "#181410" }}
+                      style={{ color: "var(--ink)" }}
                     >
                       {formatCurrency(
                         filtered.reduce((s, o) => s + o.total_amount, 0),
@@ -578,14 +578,14 @@ export function PurchaseOrdersPage() {
                 <div>
                   <div
                     className="text-[10px] font-bold uppercase tracking-widest mb-1"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     Purchase Order
                   </div>
                   <div
                     className="text-lg font-bold font-mono"
                     style={{
-                      color: "#1b5e78",
+                      color: "var(--accent)",
                       fontFamily: "'JetBrains Mono', monospace",
                     }}
                   >
@@ -594,60 +594,60 @@ export function PurchaseOrdersPage() {
                 </div>
                 <button
                   onClick={() => setSelected(null)}
-                  className="p-1 rounded hover:bg-[#eeeae4]"
+                  className="p-1 rounded hover:bg-[var(--surface-2)]"
                 >
-                  <X className="w-4 h-4" style={{ color: "#a8a099" }} />
+                  <X className="w-4 h-4" style={{ color: "var(--muted-2)" }} />
                 </button>
               </div>
 
               <div className="grid grid-cols-2 gap-3 mb-4">
                 <div
                   className="p-3 rounded-lg"
-                  style={{ backgroundColor: "#f0ede8" }}
+                  style={{ backgroundColor: "var(--bg)" }}
                 >
                   <div
                     className="text-[10px] font-bold uppercase tracking-widest mb-1"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     Net
                   </div>
                   <div
                     className="text-base font-mono font-bold tnum"
-                    style={{ color: "#181410" }}
+                    style={{ color: "var(--ink)" }}
                   >
                     {formatCurrency(selected.amount)}
                   </div>
                 </div>
                 <div
                   className="p-3 rounded-lg"
-                  style={{ backgroundColor: "#f0ede8" }}
+                  style={{ backgroundColor: "var(--bg)" }}
                 >
                   <div
                     className="text-[10px] font-bold uppercase tracking-widest mb-1"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     VAT
                   </div>
                   <div
                     className="text-base font-mono font-bold tnum"
-                    style={{ color: "#181410" }}
+                    style={{ color: "var(--ink)" }}
                   >
                     {formatCurrency(selected.vat_amount)}
                   </div>
                 </div>
                 <div
                   className="col-span-2 p-3 rounded-lg"
-                  style={{ backgroundColor: "#e8f3f7" }}
+                  style={{ backgroundColor: "var(--accent-bg)" }}
                 >
                   <div
                     className="text-[10px] font-bold uppercase tracking-widest mb-1"
-                    style={{ color: "#1b5e78" }}
+                    style={{ color: "var(--accent)" }}
                   >
                     Total (inc. VAT)
                   </div>
                   <div
                     className="text-xl font-mono font-bold tnum"
-                    style={{ color: "#1b5e78" }}
+                    style={{ color: "var(--accent)" }}
                   >
                     {formatCurrency(selected.total_amount)}
                   </div>
@@ -656,17 +656,17 @@ export function PurchaseOrdersPage() {
 
               <div className="space-y-3 text-sm mb-4">
                 <div className="flex items-center justify-between">
-                  <span style={{ color: "#7a7469" }}>Supplier</span>
-                  <span className="font-medium" style={{ color: "#181410" }}>
+                  <span style={{ color: "var(--muted)" }}>Supplier</span>
+                  <span className="font-medium" style={{ color: "var(--ink)" }}>
                     {selected.supplier}
                   </span>
                 </div>
                 {selected.job_number && (
                   <div className="flex items-center justify-between">
-                    <span style={{ color: "#7a7469" }}>Job</span>
+                    <span style={{ color: "var(--muted)" }}>Job</span>
                     <span
                       className="font-mono text-xs font-bold px-2 py-0.5 rounded"
-                      style={{ backgroundColor: "#eeeae4", color: "#4a4540" }}
+                      style={{ backgroundColor: "var(--surface-2)", color: "var(--ink-2)" }}
                     >
                       {selected.job_number}{" "}
                       {selected.job_title && `— ${selected.job_title}`}
@@ -674,22 +674,22 @@ export function PurchaseOrdersPage() {
                   </div>
                 )}
                 <div className="flex items-center justify-between">
-                  <span style={{ color: "#7a7469" }}>Ordered</span>
-                  <span style={{ color: "#181410" }}>
+                  <span style={{ color: "var(--muted)" }}>Ordered</span>
+                  <span style={{ color: "var(--ink)" }}>
                     {formatDate(selected.order_date)}
                   </span>
                 </div>
                 {selected.expected_delivery && (
                   <div className="flex items-center justify-between">
-                    <span style={{ color: "#7a7469" }}>Expected</span>
-                    <span style={{ color: "#181410" }}>
+                    <span style={{ color: "var(--muted)" }}>Expected</span>
+                    <span style={{ color: "var(--ink)" }}>
                       {formatDate(selected.expected_delivery)}
                     </span>
                   </div>
                 )}
                 {selected.delivery_date && (
                   <div className="flex items-center justify-between">
-                    <span style={{ color: "#7a7469" }}>Delivered</span>
+                    <span style={{ color: "var(--muted)" }}>Delivered</span>
                     <span className="font-medium" style={{ color: "#2a6e45" }}>
                       {formatDate(selected.delivery_date)}
                     </span>
@@ -700,17 +700,17 @@ export function PurchaseOrdersPage() {
               {selected.description && (
                 <div
                   className="p-3 rounded-lg mb-4"
-                  style={{ backgroundColor: "#f0ede8" }}
+                  style={{ backgroundColor: "var(--bg)" }}
                 >
                   <div
                     className="text-[10px] font-bold uppercase tracking-widest mb-1"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     Description
                   </div>
                   <p
                     className="text-sm leading-relaxed"
-                    style={{ color: "#4a4540" }}
+                    style={{ color: "var(--ink-2)" }}
                   >
                     {selected.description}
                   </p>
@@ -720,17 +720,17 @@ export function PurchaseOrdersPage() {
               {selected.notes && (
                 <div
                   className="p-3 rounded-lg mb-4"
-                  style={{ backgroundColor: "#f0ede8" }}
+                  style={{ backgroundColor: "var(--bg)" }}
                 >
                   <div
                     className="text-[10px] font-bold uppercase tracking-widest mb-1"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     Notes
                   </div>
                   <p
                     className="text-sm leading-relaxed"
-                    style={{ color: "#4a4540" }}
+                    style={{ color: "var(--ink-2)" }}
                   >
                     {selected.notes}
                   </p>
@@ -740,7 +740,7 @@ export function PurchaseOrdersPage() {
               <div className="mb-4">
                 <div
                   className="text-[10px] font-bold uppercase tracking-widest mb-2"
-                  style={{ color: "#7a7469" }}
+                  style={{ color: "var(--muted)" }}
                 >
                   Move Status
                 </div>
@@ -758,8 +758,8 @@ export function PurchaseOrdersPage() {
                               border: `1.5px solid ${STATUS_CONFIG[s].color}`,
                             }
                           : {
-                              backgroundColor: "#eeeae4",
-                              color: "#7a7469",
+                              backgroundColor: "var(--surface-2)",
+                              color: "var(--muted)",
                               border: "1.5px solid transparent",
                             }
                       }
@@ -772,7 +772,7 @@ export function PurchaseOrdersPage() {
 
               <div
                 className="flex gap-2 pt-3"
-                style={{ borderTop: "1px solid #e8e4dd" }}
+                style={{ borderTop: "1px solid var(--surface-3)" }}
               >
                 <Btn
                   variant="outline"
@@ -811,16 +811,16 @@ export function PurchaseOrdersPage() {
         >
           <div
             className="w-full max-w-lg rounded-xl shadow-2xl overflow-hidden"
-            style={{ backgroundColor: "#fafaf8", border: "1px solid #d9d4ce" }}
+            style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border)" }}
           >
             <div
               className="flex items-center justify-between px-6 py-4"
-              style={{ borderBottom: "1px solid #e8e4dd" }}
+              style={{ borderBottom: "1px solid var(--surface-3)" }}
             >
               <h2
                 className="text-base font-semibold"
                 style={{
-                  color: "#181410",
+                  color: "var(--ink)",
                   fontFamily: "'Space Grotesk', sans-serif",
                 }}
               >
@@ -828,9 +828,9 @@ export function PurchaseOrdersPage() {
               </h2>
               <button
                 onClick={() => setShowModal(false)}
-                className="p-1.5 rounded hover:bg-[#eeeae4]"
+                className="p-1.5 rounded hover:bg-[var(--surface-2)]"
               >
-                <X className="w-4 h-4" style={{ color: "#7a7469" }} />
+                <X className="w-4 h-4" style={{ color: "var(--muted)" }} />
               </button>
             </div>
 
@@ -839,7 +839,7 @@ export function PurchaseOrdersPage() {
                 <div className="col-span-2">
                   <label
                     className="block text-[10px] font-bold uppercase tracking-widest mb-1.5"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     Supplier *
                   </label>
@@ -852,8 +852,8 @@ export function PurchaseOrdersPage() {
                     className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
                     style={{
                       backgroundColor: "#ffffff",
-                      border: "1.5px solid #d9d4ce",
-                      color: "#181410",
+                      border: "1.5px solid var(--border)",
+                      color: "var(--ink)",
                     }}
                   />
                 </div>
@@ -861,7 +861,7 @@ export function PurchaseOrdersPage() {
                 <div className="col-span-2">
                   <label
                     className="block text-[10px] font-bold uppercase tracking-widest mb-1.5"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     Description *
                   </label>
@@ -874,8 +874,8 @@ export function PurchaseOrdersPage() {
                     className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
                     style={{
                       backgroundColor: "#ffffff",
-                      border: "1.5px solid #d9d4ce",
-                      color: "#181410",
+                      border: "1.5px solid var(--border)",
+                      color: "var(--ink)",
                     }}
                   />
                 </div>
@@ -883,7 +883,7 @@ export function PurchaseOrdersPage() {
                 <div>
                   <label
                     className="block text-[10px] font-bold uppercase tracking-widest mb-1.5"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     Net Amount (£)
                   </label>
@@ -900,8 +900,8 @@ export function PurchaseOrdersPage() {
                     className="w-full px-3 py-2 rounded-lg text-sm font-mono focus:outline-none"
                     style={{
                       backgroundColor: "#ffffff",
-                      border: "1.5px solid #d9d4ce",
-                      color: "#181410",
+                      border: "1.5px solid var(--border)",
+                      color: "var(--ink)",
                     }}
                   />
                 </div>
@@ -909,7 +909,7 @@ export function PurchaseOrdersPage() {
                 <div>
                   <label
                     className="block text-[10px] font-bold uppercase tracking-widest mb-1.5"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     VAT (£)
                   </label>
@@ -925,14 +925,14 @@ export function PurchaseOrdersPage() {
                     className="w-full px-3 py-2 rounded-lg text-sm font-mono focus:outline-none"
                     style={{
                       backgroundColor: "#ffffff",
-                      border: "1.5px solid #d9d4ce",
-                      color: "#181410",
+                      border: "1.5px solid var(--border)",
+                      color: "var(--ink)",
                     }}
                   />
                   {form.amount && (
                     <p
                       className="text-[11px] mt-1 font-mono"
-                      style={{ color: "#7a7469" }}
+                      style={{ color: "var(--muted)" }}
                     >
                       Total:{" "}
                       {formatCurrency(
@@ -946,7 +946,7 @@ export function PurchaseOrdersPage() {
                 <div>
                   <label
                     className="block text-[10px] font-bold uppercase tracking-widest mb-1.5"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     Status
                   </label>
@@ -961,8 +961,8 @@ export function PurchaseOrdersPage() {
                     className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
                     style={{
                       backgroundColor: "#ffffff",
-                      border: "1.5px solid #d9d4ce",
-                      color: "#181410",
+                      border: "1.5px solid var(--border)",
+                      color: "var(--ink)",
                     }}
                   >
                     {Object.entries(STATUS_CONFIG).map(([k, v]) => (
@@ -976,7 +976,7 @@ export function PurchaseOrdersPage() {
                 <div>
                   <label
                     className="block text-[10px] font-bold uppercase tracking-widest mb-1.5"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     Order Date *
                   </label>
@@ -989,8 +989,8 @@ export function PurchaseOrdersPage() {
                     className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
                     style={{
                       backgroundColor: "#ffffff",
-                      border: "1.5px solid #d9d4ce",
-                      color: "#181410",
+                      border: "1.5px solid var(--border)",
+                      color: "var(--ink)",
                     }}
                   />
                 </div>
@@ -998,7 +998,7 @@ export function PurchaseOrdersPage() {
                 <div>
                   <label
                     className="block text-[10px] font-bold uppercase tracking-widest mb-1.5"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     Expected Delivery
                   </label>
@@ -1014,8 +1014,8 @@ export function PurchaseOrdersPage() {
                     className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
                     style={{
                       backgroundColor: "#ffffff",
-                      border: "1.5px solid #d9d4ce",
-                      color: "#181410",
+                      border: "1.5px solid var(--border)",
+                      color: "var(--ink)",
                     }}
                   />
                 </div>
@@ -1023,7 +1023,7 @@ export function PurchaseOrdersPage() {
                 <div>
                   <label
                     className="block text-[10px] font-bold uppercase tracking-widest mb-1.5"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     Delivery Date
                   </label>
@@ -1036,8 +1036,8 @@ export function PurchaseOrdersPage() {
                     className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
                     style={{
                       backgroundColor: "#ffffff",
-                      border: "1.5px solid #d9d4ce",
-                      color: "#181410",
+                      border: "1.5px solid var(--border)",
+                      color: "var(--ink)",
                     }}
                   />
                 </div>
@@ -1045,7 +1045,7 @@ export function PurchaseOrdersPage() {
                 <div className="col-span-2">
                   <label
                     className="block text-[10px] font-bold uppercase tracking-widest mb-1.5"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     Job (optional)
                   </label>
@@ -1057,8 +1057,8 @@ export function PurchaseOrdersPage() {
                     className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
                     style={{
                       backgroundColor: "#ffffff",
-                      border: "1.5px solid #d9d4ce",
-                      color: "#181410",
+                      border: "1.5px solid var(--border)",
+                      color: "var(--ink)",
                     }}
                   >
                     <option value="">No job assigned</option>
@@ -1073,7 +1073,7 @@ export function PurchaseOrdersPage() {
                 <div className="col-span-2">
                   <label
                     className="block text-[10px] font-bold uppercase tracking-widest mb-1.5"
-                    style={{ color: "#7a7469" }}
+                    style={{ color: "var(--muted)" }}
                   >
                     Notes
                   </label>
@@ -1087,8 +1087,8 @@ export function PurchaseOrdersPage() {
                     className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none resize-none"
                     style={{
                       backgroundColor: "#ffffff",
-                      border: "1.5px solid #d9d4ce",
-                      color: "#181410",
+                      border: "1.5px solid var(--border)",
+                      color: "var(--ink)",
                     }}
                   />
                 </div>
@@ -1097,7 +1097,7 @@ export function PurchaseOrdersPage() {
 
             <div
               className="flex gap-3 px-6 py-4"
-              style={{ borderTop: "1px solid #e8e4dd" }}
+              style={{ borderTop: "1px solid var(--surface-3)" }}
             >
               <Btn
                 variant="outline"

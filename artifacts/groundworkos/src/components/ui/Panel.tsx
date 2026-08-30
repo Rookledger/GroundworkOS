@@ -1,5 +1,6 @@
 import { cn } from "../../lib/utils";
 import type { ReactNode } from "react";
+import { CornerMarks } from "./Blueprint";
 
 interface PanelProps {
   title?: string;
@@ -20,27 +21,25 @@ export function Panel({
 }: PanelProps) {
   return (
     <div
-      className={cn("rounded-xl overflow-hidden gw-shadow", className)}
-      style={{
-        backgroundColor: "#fafaf8",
-        border: "1px solid #d9d4ce",
-      }}
+      className={cn("blueprint gw-shadow", className)}
+      style={{ backgroundColor: "var(--surface)" }}
     >
+      <CornerMarks />
       {(title || actions) && (
         <div
           className="flex items-center justify-between px-5 py-3.5"
-          style={{ borderBottom: "1px solid #d9d4ce" }}
+          style={{ borderBottom: "1px solid var(--border)" }}
         >
           <div className="flex items-center gap-2.5 min-w-0">
             {title && (
               <h3
                 className="truncate"
                 style={{
-                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontFamily: "var(--font-heading)",
                   fontWeight: 600,
-                  fontSize: "15px",
+                  fontSize: "16px",
                   letterSpacing: "-0.01em",
-                  color: "#181410",
+                  color: "var(--ink)",
                 }}
               >
                 {title}
@@ -48,11 +47,11 @@ export function Panel({
             )}
             {badge !== undefined && (
               <span
-                className="flex-shrink-0 inline-flex items-center justify-center px-2 py-0.5 rounded-full"
+                className="flex-shrink-0 inline-flex items-center justify-center px-2 py-0.5"
                 style={{
-                  backgroundColor: "rgba(193,58,42,0.1)",
-                  color: "#c13a2a",
-                  fontFamily: "'JetBrains Mono', monospace",
+                  backgroundColor: "var(--surface-3)",
+                  color: "var(--ink-2)",
+                  fontFamily: "var(--font-heading)",
                   fontSize: "11px",
                   fontWeight: 700,
                 }}

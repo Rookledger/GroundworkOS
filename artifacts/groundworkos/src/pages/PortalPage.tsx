@@ -101,7 +101,7 @@ export function PortalPage() {
       <div
         style={{
           minHeight: "100dvh",
-          backgroundColor: "#f0ede8",
+          backgroundColor: "var(--bg)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -110,7 +110,7 @@ export function PortalPage() {
         <div
           style={{
             fontFamily: "'Space Grotesk', sans-serif",
-            color: "#7a7469",
+            color: "var(--muted)",
             fontSize: 14,
           }}
         >
@@ -125,7 +125,7 @@ export function PortalPage() {
       <div
         style={{
           minHeight: "100dvh",
-          backgroundColor: "#f0ede8",
+          backgroundColor: "var(--bg)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -136,7 +136,7 @@ export function PortalPage() {
             style={{
               width: 40,
               height: 40,
-              color: "#c13a2a",
+              color: "var(--danger)",
               margin: "0 auto 12px",
             }}
           />
@@ -145,7 +145,7 @@ export function PortalPage() {
               fontFamily: "'Space Grotesk', sans-serif",
               fontWeight: 600,
               fontSize: 16,
-              color: "#181410",
+              color: "var(--ink)",
             }}
           >
             Quote not found
@@ -154,7 +154,7 @@ export function PortalPage() {
             style={{
               fontFamily: "'Inter', sans-serif",
               fontSize: 13,
-              color: "#7a7469",
+              color: "var(--muted)",
               marginTop: 4,
             }}
           >
@@ -169,11 +169,11 @@ export function PortalPage() {
   const resolvedByAction = outcome;
 
   return (
-    <div style={{ minHeight: "100dvh", backgroundColor: "#f0ede8" }}>
+    <div style={{ minHeight: "100dvh", backgroundColor: "var(--bg)" }}>
       <header
         style={{
-          backgroundColor: "#fafaf8",
-          borderBottom: "1px solid #d9d4ce",
+          backgroundColor: "var(--surface)",
+          borderBottom: "1px solid var(--border)",
         }}
       >
         <div
@@ -192,17 +192,17 @@ export function PortalPage() {
               fontFamily: "'Space Grotesk', sans-serif",
               fontWeight: 700,
               fontSize: 13,
-              color: "#181410",
+              color: "var(--ink)",
               letterSpacing: "0.04em",
             }}
           >
-            GROUNDWORK<span style={{ color: "#1b5e78" }}>OS</span>
+            GROUNDWORK<span style={{ color: "var(--accent)" }}>OS</span>
           </span>
           <span
             style={{
               fontFamily: "'JetBrains Mono', monospace",
               fontSize: 11,
-              color: "#a8a099",
+              color: "var(--muted-2)",
               marginLeft: "auto",
             }}
           >
@@ -220,11 +220,11 @@ export function PortalPage() {
               marginBottom: 24,
               padding: "16px 20px",
               borderRadius: 10,
-              border: `1px solid ${resolvedByAction === "approved" ? "rgba(42,110,69,0.25)" : "rgba(193,58,42,0.25)"}`,
+              border: `1px solid ${resolvedByAction === "approved" ? "rgba(42,110,69,0.25)" : "rgba(178,58,38,0.25)"}`,
               backgroundColor:
                 resolvedByAction === "approved"
                   ? "rgba(42,110,69,0.06)"
-                  : "rgba(193,58,42,0.06)",
+                  : "rgba(178,58,38,0.06)",
               display: "flex",
               gap: 12,
               alignItems: "center",
@@ -244,7 +244,7 @@ export function PortalPage() {
                 style={{
                   width: 20,
                   height: 20,
-                  color: "#c13a2a",
+                  color: "var(--danger)",
                   flexShrink: 0,
                 }}
               />
@@ -256,7 +256,7 @@ export function PortalPage() {
                   fontWeight: 600,
                   fontSize: 14,
                   color:
-                    resolvedByAction === "approved" ? "#2a6e45" : "#c13a2a",
+                    resolvedByAction === "approved" ? "#2a6e45" : "var(--danger)",
                 }}
               >
                 {resolvedByAction === "approved"
@@ -267,7 +267,7 @@ export function PortalPage() {
                 style={{
                   fontFamily: "'Inter', sans-serif",
                   fontSize: 12,
-                  color: "#7a7469",
+                  color: "var(--muted)",
                   marginTop: 2,
                 }}
               >
@@ -281,8 +281,8 @@ export function PortalPage() {
 
         <div
           style={{
-            backgroundColor: "#fafaf8",
-            border: "1px solid #d9d4ce",
+            backgroundColor: "var(--surface)",
+            border: "1px solid var(--border)",
             borderRadius: 12,
             overflow: "hidden",
           }}
@@ -290,7 +290,7 @@ export function PortalPage() {
           <div
             style={{
               padding: "28px 32px",
-              borderBottom: "1px solid #ece8e3",
+              borderBottom: "1px solid var(--surface-3)",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "flex-start",
@@ -307,12 +307,12 @@ export function PortalPage() {
                   marginBottom: 6,
                 }}
               >
-                <FileText style={{ width: 16, height: 16, color: "#1b5e78" }} />
+                <FileText style={{ width: 16, height: 16, color: "var(--accent)" }} />
                 <span
                   style={{
                     fontFamily: "'JetBrains Mono', monospace",
                     fontSize: 12,
-                    color: "#1b5e78",
+                    color: "var(--accent)",
                     fontWeight: 700,
                   }}
                 >
@@ -325,7 +325,7 @@ export function PortalPage() {
                   fontFamily: "'Space Grotesk', sans-serif",
                   fontWeight: 700,
                   fontSize: 22,
-                  color: "#181410",
+                  color: "var(--ink)",
                   letterSpacing: "-0.02em",
                   lineHeight: 1.2,
                 }}
@@ -337,7 +337,7 @@ export function PortalPage() {
                   style={{
                     fontFamily: "'Inter', sans-serif",
                     fontSize: 12,
-                    color: "#7a7469",
+                    color: "var(--muted)",
                     marginTop: 4,
                   }}
                 >
@@ -361,14 +361,14 @@ export function PortalPage() {
                 }}
               >
                 <Building2
-                  style={{ width: 12, height: 12, color: "#7a7469" }}
+                  style={{ width: 12, height: 12, color: "var(--muted)" }}
                 />
                 <span
                   style={{
                     fontFamily: "'Space Grotesk', sans-serif",
                     fontWeight: 600,
                     fontSize: 13,
-                    color: "#181410",
+                    color: "var(--ink)",
                   }}
                 >
                   {quote.company.name}
@@ -379,7 +379,7 @@ export function PortalPage() {
                   style={{
                     fontFamily: "'Inter', sans-serif",
                     fontSize: 12,
-                    color: "#7a7469",
+                    color: "var(--muted)",
                     lineHeight: 1.5,
                   }}
                 >
@@ -391,7 +391,7 @@ export function PortalPage() {
                   style={{
                     fontFamily: "'JetBrains Mono', monospace",
                     fontSize: 11,
-                    color: "#a8a099",
+                    color: "var(--muted-2)",
                   }}
                 >
                   VAT {quote.company.vatNumber}
@@ -404,7 +404,7 @@ export function PortalPage() {
             <div
               style={{
                 padding: "16px 32px",
-                borderBottom: "1px solid #ece8e3",
+                borderBottom: "1px solid var(--surface-3)",
                 backgroundColor: "#f7f4f0",
               }}
             >
@@ -413,7 +413,7 @@ export function PortalPage() {
                   fontFamily: "'Space Grotesk', sans-serif",
                   fontSize: 11,
                   fontWeight: 600,
-                  color: "#7a7469",
+                  color: "var(--muted)",
                   textTransform: "uppercase",
                   letterSpacing: "0.06em",
                   marginBottom: 4,
@@ -426,7 +426,7 @@ export function PortalPage() {
                   fontFamily: "'Space Grotesk', sans-serif",
                   fontWeight: 600,
                   fontSize: 14,
-                  color: "#181410",
+                  color: "var(--ink)",
                 }}
               >
                 {quote.client.companyName}
@@ -436,7 +436,7 @@ export function PortalPage() {
                   style={{
                     fontFamily: "'Inter', sans-serif",
                     fontSize: 12,
-                    color: "#7a7469",
+                    color: "var(--muted)",
                   }}
                 >
                   {quote.client.address}
@@ -448,7 +448,7 @@ export function PortalPage() {
           <div style={{ padding: "0 32px" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ borderBottom: "1px solid #ece8e3" }}>
+                <tr style={{ borderBottom: "1px solid var(--surface-3)" }}>
                   {["Description", "Qty", "Unit", "Unit Price", "Total"].map(
                     (h) => (
                       <th
@@ -458,7 +458,7 @@ export function PortalPage() {
                           fontFamily: "'Space Grotesk', sans-serif",
                           fontSize: 11,
                           fontWeight: 600,
-                          color: "#7a7469",
+                          color: "var(--muted)",
                           textTransform: "uppercase",
                           letterSpacing: "0.05em",
                           textAlign: h === "Description" ? "left" : "right",
@@ -477,7 +477,7 @@ export function PortalPage() {
                     style={{
                       borderBottom:
                         i < quote.lineItems.length - 1
-                          ? "1px solid #f0ede8"
+                          ? "1px solid var(--bg)"
                           : "none",
                     }}
                   >
@@ -486,7 +486,7 @@ export function PortalPage() {
                         padding: "11px 8px",
                         fontFamily: "'Inter', sans-serif",
                         fontSize: 13,
-                        color: "#181410",
+                        color: "var(--ink)",
                         textAlign: "left",
                       }}
                     >
@@ -497,7 +497,7 @@ export function PortalPage() {
                         padding: "11px 8px",
                         fontFamily: "'JetBrains Mono', monospace",
                         fontSize: 12,
-                        color: "#4a4540",
+                        color: "var(--ink-2)",
                         textAlign: "right",
                       }}
                     >
@@ -508,7 +508,7 @@ export function PortalPage() {
                         padding: "11px 8px",
                         fontFamily: "'JetBrains Mono', monospace",
                         fontSize: 12,
-                        color: "#7a7469",
+                        color: "var(--muted)",
                         textAlign: "right",
                       }}
                     >
@@ -519,7 +519,7 @@ export function PortalPage() {
                         padding: "11px 8px",
                         fontFamily: "'JetBrains Mono', monospace",
                         fontSize: 12,
-                        color: "#4a4540",
+                        color: "var(--ink-2)",
                         textAlign: "right",
                       }}
                     >
@@ -530,7 +530,7 @@ export function PortalPage() {
                         padding: "11px 8px",
                         fontFamily: "'JetBrains Mono', monospace",
                         fontSize: 13,
-                        color: "#181410",
+                        color: "var(--ink)",
                         fontWeight: 600,
                         textAlign: "right",
                       }}
@@ -546,7 +546,7 @@ export function PortalPage() {
           <div
             style={{
               padding: "16px 32px 24px",
-              borderTop: "1px solid #ece8e3",
+              borderTop: "1px solid var(--surface-3)",
               display: "flex",
               justifyContent: "flex-end",
             }}
@@ -557,7 +557,7 @@ export function PortalPage() {
               <div
                 style={{
                   height: 1,
-                  backgroundColor: "#d9d4ce",
+                  backgroundColor: "var(--border)",
                   margin: "8px 0",
                 }}
               />
@@ -569,7 +569,7 @@ export function PortalPage() {
             <div
               style={{
                 padding: "16px 32px 24px",
-                borderTop: "1px solid #ece8e3",
+                borderTop: "1px solid var(--surface-3)",
               }}
             >
               <p
@@ -577,7 +577,7 @@ export function PortalPage() {
                   fontFamily: "'Space Grotesk', sans-serif",
                   fontSize: 11,
                   fontWeight: 600,
-                  color: "#7a7469",
+                  color: "var(--muted)",
                   textTransform: "uppercase",
                   letterSpacing: "0.06em",
                   marginBottom: 8,
@@ -589,7 +589,7 @@ export function PortalPage() {
                 style={{
                   fontFamily: "'Inter', sans-serif",
                   fontSize: 13,
-                  color: "#4a4540",
+                  color: "var(--ink-2)",
                   lineHeight: 1.65,
                 }}
               >
@@ -603,8 +603,8 @@ export function PortalPage() {
           <div
             style={{
               marginTop: 24,
-              backgroundColor: "#fafaf8",
-              border: "1px solid #d9d4ce",
+              backgroundColor: "var(--surface)",
+              border: "1px solid var(--border)",
               borderRadius: 12,
               padding: "24px 32px",
             }}
@@ -614,7 +614,7 @@ export function PortalPage() {
                 fontFamily: "'Space Grotesk', sans-serif",
                 fontWeight: 700,
                 fontSize: 15,
-                color: "#181410",
+                color: "var(--ink)",
                 marginBottom: 4,
               }}
             >
@@ -624,7 +624,7 @@ export function PortalPage() {
               style={{
                 fontFamily: "'Inter', sans-serif",
                 fontSize: 13,
-                color: "#7a7469",
+                color: "var(--muted)",
                 marginBottom: 16,
               }}
             >
@@ -637,7 +637,7 @@ export function PortalPage() {
                   fontFamily: "'Space Grotesk', sans-serif",
                   fontSize: 11,
                   fontWeight: 600,
-                  color: "#4a4540",
+                  color: "var(--ink-2)",
                   textTransform: "uppercase",
                   letterSpacing: "0.06em",
                   marginBottom: 6,
@@ -654,11 +654,11 @@ export function PortalPage() {
                   width: "100%",
                   padding: "9px 12px",
                   borderRadius: 6,
-                  border: "1px solid #d9d4ce",
+                  border: "1px solid var(--border)",
                   backgroundColor: "#ffffff",
                   fontFamily: "'Inter', sans-serif",
                   fontSize: 14,
-                  color: "#181410",
+                  color: "var(--ink)",
                   outline: "none",
                   boxSizing: "border-box",
                 }}
@@ -700,11 +700,11 @@ export function PortalPage() {
                   padding: "10px 20px",
                   borderRadius: 7,
                   backgroundColor: "transparent",
-                  color: "#c13a2a",
+                  color: "var(--danger)",
                   fontFamily: "'Space Grotesk', sans-serif",
                   fontWeight: 600,
                   fontSize: 13,
-                  border: "1px solid rgba(193,58,42,0.3)",
+                  border: "1px solid rgba(178,58,38,0.3)",
                   cursor: submitting ? "not-allowed" : "pointer",
                   opacity: submitting ? 0.6 : 1,
                 }}
@@ -722,8 +722,8 @@ export function PortalPage() {
               marginTop: 20,
               padding: "14px 20px",
               borderRadius: 8,
-              backgroundColor: "#fafaf8",
-              border: "1px solid #d9d4ce",
+              backgroundColor: "var(--surface)",
+              border: "1px solid var(--border)",
               textAlign: "center",
             }}
           >
@@ -731,7 +731,7 @@ export function PortalPage() {
               style={{
                 fontFamily: "'Inter', sans-serif",
                 fontSize: 13,
-                color: "#7a7469",
+                color: "var(--muted)",
               }}
             >
               This quote has already been <strong>{quote.status}</strong>
@@ -745,7 +745,7 @@ export function PortalPage() {
             style={{
               fontFamily: "'JetBrains Mono', monospace",
               fontSize: 11,
-              color: "#a8a099",
+              color: "var(--muted-2)",
             }}
           >
             Powered by GroundworkOS · UK groundwork management
@@ -778,7 +778,7 @@ function Row({
         style={{
           fontFamily: "'Inter', sans-serif",
           fontSize: 13,
-          color: "#7a7469",
+          color: "var(--muted)",
         }}
       >
         {label}
@@ -787,7 +787,7 @@ function Row({
         style={{
           fontFamily: "'JetBrains Mono', monospace",
           fontSize: bold ? 15 : 13,
-          color: "#181410",
+          color: "var(--ink)",
           fontWeight: bold ? 700 : 400,
         }}
       >
@@ -799,13 +799,13 @@ function Row({
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; bg: string; color: string }> = {
-    draft: { label: "Draft", bg: "#f3f4f6", color: "#4a4540" },
-    sent: { label: "Sent", bg: "#e8f3f7", color: "#1b5e78" },
+    draft: { label: "Draft", bg: "#f3f4f6", color: "var(--ink-2)" },
+    sent: { label: "Sent", bg: "var(--accent-bg)", color: "var(--accent)" },
     approved: { label: "Approved", bg: "#dcfce7", color: "#2a6e45" },
-    declined: { label: "Declined", bg: "#fee2e2", color: "#c13a2a" },
+    declined: { label: "Declined", bg: "#fee2e2", color: "var(--danger)" },
     expired: { label: "Expired", bg: "#fef3c7", color: "#92400e" },
   };
-  const s = map[status] ?? { label: status, bg: "#f3f4f6", color: "#4a4540" };
+  const s = map[status] ?? { label: status, bg: "#f3f4f6", color: "var(--ink-2)" };
   return (
     <span
       style={{

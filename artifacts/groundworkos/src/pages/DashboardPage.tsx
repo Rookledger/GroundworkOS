@@ -1,7 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   AlertTriangle,
   ShieldAlert,
+  ShieldCheck,
+  CheckCircle,
   Clock,
   ArrowRight,
   ChevronRight,
@@ -14,11 +16,13 @@ import {
   PlusCircle,
   Edit2,
   Trash2,
+  BarChart3,
 } from "lucide-react";
 import { Link } from "wouter";
 import {
   BarChart,
   Bar,
+  Cell,
   XAxis,
   YAxis,
   Tooltip,
@@ -28,6 +32,8 @@ import {
 import { Panel } from "../components/ui/Panel";
 import { StatCard } from "../components/ui/StatCard";
 import { Btn } from "../components/ui/Btn";
+import { ChartEmptyState } from "../components/ui/EmptyState";
+import { CornerMarks } from "../components/ui/Blueprint";
 import { formatCurrency, formatDate } from "../lib/utils";
 import { useApp } from "../store/AppContext";
 import { useRole, isAtLeast } from "../hooks/useRole";
@@ -64,11 +70,11 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return (
     <div
       className="px-3 py-2.5 rounded-lg gw-shadow text-xs"
-      style={{ backgroundColor: "#fafaf8", border: "1px solid #d9d4ce" }}
+      style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border)" }}
     >
       <div
         className="font-medium mb-1.5"
-        style={{ color: "#181410", fontFamily: "'Inter', sans-serif" }}
+        style={{ color: "var(--ink)", fontFamily: "'Inter', sans-serif" }}
       >
         {label}
       </div>
@@ -82,12 +88,12 @@ const CustomTooltip = ({ active, payload, label }: any) => {
               className="w-1.5 h-1.5 rounded-full flex-shrink-0"
               style={{ backgroundColor: p.color }}
             />
-            <span style={{ color: "#7a7469" }}>{p.name}</span>
+            <span style={{ color: "var(--muted)" }}>{p.name}</span>
           </div>
           <span
             className="tnum"
             style={{
-              color: "#181410",
+              color: "var(--ink)",
               fontFamily: "'JetBrains Mono', monospace",
             }}
           >
@@ -113,14 +119,14 @@ const ENTITY_LABELS: Record<string, string> = {
 
 const ACTION_ICON: Record<string, React.ReactNode> = {
   create: <PlusCircle className="w-3.5 h-3.5" style={{ color: "#2a6e45" }} />,
-  update: <Edit2 className="w-3.5 h-3.5" style={{ color: "#1b5e78" }} />,
-  delete: <Trash2 className="w-3.5 h-3.5" style={{ color: "#c13a2a" }} />,
+  update: <Edit2 className="w-3.5 h-3.5" style={{ color: "var(--accent)" }} />,
+  delete: <Trash2 className="w-3.5 h-3.5" style={{ color: "var(--danger)" }} />,
 };
 
 const ACTION_COLOR: Record<string, string> = {
   create: "#2a6e45",
-  update: "#1b5e78",
-  delete: "#c13a2a",
+  update: "var(--accent)",
+  delete: "var(--danger)",
 };
 
 function timeAgo(iso: string): string {
@@ -254,19 +260,19 @@ export function DashboardPage() {
         <Link href="/jobs">
           <div
             className="flex items-center gap-3 px-4 py-3.5 rounded-xl cursor-pointer transition-colors hover:opacity-80"
-            style={{ backgroundColor: "#fafaf8", border: "1px solid #d9d4ce" }}
+            style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border)" }}
           >
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-              style={{ backgroundColor: "#e8f3f7" }}
+              style={{ backgroundColor: "var(--accent-bg)" }}
             >
-              <Briefcase className="w-4 h-4" style={{ color: "#1b5e78" }} />
+              <Briefcase className="w-4 h-4" style={{ color: "var(--accent)" }} />
             </div>
             <div>
               <div
                 className="text-xs font-medium uppercase tracking-widest mb-0.5"
                 style={{
-                  color: "#7a7469",
+                  color: "var(--muted)",
                   fontFamily: "'Space Grotesk', sans-serif",
                 }}
               >
@@ -275,7 +281,7 @@ export function DashboardPage() {
               <div
                 className="text-xl font-bold"
                 style={{
-                  color: "#181410",
+                  color: "var(--ink)",
                   fontFamily: "'Space Grotesk', sans-serif",
                 }}
               >
@@ -289,7 +295,7 @@ export function DashboardPage() {
         <Link href="/subcontractors">
           <div
             className="flex items-center gap-3 px-4 py-3.5 rounded-xl cursor-pointer transition-colors hover:opacity-80"
-            style={{ backgroundColor: "#fafaf8", border: "1px solid #d9d4ce" }}
+            style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border)" }}
           >
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -301,7 +307,7 @@ export function DashboardPage() {
               <div
                 className="text-xs font-medium uppercase tracking-widest mb-0.5"
                 style={{
-                  color: "#7a7469",
+                  color: "var(--muted)",
                   fontFamily: "'Space Grotesk', sans-serif",
                 }}
               >
@@ -310,7 +316,7 @@ export function DashboardPage() {
               <div
                 className="text-xl font-bold"
                 style={{
-                  color: "#181410",
+                  color: "var(--ink)",
                   fontFamily: "'Space Grotesk', sans-serif",
                 }}
               >
@@ -322,19 +328,19 @@ export function DashboardPage() {
         <Link href="/plant">
           <div
             className="flex items-center gap-3 px-4 py-3.5 rounded-xl cursor-pointer transition-colors hover:opacity-80"
-            style={{ backgroundColor: "#fafaf8", border: "1px solid #d9d4ce" }}
+            style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border)" }}
           >
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
               style={{ backgroundColor: "#fef9f0" }}
             >
-              <Truck className="w-4 h-4" style={{ color: "#b56918" }} />
+              <Truck className="w-4 h-4" style={{ color: "var(--warning)" }} />
             </div>
             <div>
               <div
                 className="text-xs font-medium uppercase tracking-widest mb-0.5"
                 style={{
-                  color: "#7a7469",
+                  color: "var(--muted)",
                   fontFamily: "'Space Grotesk', sans-serif",
                 }}
               >
@@ -343,7 +349,7 @@ export function DashboardPage() {
               <div
                 className="text-xl font-bold"
                 style={{
-                  color: "#181410",
+                  color: "var(--ink)",
                   fontFamily: "'Space Grotesk', sans-serif",
                 }}
               >
@@ -355,7 +361,7 @@ export function DashboardPage() {
         <Link href="/documents">
           <div
             className="flex items-center gap-3 px-4 py-3.5 rounded-xl cursor-pointer transition-colors hover:opacity-80"
-            style={{ backgroundColor: "#fafaf8", border: "1px solid #d9d4ce" }}
+            style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border)" }}
           >
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -367,7 +373,7 @@ export function DashboardPage() {
               <FileWarning
                 className="w-4 h-4"
                 style={{
-                  color: complianceDocs.length > 0 ? "#c13a2a" : "#2a6e45",
+                  color: complianceDocs.length > 0 ? "var(--danger)" : "#2a6e45",
                 }}
               />
             </div>
@@ -375,7 +381,7 @@ export function DashboardPage() {
               <div
                 className="text-xs font-medium uppercase tracking-widest mb-0.5"
                 style={{
-                  color: "#7a7469",
+                  color: "var(--muted)",
                   fontFamily: "'Space Grotesk', sans-serif",
                 }}
               >
@@ -384,7 +390,7 @@ export function DashboardPage() {
               <div
                 className="text-xl font-bold"
                 style={{
-                  color: complianceDocs.length > 0 ? "#c13a2a" : "#181410",
+                  color: complianceDocs.length > 0 ? "var(--danger)" : "var(--ink)",
                   fontFamily: "'Space Grotesk', sans-serif",
                 }}
               >
@@ -417,13 +423,13 @@ export function DashboardPage() {
                 >
                   <CartesianGrid
                     vertical={false}
-                    stroke="#e8e4dd"
+                    stroke="var(--surface-3)"
                     strokeDasharray="3 3"
                   />
                   <XAxis
                     dataKey="month"
                     tick={{
-                      fill: "#7a7469",
+                      fill: "var(--muted)",
                       fontSize: 11,
                       fontFamily: "'JetBrains Mono', monospace",
                     }}
@@ -433,7 +439,7 @@ export function DashboardPage() {
                   />
                   <YAxis
                     tick={{
-                      fill: "#7a7469",
+                      fill: "var(--muted)",
                       fontSize: 10,
                       fontFamily: "'JetBrains Mono', monospace",
                     }}
@@ -446,7 +452,7 @@ export function DashboardPage() {
                   />
                   <Tooltip
                     content={<CustomTooltip />}
-                    cursor={{ fill: "#eeeae4", opacity: 0.5 }}
+                    cursor={{ fill: "var(--surface-2)", opacity: 0.5 }}
                   />
                   <Bar
                     dataKey="invoiced"
@@ -467,11 +473,11 @@ export function DashboardPage() {
             </div>
             <div
               className="flex items-center gap-6 mt-5 pt-4"
-              style={{ borderTop: "1px solid #d9d4ce" }}
+              style={{ borderTop: "1px solid var(--border)" }}
             >
               <div
                 className="flex items-center gap-2 text-xs"
-                style={{ color: "#7a7469" }}
+                style={{ color: "var(--muted)" }}
               >
                 <span
                   className="w-3 h-3 rounded-sm inline-block"
@@ -481,7 +487,7 @@ export function DashboardPage() {
               </div>
               <div
                 className="flex items-center gap-2 text-xs"
-                style={{ color: "#7a7469" }}
+                style={{ color: "var(--muted)" }}
               >
                 <span
                   className="w-3 h-3 rounded-sm inline-block"
@@ -506,7 +512,7 @@ export function DashboardPage() {
             {activeJobs.length === 0 ? (
               <p
                 className="text-sm text-center py-10"
-                style={{ color: "#a8a099" }}
+                style={{ color: "var(--muted-2)" }}
               >
                 No active jobs
               </p>
@@ -515,11 +521,11 @@ export function DashboardPage() {
                 {activeJobs.slice(0, 6).map((job, i) => (
                   <Link key={job.id} href="/jobs">
                     <div
-                      className="flex items-center gap-5 px-5 py-4 transition-colors hover:bg-[#eeeae4] cursor-pointer group"
+                      className="flex items-center gap-5 px-5 py-4 transition-colors hover:bg-[var(--surface-2)] cursor-pointer group"
                       style={{
                         borderBottom:
                           i < Math.min(activeJobs.length, 6) - 1
-                            ? "1px solid #d9d4ce"
+                            ? "1px solid var(--border)"
                             : "none",
                       }}
                     >
@@ -527,7 +533,7 @@ export function DashboardPage() {
                         <div className="flex items-center gap-2.5 mb-1">
                           <span
                             className="text-sm font-semibold truncate"
-                            style={{ color: "#181410" }}
+                            style={{ color: "var(--ink)" }}
                           >
                             {job.title}
                           </span>
@@ -535,8 +541,8 @@ export function DashboardPage() {
                             <span
                               className="flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"
                               style={{
-                                backgroundColor: "#e8e4dd",
-                                color: "#4a4540",
+                                backgroundColor: "var(--surface-3)",
+                                color: "var(--ink-2)",
                               }}
                             >
                               {job.client.company_name}
@@ -545,7 +551,7 @@ export function DashboardPage() {
                         </div>
                         <div
                           className="flex items-center gap-3 text-xs"
-                          style={{ color: "#7a7469" }}
+                          style={{ color: "var(--muted)" }}
                         >
                           <span className="font-mono">{job.job_number}</span>
                           <span className="flex items-center gap-1">
@@ -560,7 +566,7 @@ export function DashboardPage() {
                         <div className="flex justify-between items-center mb-1.5">
                           <span
                             className="text-[11px] font-medium"
-                            style={{ color: "#7a7469" }}
+                            style={{ color: "var(--muted)" }}
                           >
                             Progress
                           </span>
@@ -573,7 +579,7 @@ export function DashboardPage() {
                         </div>
                         <div
                           className="h-1.5 rounded-full overflow-hidden"
-                          style={{ backgroundColor: "#e8e4dd" }}
+                          style={{ backgroundColor: "var(--surface-3)" }}
                         >
                           <div
                             className="h-full rounded-full"
@@ -587,20 +593,20 @@ export function DashboardPage() {
                       <div className="w-28 hidden md:block flex-shrink-0 text-right">
                         <div
                           className="text-[10px] font-bold uppercase tracking-widest mb-1"
-                          style={{ color: "#7a7469" }}
+                          style={{ color: "var(--muted)" }}
                         >
                           Value
                         </div>
                         <div
                           className="text-sm font-medium font-mono tnum"
-                          style={{ color: "#181410" }}
+                          style={{ color: "var(--ink)" }}
                         >
                           {job.value ? formatCurrency(job.value) : "—"}
                         </div>
                       </div>
                       <ChevronRight
                         className="w-4 h-4 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                        style={{ color: "#7a7469" }}
+                        style={{ color: "var(--muted)" }}
                       />
                     </div>
                   </Link>
@@ -618,7 +624,7 @@ export function DashboardPage() {
             {!hasAlerts && (
               <p
                 className="text-sm text-center py-6"
-                style={{ color: "#a8a099" }}
+                style={{ color: "var(--muted-2)" }}
               >
                 All clear — no outstanding actions
               </p>
@@ -629,13 +635,13 @@ export function DashboardPage() {
                 <h4
                   className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest mb-3"
                   style={{
-                    color: "#7a7469",
+                    color: "var(--muted)",
                     fontFamily: "'Space Grotesk', sans-serif",
                   }}
                 >
                   <AlertTriangle
                     className="w-3.5 h-3.5"
-                    style={{ color: "#c13a2a" }}
+                    style={{ color: "var(--danger)" }}
                   />{" "}
                   Overdue Invoices
                 </h4>
@@ -645,20 +651,20 @@ export function DashboardPage() {
                       <div
                         className="flex items-center justify-between p-3 rounded-lg cursor-pointer group transition-colors"
                         style={{
-                          backgroundColor: "#eeeae4",
-                          border: "1px solid rgba(193,58,42,0.18)",
+                          backgroundColor: "var(--surface-2)",
+                          border: "1px solid rgba(178,58,38,0.18)",
                         }}
                       >
                         <div className="min-w-0">
                           <div
                             className="text-sm font-bold font-mono truncate"
-                            style={{ color: "#c13a2a" }}
+                            style={{ color: "var(--danger)" }}
                           >
                             {inv.invoice_number}
                           </div>
                           <div
                             className="text-xs mt-0.5 truncate"
-                            style={{ color: "#7a7469" }}
+                            style={{ color: "var(--muted)" }}
                           >
                             {inv.client?.company_name ?? "—"}
                           </div>
@@ -666,13 +672,13 @@ export function DashboardPage() {
                         <div className="text-right flex-shrink-0 ml-3">
                           <div
                             className="text-sm font-bold font-mono tnum"
-                            style={{ color: "#181410" }}
+                            style={{ color: "var(--ink)" }}
                           >
                             {formatCurrency(inv.total_amount)}
                           </div>
                           <div
                             className="text-[10px] font-medium mt-0.5 flex items-center justify-end gap-1"
-                            style={{ color: "#c13a2a" }}
+                            style={{ color: "var(--danger)" }}
                           >
                             Review{" "}
                             <ArrowRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -690,13 +696,13 @@ export function DashboardPage() {
                 <h4
                   className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest mb-3"
                   style={{
-                    color: "#7a7469",
+                    color: "var(--muted)",
                     fontFamily: "'Space Grotesk', sans-serif",
                   }}
                 >
                   <ShieldAlert
                     className="w-3.5 h-3.5"
-                    style={{ color: "#b56918" }}
+                    style={{ color: "var(--warning)" }}
                   />{" "}
                   Compliance Lapsing
                 </h4>
@@ -704,20 +710,20 @@ export function DashboardPage() {
                   {complianceDocs.slice(0, 4).map((doc) => (
                     <Link key={doc.id} href="/documents">
                       <div
-                        className="flex items-start gap-3 p-3 rounded-lg cursor-pointer group transition-colors hover:bg-[#eeeae4]"
-                        style={{ border: "1px solid #d9d4ce" }}
+                        className="flex items-start gap-3 p-3 rounded-lg cursor-pointer group transition-colors hover:bg-[var(--surface-2)]"
+                        style={{ border: "1px solid var(--border)" }}
                       >
                         <span
                           className="mt-1.5 w-2 h-2 rounded-full flex-shrink-0"
                           style={{
                             backgroundColor:
-                              doc.status === "expired" ? "#c13a2a" : "#b56918",
+                              doc.status === "expired" ? "var(--danger)" : "var(--warning)",
                           }}
                         />
                         <div className="flex-1 min-w-0">
                           <div
-                            className="text-sm font-medium leading-tight truncate transition-colors group-hover:text-[#1b5e78]"
-                            style={{ color: "#181410" }}
+                            className="text-sm font-medium leading-tight truncate transition-colors group-hover:text-[var(--accent)]"
+                            style={{ color: "var(--ink)" }}
                           >
                             {doc.name}
                           </div>
@@ -726,8 +732,8 @@ export function DashboardPage() {
                             style={{
                               color:
                                 doc.status === "expired"
-                                  ? "#c13a2a"
-                                  : "#b56918",
+                                  ? "var(--danger)"
+                                  : "var(--warning)",
                             }}
                           >
                             <Clock className="w-3 h-3" />
@@ -759,7 +765,7 @@ export function DashboardPage() {
               {activityFeed.length === 0 ? (
                 <p
                   className="text-sm text-center py-6"
-                  style={{ color: "#a8a099" }}
+                  style={{ color: "var(--muted-2)" }}
                 >
                   No recent activity
                 </p>
@@ -769,10 +775,10 @@ export function DashboardPage() {
                     const icon = ACTION_ICON[entry.action] ?? (
                       <Activity
                         className="w-3.5 h-3.5"
-                        style={{ color: "#7a7469" }}
+                        style={{ color: "var(--muted)" }}
                       />
                     );
-                    const color = ACTION_COLOR[entry.action] ?? "#7a7469";
+                    const color = ACTION_COLOR[entry.action] ?? "var(--muted)";
                     const entityLabel =
                       ENTITY_LABELS[entry.entityType] ?? entry.entityType;
                     const summary = getChangeSummary(
@@ -782,9 +788,9 @@ export function DashboardPage() {
                     return (
                       <div
                         key={entry.id}
-                        className="flex items-start gap-3 px-5 py-3 transition-colors hover:bg-[#eeeae4]"
+                        className="flex items-start gap-3 px-5 py-3 transition-colors hover:bg-[var(--surface-2)]"
                         style={{
-                          borderTop: i > 0 ? "1px solid #e8e4dd" : "none",
+                          borderTop: i > 0 ? "1px solid var(--surface-3)" : "none",
                         }}
                       >
                         <div
@@ -798,15 +804,15 @@ export function DashboardPage() {
                             <span
                               className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
                               style={{
-                                backgroundColor: "#eeeae4",
-                                color: "#4a4540",
+                                backgroundColor: "var(--surface-2)",
+                                color: "var(--ink-2)",
                               }}
                             >
                               {entityLabel}
                             </span>
                             <span
                               className="text-sm"
-                              style={{ color: "#4a4540" }}
+                              style={{ color: "var(--ink-2)" }}
                             >
                               {summary}
                             </span>
@@ -815,14 +821,14 @@ export function DashboardPage() {
                             {entry.userName && (
                               <span
                                 className="text-xs font-medium"
-                                style={{ color: "#7a7469" }}
+                                style={{ color: "var(--muted)" }}
                               >
                                 {entry.userName}
                               </span>
                             )}
                             <span
                               className="text-xs font-mono"
-                              style={{ color: "#a8a099" }}
+                              style={{ color: "var(--muted-2)" }}
                             >
                               {timeAgo(entry.createdAt)}
                             </span>

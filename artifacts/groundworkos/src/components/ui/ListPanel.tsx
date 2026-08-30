@@ -19,7 +19,7 @@ export function ListPanel<T>({
   return (
     <Panel title={title} badge={items.length} noPad className={className}>
       {items.length === 0 ? (
-        <p className="text-center py-12 text-sm" style={{ color: "#a8a099" }}>
+        <p className="text-center py-12 text-sm" style={{ color: "var(--muted-2)" }}>
           {emptyMessage}
         </p>
       ) : (

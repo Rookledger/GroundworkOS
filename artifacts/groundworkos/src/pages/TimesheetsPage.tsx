@@ -217,13 +217,13 @@ export function TimesheetsPage() {
           <h1
             className="text-xl font-semibold tracking-tight"
             style={{
-              color: "#181410",
+              color: "var(--ink)",
               fontFamily: "'Space Grotesk', sans-serif",
             }}
           >
             Timesheets
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: "#7a7469" }}>
+          <p className="text-sm mt-0.5" style={{ color: "var(--muted)" }}>
             Labour hours and day rates across all sites
           </p>
         </div>
@@ -265,7 +265,7 @@ export function TimesheetsPage() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 justify-between">
         <div
           className="flex items-center gap-1"
-          style={{ borderBottom: "1px solid #d9d4ce" }}
+          style={{ borderBottom: "1px solid var(--border)" }}
         >
           {TABS.map((t) => (
             <button
@@ -275,12 +275,12 @@ export function TimesheetsPage() {
               style={
                 tab === t.id
                   ? {
-                      color: "#181410",
+                      color: "var(--ink)",
                       fontWeight: 500,
-                      borderBottom: "2px solid #1b5e78",
+                      borderBottom: "2px solid var(--accent)",
                       marginBottom: "-1px",
                     }
-                  : { color: "#7a7469" }
+                  : { color: "var(--muted)" }
               }
             >
               {t.label}
@@ -293,9 +293,9 @@ export function TimesheetsPage() {
             onChange={(e) => setJobFilter(e.target.value)}
             className="text-sm px-3 py-1.5 rounded-md focus:outline-none"
             style={{
-              backgroundColor: "#fafaf8",
-              border: "1px solid #d9d4ce",
-              color: "#181410",
+              backgroundColor: "var(--surface)",
+              border: "1px solid var(--border)",
+              color: "var(--ink)",
               fontFamily: "'Inter', sans-serif",
             }}
           >
@@ -321,12 +321,12 @@ export function TimesheetsPage() {
               <div className="text-center py-16">
                 <Clock
                   className="w-10 h-10 mx-auto mb-3 opacity-20"
-                  style={{ color: "#1b5e78" }}
+                  style={{ color: "var(--accent)" }}
                 />
-                <p className="text-sm font-medium" style={{ color: "#4a4540" }}>
+                <p className="text-sm font-medium" style={{ color: "var(--ink-2)" }}>
                   No timesheet entries found
                 </p>
-                <p className="text-sm mt-1 mb-5" style={{ color: "#a8a099" }}>
+                <p className="text-sm mt-1 mb-5" style={{ color: "var(--muted-2)" }}>
                   {tab === "week"
                     ? "No hours logged this week"
                     : tab === "month"
@@ -359,25 +359,25 @@ export function TimesheetsPage() {
                         onClick={() =>
                           setSelected(selected === entry.id ? null : entry.id)
                         }
-                        className="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-4 sm:py-3.5 cursor-pointer transition-colors hover:bg-[#eeeae4] group min-h-[64px]"
+                        className="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-4 sm:py-3.5 cursor-pointer transition-colors hover:bg-[var(--surface-2)] group min-h-[64px]"
                         style={{
                           borderBottom:
                             i < entries.length - 1
-                              ? "1px solid #ece8e3"
+                              ? "1px solid var(--surface-3)"
                               : "none",
                           backgroundColor:
-                            selected === entry.id ? "#eeeae4" : undefined,
+                            selected === entry.id ? "var(--surface-2)" : undefined,
                           borderLeft:
                             selected === entry.id
-                              ? "3px solid #1b5e78"
+                              ? "3px solid var(--accent)"
                               : "3px solid transparent",
                         }}
                       >
                         <div
                           className="w-10 h-10 sm:w-8 sm:h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
                           style={{
-                            backgroundColor: "#e8f3f7",
-                            color: "#1b5e78",
+                            backgroundColor: "var(--accent-bg)",
+                            color: "var(--accent)",
                             fontFamily: "'Space Grotesk', sans-serif",
                           }}
                         >
@@ -392,7 +392,7 @@ export function TimesheetsPage() {
                           <div className="flex items-center gap-2 mb-0.5">
                             <span
                               className="text-sm font-semibold"
-                              style={{ color: "#181410" }}
+                              style={{ color: "var(--ink)" }}
                             >
                               {entry.worker_name}
                             </span>
@@ -400,8 +400,8 @@ export function TimesheetsPage() {
                               <span
                                 className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded flex-shrink-0 hidden sm:inline"
                                 style={{
-                                  backgroundColor: "#e8e4dd",
-                                  color: "#4a4540",
+                                  backgroundColor: "var(--surface-3)",
+                                  color: "var(--ink-2)",
                                 }}
                               >
                                 {entry.job_number}
@@ -411,7 +411,7 @@ export function TimesheetsPage() {
                           {entry.description && (
                             <p
                               className="text-xs truncate"
-                              style={{ color: "#7a7469" }}
+                              style={{ color: "var(--muted)" }}
                             >
                               {entry.description}
                             </p>
@@ -419,7 +419,7 @@ export function TimesheetsPage() {
                           {entry.job_title && !entry.description && (
                             <p
                               className="text-xs truncate"
-                              style={{ color: "#7a7469" }}
+                              style={{ color: "var(--muted)" }}
                             >
                               {entry.job_title}
                             </p>
@@ -428,7 +428,7 @@ export function TimesheetsPage() {
                         <div className="text-right flex-shrink-0">
                           <div
                             className="text-sm font-semibold font-mono"
-                            style={{ color: "#181410" }}
+                            style={{ color: "var(--ink)" }}
                           >
                             {entry.hours_worked % 1 === 0
                               ? entry.hours_worked
@@ -438,7 +438,7 @@ export function TimesheetsPage() {
                           {entry.cost != null && entry.cost > 0 && (
                             <div
                               className="text-xs font-mono"
-                              style={{ color: "#7a7469" }}
+                              style={{ color: "var(--muted)" }}
                             >
                               {formatCurrency(entry.cost)}
                             </div>
@@ -446,7 +446,7 @@ export function TimesheetsPage() {
                         </div>
                         <ChevronRight
                           className="w-5 h-5 sm:w-4 sm:h-4 flex-shrink-0 opacity-40 group-hover:opacity-70 transition-opacity"
-                          style={{ color: "#1b5e78" }}
+                          style={{ color: "var(--accent)" }}
                         />
                       </div>
                     ))}
@@ -464,8 +464,8 @@ export function TimesheetsPage() {
               actions={
                 <button
                   onClick={() => setSelected(null)}
-                  className="p-1 rounded transition-colors hover:bg-[#eeeae4]"
-                  style={{ color: "#7a7469" }}
+                  className="p-1 rounded transition-colors hover:bg-[var(--surface-2)]"
+                  style={{ color: "var(--muted)" }}
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -474,13 +474,13 @@ export function TimesheetsPage() {
               <div className="space-y-4">
                 <div
                   className="flex items-center gap-3 pb-4"
-                  style={{ borderBottom: "1px solid #ece8e3" }}
+                  style={{ borderBottom: "1px solid var(--surface-3)" }}
                 >
                   <div
                     className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
                     style={{
-                      backgroundColor: "#e8f3f7",
-                      color: "#1b5e78",
+                      backgroundColor: "var(--accent-bg)",
+                      color: "var(--accent)",
                       fontFamily: "'Space Grotesk', sans-serif",
                     }}
                   >
@@ -495,13 +495,13 @@ export function TimesheetsPage() {
                     <div
                       className="font-semibold"
                       style={{
-                        color: "#181410",
+                        color: "var(--ink)",
                         fontFamily: "'Space Grotesk', sans-serif",
                       }}
                     >
                       {selectedEntry.worker_name}
                     </div>
-                    <div className="text-xs" style={{ color: "#7a7469" }}>
+                    <div className="text-xs" style={{ color: "var(--muted)" }}>
                       {formatDate(selectedEntry.work_date)}
                     </div>
                   </div>
@@ -510,12 +510,12 @@ export function TimesheetsPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div
                     className="rounded-lg p-3 text-center"
-                    style={{ backgroundColor: "#f0ede8" }}
+                    style={{ backgroundColor: "var(--bg)" }}
                   >
                     <div
                       className="text-2xl font-bold font-mono"
                       style={{
-                        color: "#1b5e78",
+                        color: "var(--accent)",
                         fontFamily: "'JetBrains Mono', monospace",
                       }}
                     >
@@ -525,19 +525,19 @@ export function TimesheetsPage() {
                     </div>
                     <div
                       className="text-[11px] font-bold uppercase tracking-widest mt-0.5"
-                      style={{ color: "#7a7469" }}
+                      style={{ color: "var(--muted)" }}
                     >
                       Hours
                     </div>
                   </div>
                   <div
                     className="rounded-lg p-3 text-center"
-                    style={{ backgroundColor: "#f0ede8" }}
+                    style={{ backgroundColor: "var(--bg)" }}
                   >
                     <div
                       className="text-2xl font-bold font-mono"
                       style={{
-                        color: selectedEntry.cost ? "#181410" : "#c0bab4",
+                        color: selectedEntry.cost ? "var(--ink)" : "#c0bab4",
                         fontFamily: "'JetBrains Mono', monospace",
                       }}
                     >
@@ -547,7 +547,7 @@ export function TimesheetsPage() {
                     </div>
                     <div
                       className="text-[11px] font-bold uppercase tracking-widest mt-0.5"
-                      style={{ color: "#7a7469" }}
+                      style={{ color: "var(--muted)" }}
                     >
                       Cost
                     </div>
@@ -558,14 +558,14 @@ export function TimesheetsPage() {
                   <div
                     className="flex items-center justify-between text-sm"
                     style={{
-                      borderBottom: "1px solid #ece8e3",
+                      borderBottom: "1px solid var(--surface-3)",
                       paddingBottom: "12px",
                     }}
                   >
-                    <span style={{ color: "#7a7469" }}>Day rate</span>
+                    <span style={{ color: "var(--muted)" }}>Day rate</span>
                     <span
                       className="font-mono font-medium"
-                      style={{ color: "#181410" }}
+                      style={{ color: "var(--ink)" }}
                     >
                       {formatCurrency(selectedEntry.day_rate)}/day
                     </span>
@@ -576,18 +576,18 @@ export function TimesheetsPage() {
                   <div
                     className="flex items-center justify-between text-sm"
                     style={{
-                      borderBottom: "1px solid #ece8e3",
+                      borderBottom: "1px solid var(--surface-3)",
                       paddingBottom: "12px",
                     }}
                   >
-                    <span style={{ color: "#7a7469" }}>Job</span>
+                    <span style={{ color: "var(--muted)" }}>Job</span>
                     <span
                       className="font-medium text-right"
-                      style={{ color: "#181410" }}
+                      style={{ color: "var(--ink)" }}
                     >
                       <span
                         className="font-mono text-xs mr-1"
-                        style={{ color: "#1b5e78" }}
+                        style={{ color: "var(--accent)" }}
                       >
                         {selectedEntry.job_number}
                       </span>
@@ -600,23 +600,23 @@ export function TimesheetsPage() {
                   <div
                     className="text-sm"
                     style={{
-                      borderBottom: "1px solid #ece8e3",
+                      borderBottom: "1px solid var(--surface-3)",
                       paddingBottom: "12px",
                     }}
                   >
                     <div
                       className="mb-1 font-medium text-xs uppercase tracking-widest"
-                      style={{ color: "#7a7469" }}
+                      style={{ color: "var(--muted)" }}
                     >
                       Site Notes
                     </div>
-                    <p style={{ color: "#4a4540", lineHeight: 1.6 }}>
+                    <p style={{ color: "var(--ink-2)", lineHeight: 1.6 }}>
                       {selectedEntry.description}
                     </p>
                   </div>
                 )}
 
-                <div className="text-xs" style={{ color: "#a8a099" }}>
+                <div className="text-xs" style={{ color: "var(--muted-2)" }}>
                   Logged{" "}
                   {new Date(selectedEntry.created_at).toLocaleDateString(
                     "en-GB",
@@ -633,7 +633,7 @@ export function TimesheetsPage() {
                 <button
                   onClick={() => handleDelete(selectedEntry.id)}
                   className="flex items-center gap-2 text-sm mt-2 px-3 py-2 rounded-md w-full justify-center transition-colors hover:bg-red-50"
-                  style={{ color: "#c13a2a", border: "1px solid #fca5a5" }}
+                  style={{ color: "var(--danger)", border: "1px solid #fca5a5" }}
                 >
                   <Trash2 className="w-3.5 h-3.5" /> Delete Entry
                 </button>
@@ -724,12 +724,12 @@ export function TimesheetsPage() {
               !isNaN(parseFloat(form.hours_worked)) && (
                 <div
                   className="flex items-center justify-between px-3 py-2 rounded-md text-sm"
-                  style={{ backgroundColor: "#e8f3f7" }}
+                  style={{ backgroundColor: "var(--accent-bg)" }}
                 >
-                  <span style={{ color: "#1b5e78" }}>Calculated cost</span>
+                  <span style={{ color: "var(--accent)" }}>Calculated cost</span>
                   <span
                     className="font-semibold font-mono"
-                    style={{ color: "#1b5e78" }}
+                    style={{ color: "var(--accent)" }}
                   >
                     {formatCurrency(
                       Math.round(

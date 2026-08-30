@@ -22,8 +22,8 @@ const inputCls =
   "w-full py-2 px-3 rounded-md text-sm focus:outline-none transition-colors";
 const inputStyle = {
   backgroundColor: "#ffffff",
-  border: "1px solid #d9d4ce",
-  color: "#181410",
+  border: "1px solid var(--border)",
+  color: "var(--ink)",
 };
 
 function Inp({
@@ -47,8 +47,8 @@ function Inp({
       placeholder={placeholder}
       className={`${inputCls} ${isMono ? "font-mono tnum" : ""}`}
       style={inputStyle}
-      onFocus={(e) => (e.target.style.borderColor = "#1b5e78")}
-      onBlur={(e) => (e.target.style.borderColor = "#d9d4ce")}
+      onFocus={(e) => (e.target.style.borderColor = "var(--accent)")}
+      onBlur={(e) => (e.target.style.borderColor = "var(--border)")}
     />
   );
 }
@@ -66,21 +66,21 @@ function SettingsRow({
 }) {
   return (
     <div
-      className="flex flex-col sm:flex-row sm:items-center gap-4 px-5 py-4 transition-colors hover:bg-[#fafaf8]"
-      style={{ borderBottom: isLast ? "none" : "1px solid #d9d4ce" }}
+      className="flex flex-col sm:flex-row sm:items-center gap-4 px-5 py-4 transition-colors hover:bg-[var(--surface)]"
+      style={{ borderBottom: isLast ? "none" : "1px solid var(--border)" }}
     >
       <div className="sm:w-1/3 flex-shrink-0">
         <label
           className="block text-[11px] font-bold uppercase tracking-widest"
           style={{
-            color: "#4a4540",
+            color: "var(--ink-2)",
             fontFamily: "'Space Grotesk', sans-serif",
           }}
         >
           {label}
         </label>
         {description && (
-          <p className="text-xs mt-1" style={{ color: "#7a7469" }}>
+          <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
             {description}
           </p>
         )}
@@ -94,7 +94,7 @@ function SaveBar({ onSave, saving }: { onSave: () => void; saving: boolean }) {
   return (
     <div
       className="px-5 py-4"
-      style={{ backgroundColor: "#f0ede8", borderTop: "1px solid #d9d4ce" }}
+      style={{ backgroundColor: "var(--bg)", borderTop: "1px solid var(--border)" }}
     >
       <Btn size="sm" onClick={onSave} disabled={saving}>
         {saving ? (
@@ -138,7 +138,7 @@ function LogoUpload({
     <div className="flex items-center gap-3">
       <div
         className="w-14 h-14 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden"
-        style={{ backgroundColor: "#f0ede8", border: "1px solid #d9d4ce" }}
+        style={{ backgroundColor: "var(--bg)", border: "1px solid var(--border)" }}
       >
         {value ? (
           <img
@@ -147,7 +147,7 @@ function LogoUpload({
             className="w-full h-full object-contain"
           />
         ) : (
-          <Upload className="w-5 h-5" style={{ color: "#a8a099" }} />
+          <Upload className="w-5 h-5" style={{ color: "var(--muted-2)" }} />
         )}
       </div>
       <input
@@ -352,7 +352,7 @@ function AccountingProviderPanel({
         {res && (
           <span
             className="text-xs font-mono tnum"
-            style={{ color: res.failed > 0 ? "#b56918" : "#2a6e45" }}
+            style={{ color: res.failed > 0 ? "var(--warning)" : "#2a6e45" }}
           >
             {res.synced} synced{res.failed > 0 ? `, ${res.failed} failed` : ""}
           </span>
@@ -379,9 +379,9 @@ function AccountingProviderPanel({
         <div
           className="flex items-center gap-3 px-5 py-3 text-sm"
           style={{
-            backgroundColor: banner.type === "success" ? "#e8f3f7" : "#fdf2f2",
-            borderBottom: "1px solid #d9d4ce",
-            color: banner.type === "success" ? "#1b5e78" : "#c13a2a",
+            backgroundColor: banner.type === "success" ? "var(--accent-bg)" : "#fdf2f2",
+            borderBottom: "1px solid var(--border)",
+            color: banner.type === "success" ? "var(--accent)" : "var(--danger)",
           }}
         >
           {banner.type === "success" ? (
@@ -400,12 +400,12 @@ function AccountingProviderPanel({
       )}
 
       {loading ? (
-        <div className="px-5 py-6 text-sm" style={{ color: "#7a7469" }}>
+        <div className="px-5 py-6 text-sm" style={{ color: "var(--muted)" }}>
           Checking connection…
         </div>
       ) : !connected ? (
         <div className="px-5 py-6">
-          <p className="text-sm mb-4" style={{ color: "#4a4540" }}>
+          <p className="text-sm mb-4" style={{ color: "var(--ink-2)" }}>
             {provider.description}
           </p>
           <Btn
@@ -416,7 +416,7 @@ function AccountingProviderPanel({
             <Link2 className="w-3.5 h-3.5" />
             Connect to {provider.label}
           </Btn>
-          <p className="text-xs mt-3" style={{ color: "#7a7469" }}>
+          <p className="text-xs mt-3" style={{ color: "var(--muted)" }}>
             You'll be redirected to {provider.label} to log in and authorise
             access with your own {provider.label} account.
           </p>
@@ -425,7 +425,7 @@ function AccountingProviderPanel({
         <>
           <div
             className="px-5 py-4"
-            style={{ borderBottom: "1px solid #d9d4ce" }}
+            style={{ borderBottom: "1px solid var(--border)" }}
           >
             <div className="flex items-center gap-2 mb-1">
               <div
@@ -435,7 +435,7 @@ function AccountingProviderPanel({
               <span
                 className="text-sm font-medium"
                 style={{
-                  color: "#181410",
+                  color: "var(--ink)",
                   fontFamily: "'Space Grotesk', sans-serif",
                 }}
               >
@@ -443,7 +443,7 @@ function AccountingProviderPanel({
               </span>
             </div>
             {connectedAt && (
-              <p className="text-xs" style={{ color: "#7a7469" }}>
+              <p className="text-xs" style={{ color: "var(--muted)" }}>
                 Connected{" "}
                 {new Date(connectedAt).toLocaleDateString("en-GB", {
                   day: "numeric",
@@ -456,12 +456,12 @@ function AccountingProviderPanel({
 
           <div
             className="px-5 py-4 space-y-4"
-            style={{ borderBottom: "1px solid #d9d4ce" }}
+            style={{ borderBottom: "1px solid var(--border)" }}
           >
             <p
               className="text-[11px] font-bold uppercase tracking-widest mb-3"
               style={{
-                color: "#7a7469",
+                color: "var(--muted)",
                 fontFamily: "'Space Grotesk', sans-serif",
               }}
             >
@@ -489,12 +489,12 @@ function AccountingProviderPanel({
 
           <div
             className="px-5 py-4"
-            style={{ borderBottom: "1px solid #d9d4ce" }}
+            style={{ borderBottom: "1px solid var(--border)" }}
           >
             <p
               className="text-[11px] font-bold uppercase tracking-widest mb-3"
               style={{
-                color: "#7a7469",
+                color: "var(--muted)",
                 fontFamily: "'Space Grotesk', sans-serif",
               }}
             >
@@ -506,13 +506,13 @@ function AccountingProviderPanel({
               path={`/api/${provider.key}/pull/payments`}
               icon={<Download className="w-3.5 h-3.5" />}
             />
-            <p className="text-xs mt-2" style={{ color: "#7a7469" }}>
+            <p className="text-xs mt-2" style={{ color: "var(--muted)" }}>
               Marks invoices as paid in GroundworkOS when they're marked paid in{" "}
               {provider.label}.
             </p>
           </div>
 
-          <div className="px-5 py-4" style={{ backgroundColor: "#f0ede8" }}>
+          <div className="px-5 py-4" style={{ backgroundColor: "var(--bg)" }}>
             <Btn
               variant="outline"
               size="sm"
@@ -635,14 +635,14 @@ export function SettingsPage() {
         <h1
           className="text-2xl font-semibold"
           style={{
-            color: "#181410",
+            color: "var(--ink)",
             fontFamily: "'Space Grotesk', sans-serif",
             letterSpacing: "-0.01em",
           }}
         >
           Settings
         </h1>
-        <p className="text-sm mt-1" style={{ color: "#7a7469" }}>
+        <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
           Company configuration, compliance, and preferences
         </p>
       </div>
@@ -759,11 +759,11 @@ export function SettingsPage() {
         <div
           className="px-5 py-3"
           style={{
-            backgroundColor: "#e8f3f7",
-            borderBottom: "1px solid #d9d4ce",
+            backgroundColor: "var(--accent-bg)",
+            borderBottom: "1px solid var(--border)",
           }}
         >
-          <p className="text-xs" style={{ color: "#1b5e78" }}>
+          <p className="text-xs" style={{ color: "var(--accent)" }}>
             Bank details are printed on PDF invoices. Keep these accurate.
           </p>
         </div>
@@ -802,18 +802,18 @@ export function SettingsPage() {
         <div
           className="px-5 py-4"
           style={{
-            backgroundColor: "#e8f3f7",
-            borderBottom: "1px solid #d9d4ce",
+            backgroundColor: "var(--accent-bg)",
+            borderBottom: "1px solid var(--border)",
           }}
         >
           <div className="flex gap-3">
             <ShieldCheck
               className="w-5 h-5 flex-shrink-0 mt-0.5"
-              style={{ color: "#1b5e78" }}
+              style={{ color: "var(--accent)" }}
             />
             <div
               className="text-sm leading-relaxed"
-              style={{ color: "#181410" }}
+              style={{ color: "var(--ink)" }}
             >
               <strong className="font-semibold">
                 Construction Industry Scheme
@@ -855,20 +855,20 @@ export function SettingsPage() {
         <div
           className="px-5 py-4"
           style={{
-            backgroundColor: "#eeeae4",
-            borderBottom: "1px solid #d9d4ce",
+            backgroundColor: "var(--surface-2)",
+            borderBottom: "1px solid var(--border)",
           }}
         >
           <div className="flex gap-3">
             <Info
               className="w-5 h-5 flex-shrink-0 mt-0.5"
-              style={{ color: "#7a7469" }}
+              style={{ color: "var(--muted)" }}
             />
             <div
               className="text-sm leading-relaxed"
-              style={{ color: "#4a4540" }}
+              style={{ color: "var(--ink-2)" }}
             >
-              <strong className="font-semibold text-[#181410]">
+              <strong className="font-semibold text-[var(--ink)]">
                 New Roads and Street Works Act 1991
               </strong>{" "}
               — Company registered with relevant Highway Authority. Ensure all

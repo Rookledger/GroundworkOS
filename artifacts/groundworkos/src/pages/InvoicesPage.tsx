@@ -228,10 +228,10 @@ export function InvoicesPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold" style={{ color: "#181410" }}>
+          <h1 className="text-xl font-semibold" style={{ color: "var(--ink)" }}>
             Invoices
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: "#7a7469" }}>
+          <p className="text-sm mt-0.5" style={{ color: "var(--muted)" }}>
             Track payments and outstanding amounts
           </p>
         </div>
@@ -262,7 +262,7 @@ export function InvoicesPage() {
 
       <div
         className="flex items-center gap-1"
-        style={{ borderBottom: "1px solid #d9d4ce" }}
+        style={{ borderBottom: "1px solid var(--border)" }}
       >
         {TABS.map((t) => (
           <button
@@ -272,19 +272,19 @@ export function InvoicesPage() {
             style={
               tab === t.id
                 ? {
-                    color: "#181410",
+                    color: "var(--ink)",
                     fontWeight: 500,
-                    borderBottom: "2px solid #1b5e78",
+                    borderBottom: "2px solid var(--accent)",
                     marginBottom: "-1px",
                   }
-                : { color: "#7a7469" }
+                : { color: "var(--muted)" }
             }
           >
             {t.label}
             {t.id !== "all" && (
               <span
                 className="text-xs ml-1.5"
-                style={{ color: tab === t.id ? "#8a8377" : "#c0bab4" }}
+                style={{ color: tab === t.id ? "var(--muted-2)" : "#c0bab4" }}
               >
                 {invoices.filter((i) => i.status === t.id).length}
               </span>
@@ -313,34 +313,34 @@ export function InvoicesPage() {
                     onClick={() =>
                       setSelected(selected === inv.id ? null : inv.id)
                     }
-                    className="flex items-center gap-4 px-5 py-4 cursor-pointer transition-colors hover:bg-[#eeeae4] group"
+                    className="flex items-center gap-4 px-5 py-4 cursor-pointer transition-colors hover:bg-[var(--surface-2)] group"
                     style={{
                       borderBottom:
-                        i < filtered.length - 1 ? "1px solid #d9d4ce" : "none",
+                        i < filtered.length - 1 ? "1px solid var(--border)" : "none",
                       backgroundColor:
-                        selected === inv.id ? "#eeeae4" : undefined,
+                        selected === inv.id ? "var(--surface-2)" : undefined,
                       borderLeft:
                         selected === inv.id
-                          ? "2px solid #1b5e78"
+                          ? "2px solid var(--accent)"
                           : "2px solid transparent",
                     }}
                   >
                     <span
                       className="text-xs w-28 flex-shrink-0 font-mono font-medium"
-                      style={{ color: "#7a7469" }}
+                      style={{ color: "var(--muted)" }}
                     >
                       {inv.invoice_number}
                     </span>
                     <div className="flex-1 min-w-0">
                       <div
                         className="text-sm font-semibold truncate"
-                        style={{ color: "#181410" }}
+                        style={{ color: "var(--ink)" }}
                       >
                         {inv.client?.company_name ?? "—"}
                       </div>
                       <div
                         className="text-xs mt-0.5 truncate"
-                        style={{ color: "#7a7469" }}
+                        style={{ color: "var(--muted)" }}
                       >
                         {inv.job?.title ?? "—"}
                       </div>
@@ -350,7 +350,7 @@ export function InvoicesPage() {
                       {overdueDays > 0 && (
                         <span
                           className="text-xs flex-shrink-0 font-mono font-bold"
-                          style={{ color: "#c13a2a" }}
+                          style={{ color: "var(--danger)" }}
                         >
                           {overdueDays}d overdue
                         </span>
@@ -359,13 +359,13 @@ export function InvoicesPage() {
                     <div className="text-right flex-shrink-0 w-28 ml-2">
                       <div
                         className="text-sm font-bold font-mono tnum"
-                        style={{ color: "#181410" }}
+                        style={{ color: "var(--ink)" }}
                       >
                         {formatCurrency(inv.total_amount)}
                       </div>
                       <div
                         className="text-[11px] font-mono mt-0.5"
-                        style={{ color: "#7a7469" }}
+                        style={{ color: "var(--muted)" }}
                       >
                         Due {formatDate(inv.due_date)}
                       </div>
@@ -377,7 +377,7 @@ export function InvoicesPage() {
                           ? "opacity-100"
                           : "opacity-0 group-hover:opacity-100",
                       )}
-                      style={{ color: "#7a7469" }}
+                      style={{ color: "var(--muted)" }}
                     />
                   </div>
                 );
@@ -396,14 +396,14 @@ export function InvoicesPage() {
                       handleDelete(selectedInv.id, selectedInv.invoice_number)
                     }
                     className="p-1 rounded transition-colors hover:bg-red-50"
-                    style={{ color: "#c13a2a" }}
+                    style={{ color: "var(--danger)" }}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setSelected(null)}
-                    className="hover:text-[#181410] transition-colors p-1"
-                    style={{ color: "#7a7469" }}
+                    className="hover:text-[var(--ink)] transition-colors p-1"
+                    style={{ color: "var(--muted)" }}
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -415,7 +415,7 @@ export function InvoicesPage() {
                   <div className="flex items-center justify-between mb-1">
                     <span
                       className="text-xs font-mono font-medium"
-                      style={{ color: "#7a7469" }}
+                      style={{ color: "var(--muted)" }}
                     >
                       {selectedInv.invoice_number}
                     </span>
@@ -423,7 +423,7 @@ export function InvoicesPage() {
                   </div>
                   <p
                     className="text-base font-bold"
-                    style={{ color: "#181410" }}
+                    style={{ color: "var(--ink)" }}
                   >
                     {selectedInv.client?.company_name}
                   </p>
@@ -431,7 +431,7 @@ export function InvoicesPage() {
 
                 <div
                   className="space-y-3 pt-1"
-                  style={{ borderTop: "1px solid #d9d4ce" }}
+                  style={{ borderTop: "1px solid var(--border)" }}
                 >
                   {[
                     { label: "Job", value: selectedInv.job?.title ?? "—" },
@@ -456,11 +456,11 @@ export function InvoicesPage() {
                     <div
                       key={label}
                       className="flex justify-between items-baseline gap-3 pt-3"
-                      style={{ borderTop: "1px solid #ece8e3" }}
+                      style={{ borderTop: "1px solid var(--surface-3)" }}
                     >
                       <span
                         className="text-xs flex-shrink-0 font-medium uppercase tracking-wider"
-                        style={{ color: "#7a7469" }}
+                        style={{ color: "var(--muted)" }}
                       >
                         {label}
                       </span>
@@ -469,7 +469,7 @@ export function InvoicesPage() {
                           "text-sm text-right truncate font-medium",
                           mono && "font-mono text-[13px]",
                         )}
-                        style={{ color: "#181410" }}
+                        style={{ color: "var(--ink)" }}
                       >
                         {value}
                       </span>
@@ -479,7 +479,7 @@ export function InvoicesPage() {
 
                 <div
                   className="pt-3 space-y-2"
-                  style={{ borderTop: "1px solid #d9d4ce" }}
+                  style={{ borderTop: "1px solid var(--border)" }}
                 >
                   {[
                     {
@@ -494,28 +494,28 @@ export function InvoicesPage() {
                     <div key={label} className="flex justify-between text-sm">
                       <span
                         className="font-medium"
-                        style={{ color: "#7a7469" }}
+                        style={{ color: "var(--muted)" }}
                       >
                         {label}
                       </span>
-                      <span className="font-mono" style={{ color: "#8a8377" }}>
+                      <span className="font-mono" style={{ color: "var(--muted-2)" }}>
                         {value}
                       </span>
                     </div>
                   ))}
                   <div
                     className="flex justify-between font-bold pt-2"
-                    style={{ borderTop: "1px solid #d9d4ce" }}
+                    style={{ borderTop: "1px solid var(--border)" }}
                   >
                     <span
                       className="uppercase tracking-widest text-xs"
-                      style={{ color: "#181410" }}
+                      style={{ color: "var(--ink)" }}
                     >
                       Total
                     </span>
                     <span
                       className="font-mono tnum"
-                      style={{ color: "#181410", fontSize: "1.2rem" }}
+                      style={{ color: "var(--ink)", fontSize: "1.2rem" }}
                     >
                       {formatCurrency(selectedInv.total_amount)}
                     </span>
@@ -526,13 +526,13 @@ export function InvoicesPage() {
                   <div>
                     <p
                       className="text-[10px] font-bold uppercase tracking-widest mb-1.5"
-                      style={{ color: "#7a7469" }}
+                      style={{ color: "var(--muted)" }}
                     >
                       Notes
                     </p>
                     <p
                       className="text-sm leading-relaxed"
-                      style={{ color: "#4a4540" }}
+                      style={{ color: "var(--ink-2)" }}
                     >
                       {selectedInv.notes}
                     </p>
@@ -541,7 +541,7 @@ export function InvoicesPage() {
 
                 <div
                   className="flex flex-col gap-2 pt-3"
-                  style={{ borderTop: "1px solid #d9d4ce" }}
+                  style={{ borderTop: "1px solid var(--border)" }}
                 >
                   {selectedInv.status === "draft" && (
                     <Btn
@@ -612,7 +612,7 @@ export function InvoicesPage() {
               ))}
             </Select>
             {errors.client_id && (
-              <p className="mt-1 text-xs" style={{ color: "#c13a2a" }}>
+              <p className="mt-1 text-xs" style={{ color: "var(--danger)" }}>
                 {errors.client_id}
               </p>
             )}
@@ -666,7 +666,7 @@ export function InvoicesPage() {
               placeholder="0.00"
             />
             {errors.subtotal && (
-              <p className="mt-1 text-xs" style={{ color: "#c13a2a" }}>
+              <p className="mt-1 text-xs" style={{ color: "var(--danger)" }}>
                 {errors.subtotal}
               </p>
             )}
@@ -675,8 +675,8 @@ export function InvoicesPage() {
             <div
               className="p-4 rounded-lg space-y-2"
               style={{
-                backgroundColor: "#eeeae4",
-                border: "1px solid #d9d4ce",
+                backgroundColor: "var(--surface-2)",
+                border: "1px solid var(--border)",
               }}
             >
               {[
@@ -685,10 +685,10 @@ export function InvoicesPage() {
                 { label: "Total", value: formatCurrency(total) },
               ].map(({ label, value }) => (
                 <div key={label} className="flex justify-between text-sm">
-                  <span style={{ color: "#7a7469" }}>{label}</span>
+                  <span style={{ color: "var(--muted)" }}>{label}</span>
                   <span
                     style={{
-                      color: label === "Total" ? "#181410" : "#8a8377",
+                      color: label === "Total" ? "var(--ink)" : "var(--muted-2)",
                       fontFamily: "'JetBrains Mono', monospace",
                       fontWeight: label === "Total" ? 600 : 400,
                     }}
@@ -731,38 +731,38 @@ export function InvoicesPage() {
         >
           <div
             className="w-full max-w-md rounded-xl shadow-2xl overflow-hidden"
-            style={{ backgroundColor: "#fafaf8", border: "1px solid #d9d4ce" }}
+            style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border)" }}
           >
             <div
               className="flex items-center justify-between px-6 py-4"
-              style={{ borderBottom: "1px solid #e8e4dd" }}
+              style={{ borderBottom: "1px solid var(--surface-3)" }}
             >
               <div>
                 <h2
                   className="text-base font-semibold"
                   style={{
-                    color: "#181410",
+                    color: "var(--ink)",
                     fontFamily: "'Space Grotesk', sans-serif",
                   }}
                 >
                   Send Invoice by Email
                 </h2>
-                <p className="text-xs mt-0.5" style={{ color: "#7a7469" }}>
+                <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
                   {selectedInv.invoice_number}
                 </p>
               </div>
               <button
                 onClick={() => setShowEmailModal(false)}
-                className="p-1.5 rounded hover:bg-[#eeeae4]"
+                className="p-1.5 rounded hover:bg-[var(--surface-2)]"
               >
-                <X className="w-4 h-4" style={{ color: "#7a7469" }} />
+                <X className="w-4 h-4" style={{ color: "var(--muted)" }} />
               </button>
             </div>
             <div className="px-6 py-5 space-y-4">
               <div>
                 <label
                   className="block text-[10px] font-bold uppercase tracking-widest mb-1.5"
-                  style={{ color: "#7a7469" }}
+                  style={{ color: "var(--muted)" }}
                 >
                   Recipient Email *
                 </label>
@@ -774,8 +774,8 @@ export function InvoicesPage() {
                   className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
                   style={{
                     backgroundColor: "#ffffff",
-                    border: "1.5px solid #d9d4ce",
-                    color: "#181410",
+                    border: "1.5px solid var(--border)",
+                    color: "var(--ink)",
                   }}
                   autoFocus
                 />
@@ -783,7 +783,7 @@ export function InvoicesPage() {
               <div>
                 <label
                   className="block text-[10px] font-bold uppercase tracking-widest mb-1.5"
-                  style={{ color: "#7a7469" }}
+                  style={{ color: "var(--muted)" }}
                 >
                   Subject (optional)
                 </label>
@@ -794,14 +794,14 @@ export function InvoicesPage() {
                   className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
                   style={{
                     backgroundColor: "#ffffff",
-                    border: "1.5px solid #d9d4ce",
-                    color: "#181410",
+                    border: "1.5px solid var(--border)",
+                    color: "var(--ink)",
                   }}
                 />
               </div>
               <div
                 className="flex items-start gap-2 p-3 rounded-lg text-xs"
-                style={{ backgroundColor: "#e8f3f7", color: "#1b5e78" }}
+                style={{ backgroundColor: "var(--accent-bg)", color: "var(--accent)" }}
               >
                 <Mail className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
                 <span>
@@ -812,7 +812,7 @@ export function InvoicesPage() {
             </div>
             <div
               className="flex gap-3 px-6 py-4"
-              style={{ borderTop: "1px solid #e8e4dd" }}
+              style={{ borderTop: "1px solid var(--surface-3)" }}
             >
               <Btn
                 variant="outline"
