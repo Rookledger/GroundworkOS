@@ -7,11 +7,14 @@ import {
   ChevronRight,
   Trash2,
   Pencil,
+  HardHat,
 } from "lucide-react";
+import { useLocation } from "wouter";
 import { Panel } from "../components/ui/Panel";
 import { Badge } from "../components/ui/Badge";
 import { Btn } from "../components/ui/Btn";
 import { StatCard } from "../components/ui/StatCard";
+import { EmptyState } from "../components/ui/EmptyState";
 import { Modal, Field, Input, Select, Textarea } from "../components/ui/Modal";
 import { cn, formatDate, daysUntil } from "../lib/utils";
 import { useApp } from "../store/AppContext";
@@ -44,6 +47,7 @@ const emptyForm = {
 export function SubcontractorsPage() {
   const { state, dispatch } = useApp();
   const { subcontractors } = state;
+  const [, setLocation] = useLocation();
 
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<string | null>(null);

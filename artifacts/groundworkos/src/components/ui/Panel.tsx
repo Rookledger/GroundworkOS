@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { CornerMarks } from "./Blueprint";
 
 interface PanelProps {
-  title?: string;
+  title?: ReactNode;
   actions?: ReactNode;
   badge?: ReactNode;
   children: ReactNode;

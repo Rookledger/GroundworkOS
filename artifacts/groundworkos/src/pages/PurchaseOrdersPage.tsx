@@ -15,10 +15,12 @@ import {
   FileText,
 } from "lucide-react";
 import { pdf } from "@react-pdf/renderer";
+import { useLocation } from "wouter";
 import { useApp } from "../store/AppContext";
 import { Btn } from "../components/ui/Btn";
 import { Panel } from "../components/ui/Panel";
 import { StatCard } from "../components/ui/StatCard";
+import { EmptyState } from "../components/ui/EmptyState";
 import { formatCurrency, formatDate } from "../lib/utils";
 import { toPurchaseOrder } from "../lib/apiTransforms";
 import { PurchaseOrderPDF } from "../lib/pdf/PurchaseOrderPDF";
@@ -35,13 +37,13 @@ const STATUS_CONFIG: Record<
   ordered: {
     label: "Ordered",
     color: "var(--warning)",
-    bg: "#fef3c7",
+    bg: "var(--warning-bg)",
     icon: ShoppingCart,
   },
   received: {
     label: "Received",
-    color: "#2a6e45",
-    bg: "rgba(42,110,69,0.1)",
+    color: "var(--success)",
+    bg: "var(--success-bg)",
     icon: Package,
   },
   invoiced: {
@@ -56,10 +58,10 @@ function StatusBadge({ status }: { status: PurchaseOrderStatus }) {
   const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.draft;
   return (
     <span
-      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"
+      className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
       style={{ backgroundColor: cfg.bg, color: cfg.color }}
     >
-      {status === "ordered" && <Truck className="w-3 h-3" />}
+      {status === "ordered" && <Truck className="w-3 h-3" strokeWidth={1.5} />}
       {cfg.label}
     </span>
   );
@@ -83,12 +85,14 @@ type FormState = typeof EMPTY_FORM;
 export function PurchaseOrdersPage() {
   const { state, dispatch } = useApp();
   const { purchaseOrders, jobs, settings } = state;
+  const [, setLocation] = useLocation();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | PurchaseOrderStatus>(
     "all",
   );
   const [jobFilter, setJobFilter] = useState("all");
+  const [overBudgetOnly, setOverBudgetOnly] = useState(false);
   const [selected, setSelected] = useState<PurchaseOrder | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<PurchaseOrder | null>(null);
@@ -96,11 +100,29 @@ export function PurchaseOrdersPage() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // Jobs whose cumulative PO spend has exceeded their quoted value.
+  const overBudgetJobIds = useMemo(() => {
+    const spendByJob = new Map<string, number>();
+    for (const o of purchaseOrders) {
+      if (!o.job_id) continue;
+      spendByJob.set(o.job_id, (spendByJob.get(o.job_id) ?? 0) + o.total_amount);
+    }
+    const ids = new Set<string>();
+    for (const j of jobs) {
+      if (j.value != null && j.value > 0 && (spendByJob.get(j.id) ?? 0) > j.value) {
+        ids.add(j.id);
+      }
+    }
+    return ids;
+  }, [purchaseOrders, jobs]);
+
   const filtered = useMemo(() => {
     let list = [...purchaseOrders];
     if (statusFilter !== "all")
       list = list.filter((o) => o.status === statusFilter);
     if (jobFilter !== "all") list = list.filter((o) => o.job_id === jobFilter);
+    if (overBudgetOnly)
+      list = list.filter((o) => o.job_id && overBudgetJobIds.has(o.job_id));
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(
@@ -112,12 +134,9 @@ export function PurchaseOrdersPage() {
       );
     }
     return list;
-  }, [purchaseOrders, statusFilter, jobFilter, search]);
+  }, [purchaseOrders, statusFilter, jobFilter, overBudgetOnly, overBudgetJobIds, search]);
 
   const totalSpend = purchaseOrders.reduce((s, o) => s + o.total_amount, 0);
-  const orderedSpend = purchaseOrders
-    .filter((o) => o.status === "ordered")
-    .reduce((s, o) => s + o.total_amount, 0);
   const pendingCount = purchaseOrders.filter(
     (o) => o.status === "draft" || o.status === "ordered",
   ).length;
@@ -320,7 +339,7 @@ export function PurchaseOrdersPage() {
             className="text-xl font-semibold"
             style={{
               color: "var(--ink)",
-              fontFamily: "'Space Grotesk', sans-serif",
+              fontFamily: "var(--font-heading)",
             }}
           >
             Purchase Orders
@@ -331,10 +350,10 @@ export function PurchaseOrdersPage() {
         </div>
         <div className="flex items-center gap-2">
           <Btn variant="outline" size="sm" onClick={exportCSV}>
-            <Download className="w-3.5 h-3.5" /> Export
+            <Download className="w-3.5 h-3.5" strokeWidth={1.5} /> Export
           </Btn>
           <Btn size="sm" onClick={openAdd}>
-            <Plus className="w-3.5 h-3.5" /> New PO
+            <Plus className="w-3.5 h-3.5" strokeWidth={1.5} /> New PO
           </Btn>
         </div>
       </div>
@@ -342,26 +361,84 @@ export function PurchaseOrdersPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           accent
-          label="Total Spend"
+          label="Committed Spend"
           value={formatCurrency(totalSpend)}
           sub={`${purchaseOrders.length} orders`}
         />
         <StatCard
-          label="On Order"
-          value={formatCurrency(orderedSpend)}
-          sub="awaiting delivery"
+          danger={overBudgetJobIds.size > 0}
+          label="Over Budget"
+          value={overBudgetJobIds.size}
+          sub={overBudgetJobIds.size === 1 ? "job over budget" : "jobs over budget"}
+          actionLabel={overBudgetJobIds.size > 0 ? "Review" : undefined}
+          onAction={() => setOverBudgetOnly(true)}
         />
-        <StatCard label="Pending" value={pendingCount} sub="draft + ordered" />
+        <StatCard label="Open Orders" value={pendingCount} sub="draft + ordered" />
         <StatCard label="Received" value={receivedCount} sub="this period" />
       </div>
 
-      <div className="flex flex-wrap gap-3">
+      <div
+        className="flex items-center gap-1 overflow-x-auto"
+        style={{ borderBottom: "1px solid var(--border)" }}
+      >
+        {(
+          [
+            { id: "all" as const, label: "All" },
+            ...(Object.keys(STATUS_CONFIG) as PurchaseOrderStatus[]).map((id) => ({
+              id,
+              label: STATUS_CONFIG[id].label,
+            })),
+          ]
+        ).map((tab) => {
+          const count =
+            tab.id === "all"
+              ? purchaseOrders.length
+              : purchaseOrders.filter((o) => o.status === tab.id).length;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setStatusFilter(tab.id)}
+              className="px-4 py-2.5 text-sm transition-colors whitespace-nowrap flex items-center gap-1.5"
+              style={
+                statusFilter === tab.id
+                  ? {
+                      color: "var(--ink)",
+                      fontWeight: 600,
+                      borderBottom: "2px solid var(--accent)",
+                      marginBottom: "-1px",
+                    }
+                  : { color: "var(--muted)" }
+              }
+            >
+              {tab.label}
+              <span
+                className="inline-flex items-center justify-center px-1.5 text-[11px] font-bold"
+                style={{
+                  fontFamily: "var(--font-heading)",
+                  backgroundColor:
+                    statusFilter === tab.id
+                      ? "var(--accent-bg)"
+                      : "var(--surface-3)",
+                  color:
+                    statusFilter === tab.id ? "var(--accent)" : "var(--muted-2)",
+                  minWidth: "18px",
+                }}
+              >
+                {count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
         <div
-          className="flex items-center gap-2 flex-1 min-w-[200px] max-w-sm px-3 py-2 rounded-lg"
+          className="flex items-center gap-2 flex-1 min-w-[200px] max-w-sm px-3 py-2"
           style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border)" }}
         >
           <Search
             className="w-3.5 h-3.5 flex-shrink-0"
+            strokeWidth={1.5}
             style={{ color: "var(--muted-2)" }}
           />
           <input
@@ -372,27 +449,24 @@ export function PurchaseOrdersPage() {
             style={{ color: "var(--ink)" }}
           />
         </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as any)}
-          className="py-2 px-3 rounded-lg text-sm focus:outline-none"
-          style={{
-            backgroundColor: "var(--surface)",
-            border: "1px solid var(--border)",
-            color: "var(--ink-2)",
-          }}
-        >
-          <option value="all">All Statuses</option>
-          {Object.entries(STATUS_CONFIG).map(([k, v]) => (
-            <option key={k} value={k}>
-              {v.label}
-            </option>
-          ))}
-        </select>
+        {overBudgetOnly && (
+          <button
+            onClick={() => setOverBudgetOnly(false)}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold uppercase tracking-wider"
+            style={{
+              backgroundColor: "var(--danger-bg)",
+              color: "var(--danger)",
+              border: "1px solid rgba(178,58,38,0.3)",
+            }}
+          >
+            Over budget only
+            <X className="w-3 h-3" strokeWidth={1.5} />
+          </button>
+        )}
         <select
           value={jobFilter}
           onChange={(e) => setJobFilter(e.target.value)}
-          className="py-2 px-3 rounded-lg text-sm focus:outline-none"
+          className="py-2 px-3 text-sm focus:outline-none"
           style={{
             backgroundColor: "var(--surface)",
             border: "1px solid var(--border)",
@@ -411,162 +485,160 @@ export function PurchaseOrdersPage() {
       <div className="flex gap-6 items-start">
         <Panel noPad className="flex-1 min-w-0">
           {filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 gap-3">
-              <ShoppingCart className="w-8 h-8" style={{ color: "var(--border)" }} />
-              <p className="text-sm font-medium" style={{ color: "var(--muted)" }}>
-                No purchase orders found
-              </p>
-              <Btn size="sm" onClick={openAdd}>
-                <Plus className="w-3.5 h-3.5" /> Create your first PO
-              </Btn>
-            </div>
+            <EmptyState
+              icon={ShoppingCart}
+              title={
+                purchaseOrders.length === 0
+                  ? "No purchase orders yet"
+                  : "No purchase orders match this filter"
+              }
+              description={
+                purchaseOrders.length === 0
+                  ? "Track material and plant spend against jobs, from order through to invoice."
+                  : "Try a different status, job or search term."
+              }
+              primaryLabel={
+                purchaseOrders.length === 0 ? "Create your first purchase order" : undefined
+              }
+              onPrimary={purchaseOrders.length === 0 ? openAdd : undefined}
+              secondaryLabel="Import from spreadsheet"
+              onSecondary={() => setLocation("/import")}
+            />
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr
+            <div>
+              {filtered.map((o, i) => {
+                const isOverBudget = !!(o.job_id && overBudgetJobIds.has(o.job_id));
+                const RowIcon = STATUS_CONFIG[o.status]?.icon ?? Package;
+                return (
+                  <div
+                    key={o.id}
+                    onClick={() =>
+                      setSelected(selected?.id === o.id ? null : o)
+                    }
+                    className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 px-5 py-4 cursor-pointer transition-colors hover:bg-[var(--surface-2)] group"
                     style={{
-                      borderBottom: "1px solid var(--border)",
-                      backgroundColor: "var(--surface)",
+                      borderBottom:
+                        i < filtered.length - 1
+                          ? "1px solid var(--border)"
+                          : "none",
+                      backgroundColor:
+                        selected?.id === o.id
+                          ? "var(--surface-2)"
+                          : isOverBudget
+                            ? "var(--danger-bg)"
+                            : undefined,
+                      borderLeft: `3px solid ${isOverBudget ? "var(--danger)" : "transparent"}`,
                     }}
                   >
-                    {[
-                      "PO Number",
-                      "Supplier",
-                      "Description",
-                      "Job",
-                      "Status",
-                      "Order Date",
-                      "Total",
-                      "",
-                    ].map((h) => (
-                      <th
-                        key={h}
-                        className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-widest"
-                        style={{ color: "var(--muted)" }}
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((o, i) => (
-                    <tr
-                      key={o.id}
-                      onClick={() =>
-                        setSelected(selected?.id === o.id ? null : o)
-                      }
-                      className="cursor-pointer transition-colors hover:bg-[var(--surface-2)] group"
+                    <div
+                      className="w-8 h-8 flex items-center justify-center flex-shrink-0"
                       style={{
-                        borderBottom:
-                          i < filtered.length - 1
-                            ? "1px solid var(--surface-3)"
-                            : "none",
-                        backgroundColor:
-                          selected?.id === o.id ? "var(--surface-2)" : undefined,
+                        backgroundColor: "var(--surface-3)",
+                        border: "1px solid var(--border)",
                       }}
                     >
-                      <td className="py-3 px-4">
+                      <RowIcon
+                        className="w-3.5 h-3.5"
+                        strokeWidth={1.5}
+                        style={{ color: STATUS_CONFIG[o.status]?.color }}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                         <span
                           className="text-sm font-mono font-semibold"
                           style={{ color: "var(--accent)" }}
                         >
                           {o.po_number}
                         </span>
-                      </td>
-                      <td className="py-3 px-4">
                         <span
-                          className="text-sm font-medium"
+                          className="text-sm font-semibold truncate"
                           style={{ color: "var(--ink)" }}
                         >
                           {o.supplier}
                         </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="text-sm" style={{ color: "var(--ink-2)" }}>
-                          {o.description.length > 40
-                            ? o.description.slice(0, 40) + "…"
-                            : o.description}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        {o.job_number ? (
-                          <span
-                            className="text-[11px] font-mono font-bold px-2 py-0.5 rounded"
-                            style={{
-                              backgroundColor: "var(--surface-2)",
-                              color: "var(--ink-2)",
-                            }}
-                          >
-                            {o.job_number}
-                          </span>
-                        ) : (
-                          <span style={{ color: "var(--border)" }}>—</span>
+                        {isOverBudget && (
+                          <AlertCircle
+                            className="w-3.5 h-3.5 flex-shrink-0"
+                            strokeWidth={1.5}
+                            style={{ color: "var(--danger)" }}
+                          />
                         )}
-                      </td>
-                      <td className="py-3 px-4">
-                        <StatusBadge status={o.status} />
-                      </td>
-                      <td
-                        className="py-3 px-4 text-sm font-mono"
+                      </div>
+                      <div
+                        className="text-xs flex items-center gap-2 flex-wrap"
                         style={{ color: "var(--muted)" }}
                       >
-                        {formatDate(o.order_date)}
-                      </td>
-                      <td
-                        className="py-3 px-4 text-sm font-mono font-semibold tnum text-right"
-                        style={{ color: "var(--ink)" }}
+                        <span className="truncate">
+                          {o.description.length > 50
+                            ? o.description.slice(0, 50) + "…"
+                            : o.description}
+                        </span>
+                        {o.job_number && (
+                          <>
+                            <span>&middot;</span>
+                            <span
+                              className="font-mono font-bold px-1.5 py-0.5"
+                              style={{
+                                backgroundColor: "var(--surface-2)",
+                                color: "var(--ink-2)",
+                              }}
+                            >
+                              {o.job_number}
+                            </span>
+                          </>
+                        )}
+                        <span>&middot;</span>
+                        <span className="font-mono tnum">{formatDate(o.order_date)}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <StatusBadge status={o.status} />
+                      <div
+                        className="text-sm font-mono font-semibold tnum text-right"
+                        style={{ color: "var(--ink)", minWidth: "80px" }}
                       >
                         {formatCurrency(o.total_amount)}
-                      </td>
-                      <td className="py-3 px-2">
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={(e) => openEdit(o, e)}
-                            className="p-1.5 rounded hover:bg-[var(--border)] transition-colors"
-                            title="Edit"
-                          >
-                            <Pencil
-                              className="w-3 h-3"
-                              style={{ color: "var(--muted)" }}
-                            />
-                          </button>
-                          <ChevronRight
-                            className="w-3.5 h-3.5"
-                            style={{ color: "var(--muted-2)" }}
+                      </div>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={(e) => openEdit(o, e)}
+                          className="p-1.5 hover:bg-[var(--border)] transition-colors"
+                          title="Edit"
+                        >
+                          <Pencil
+                            className="w-3 h-3"
+                            strokeWidth={1.5}
+                            style={{ color: "var(--muted)" }}
                           />
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr
-                    style={{
-                      borderTop: "1px solid var(--border)",
-                      backgroundColor: "var(--surface)",
-                    }}
-                  >
-                    <td
-                      colSpan={6}
-                      className="py-2.5 px-4 text-xs font-bold uppercase tracking-widest text-right"
-                      style={{ color: "var(--muted)" }}
-                    >
-                      Total ({filtered.length})
-                    </td>
-                    <td
-                      className="py-2.5 px-4 text-sm font-mono font-bold tnum text-right"
-                      style={{ color: "var(--ink)" }}
-                    >
-                      {formatCurrency(
-                        filtered.reduce((s, o) => s + o.total_amount, 0),
-                      )}
-                    </td>
-                    <td />
-                  </tr>
-                </tfoot>
-              </table>
+                        </button>
+                        <ChevronRight
+                          className="w-3.5 h-3.5"
+                          strokeWidth={1.5}
+                          style={{ color: "var(--muted-2)" }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div
+                className="flex items-center justify-between px-5 py-2.5"
+                style={{ borderTop: "1px solid var(--border)", backgroundColor: "var(--surface)" }}
+              >
+                <span
+                  className="text-xs font-bold uppercase tracking-widest"
+                  style={{ color: "var(--muted)" }}
+                >
+                  Total ({filtered.length})
+                </span>
+                <span
+                  className="text-sm font-mono font-bold tnum"
+                  style={{ color: "var(--ink)" }}
+                >
+                  {formatCurrency(filtered.reduce((s, o) => s + o.total_amount, 0))}
+                </span>
+              </div>
             </div>
           )}
         </Panel>
@@ -586,7 +658,7 @@ export function PurchaseOrdersPage() {
                     className="text-lg font-bold font-mono"
                     style={{
                       color: "var(--accent)",
-                      fontFamily: "'JetBrains Mono', monospace",
+                      fontFamily: "var(--font-body)",
                     }}
                   >
                     {selected.po_number}
@@ -594,15 +666,15 @@ export function PurchaseOrdersPage() {
                 </div>
                 <button
                   onClick={() => setSelected(null)}
-                  className="p-1 rounded hover:bg-[var(--surface-2)]"
+                  className="p-1 hover:bg-[var(--surface-2)]"
                 >
-                  <X className="w-4 h-4" style={{ color: "var(--muted-2)" }} />
+                  <X className="w-4 h-4" strokeWidth={1.5} style={{ color: "var(--muted-2)" }} />
                 </button>
               </div>
 
               <div className="grid grid-cols-2 gap-3 mb-4">
                 <div
-                  className="p-3 rounded-lg"
+                  className="p-3"
                   style={{ backgroundColor: "var(--bg)" }}
                 >
                   <div
@@ -619,7 +691,7 @@ export function PurchaseOrdersPage() {
                   </div>
                 </div>
                 <div
-                  className="p-3 rounded-lg"
+                  className="p-3"
                   style={{ backgroundColor: "var(--bg)" }}
                 >
                   <div
@@ -636,7 +708,7 @@ export function PurchaseOrdersPage() {
                   </div>
                 </div>
                 <div
-                  className="col-span-2 p-3 rounded-lg"
+                  className="col-span-2 p-3"
                   style={{ backgroundColor: "var(--accent-bg)" }}
                 >
                   <div
@@ -665,7 +737,7 @@ export function PurchaseOrdersPage() {
                   <div className="flex items-center justify-between">
                     <span style={{ color: "var(--muted)" }}>Job</span>
                     <span
-                      className="font-mono text-xs font-bold px-2 py-0.5 rounded"
+                      className="font-mono text-xs font-bold px-2 py-0.5"
                       style={{ backgroundColor: "var(--surface-2)", color: "var(--ink-2)" }}
                     >
                       {selected.job_number}{" "}
@@ -690,7 +762,7 @@ export function PurchaseOrdersPage() {
                 {selected.delivery_date && (
                   <div className="flex items-center justify-between">
                     <span style={{ color: "var(--muted)" }}>Delivered</span>
-                    <span className="font-medium" style={{ color: "#2a6e45" }}>
+                    <span className="font-medium" style={{ color: "var(--success)" }}>
                       {formatDate(selected.delivery_date)}
                     </span>
                   </div>
@@ -699,7 +771,7 @@ export function PurchaseOrdersPage() {
 
               {selected.description && (
                 <div
-                  className="p-3 rounded-lg mb-4"
+                  className="p-3 mb-4"
                   style={{ backgroundColor: "var(--bg)" }}
                 >
                   <div
@@ -719,7 +791,7 @@ export function PurchaseOrdersPage() {
 
               {selected.notes && (
                 <div
-                  className="p-3 rounded-lg mb-4"
+                  className="p-3 mb-4"
                   style={{ backgroundColor: "var(--bg)" }}
                 >
                   <div
@@ -749,7 +821,7 @@ export function PurchaseOrdersPage() {
                     <button
                       key={s}
                       onClick={() => handleStatusChange(selected, s)}
-                      className="px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider transition-all"
+                      className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-all"
                       style={
                         selected.status === s
                           ? {
@@ -780,7 +852,7 @@ export function PurchaseOrdersPage() {
                   onClick={() => downloadPO(selected)}
                   title="Download PDF"
                 >
-                  <FileText className="w-3.5 h-3.5" />
+                  <FileText className="w-3.5 h-3.5" strokeWidth={1.5} />
                 </Btn>
                 <Btn
                   variant="outline"
@@ -788,7 +860,7 @@ export function PurchaseOrdersPage() {
                   className="flex-1"
                   onClick={(e) => openEdit(selected, e as any)}
                 >
-                  <Pencil className="w-3.5 h-3.5" /> Edit
+                  <Pencil className="w-3.5 h-3.5" strokeWidth={1.5} /> Edit
                 </Btn>
                 <Btn
                   variant="danger"
@@ -796,7 +868,7 @@ export function PurchaseOrdersPage() {
                   onClick={() => handleDelete(selected)}
                   disabled={deleting}
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
                 </Btn>
               </div>
             </Panel>
@@ -810,7 +882,7 @@ export function PurchaseOrdersPage() {
           style={{ backgroundColor: "rgba(24,20,16,0.5)" }}
         >
           <div
-            className="w-full max-w-lg rounded-xl shadow-2xl overflow-hidden"
+            className="w-full max-w-lg shadow-2xl overflow-hidden"
             style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border)" }}
           >
             <div
@@ -821,16 +893,16 @@ export function PurchaseOrdersPage() {
                 className="text-base font-semibold"
                 style={{
                   color: "var(--ink)",
-                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontFamily: "var(--font-heading)",
                 }}
               >
                 {editing ? `Edit ${editing.po_number}` : "New Purchase Order"}
               </h2>
               <button
                 onClick={() => setShowModal(false)}
-                className="p-1.5 rounded hover:bg-[var(--surface-2)]"
+                className="p-1.5 hover:bg-[var(--surface-2)]"
               >
-                <X className="w-4 h-4" style={{ color: "var(--muted)" }} />
+                <X className="w-4 h-4" strokeWidth={1.5} style={{ color: "var(--muted)" }} />
               </button>
             </div>
 
@@ -849,7 +921,7 @@ export function PurchaseOrdersPage() {
                       setForm((f) => ({ ...f, supplier: e.target.value }))
                     }
                     placeholder="e.g. Aggregates Direct"
-                    className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+                    className="w-full px-3 py-2 text-sm focus:outline-none"
                     style={{
                       backgroundColor: "#ffffff",
                       border: "1.5px solid var(--border)",
@@ -871,7 +943,7 @@ export function PurchaseOrdersPage() {
                       setForm((f) => ({ ...f, description: e.target.value }))
                     }
                     placeholder="e.g. 20 tonne MOT Type 1 sub-base"
-                    className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+                    className="w-full px-3 py-2 text-sm focus:outline-none"
                     style={{
                       backgroundColor: "#ffffff",
                       border: "1.5px solid var(--border)",
@@ -897,7 +969,7 @@ export function PurchaseOrdersPage() {
                     }
                     onBlur={handleAmountBlur}
                     placeholder="0.00"
-                    className="w-full px-3 py-2 rounded-lg text-sm font-mono focus:outline-none"
+                    className="w-full px-3 py-2 text-sm font-mono focus:outline-none"
                     style={{
                       backgroundColor: "#ffffff",
                       border: "1.5px solid var(--border)",
@@ -922,7 +994,7 @@ export function PurchaseOrdersPage() {
                       setForm((f) => ({ ...f, vatAmount: e.target.value }))
                     }
                     placeholder="auto-calc"
-                    className="w-full px-3 py-2 rounded-lg text-sm font-mono focus:outline-none"
+                    className="w-full px-3 py-2 text-sm font-mono focus:outline-none"
                     style={{
                       backgroundColor: "#ffffff",
                       border: "1.5px solid var(--border)",
@@ -958,7 +1030,7 @@ export function PurchaseOrdersPage() {
                         status: e.target.value as PurchaseOrderStatus,
                       }))
                     }
-                    className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+                    className="w-full px-3 py-2 text-sm focus:outline-none"
                     style={{
                       backgroundColor: "#ffffff",
                       border: "1.5px solid var(--border)",
@@ -986,7 +1058,7 @@ export function PurchaseOrdersPage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, orderDate: e.target.value }))
                     }
-                    className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+                    className="w-full px-3 py-2 text-sm focus:outline-none"
                     style={{
                       backgroundColor: "#ffffff",
                       border: "1.5px solid var(--border)",
@@ -1011,7 +1083,7 @@ export function PurchaseOrdersPage() {
                         expectedDelivery: e.target.value,
                       }))
                     }
-                    className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+                    className="w-full px-3 py-2 text-sm focus:outline-none"
                     style={{
                       backgroundColor: "#ffffff",
                       border: "1.5px solid var(--border)",
@@ -1033,7 +1105,7 @@ export function PurchaseOrdersPage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, deliveryDate: e.target.value }))
                     }
-                    className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+                    className="w-full px-3 py-2 text-sm focus:outline-none"
                     style={{
                       backgroundColor: "#ffffff",
                       border: "1.5px solid var(--border)",
@@ -1054,7 +1126,7 @@ export function PurchaseOrdersPage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, jobId: e.target.value }))
                     }
-                    className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+                    className="w-full px-3 py-2 text-sm focus:outline-none"
                     style={{
                       backgroundColor: "#ffffff",
                       border: "1.5px solid var(--border)",
@@ -1084,7 +1156,7 @@ export function PurchaseOrdersPage() {
                     }
                     rows={2}
                     placeholder="Delivery instructions, reference numbers…"
-                    className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none resize-none"
+                    className="w-full px-3 py-2 text-sm focus:outline-none resize-none"
                     style={{
                       backgroundColor: "#ffffff",
                       border: "1.5px solid var(--border)",

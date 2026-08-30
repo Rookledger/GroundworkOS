@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Search, Clock, Filter } from "lucide-react";
 import { Panel } from "../components/ui/Panel";
 import { StatCard } from "../components/ui/StatCard";
+import { Badge } from "../components/ui/Badge";
 
 const BASE = (import.meta as any).env?.BASE_URL?.replace(/\/$/, "") ?? "";
 
@@ -58,6 +59,22 @@ function formatChanges(changes: Record<string, any> | null): string {
   );
 }
 
+function dayLabel(dateStr: string): string {
+  const d = new Date(dateStr);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  if (d.toDateString() === today.toDateString()) return "Today";
+  if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+  return d.toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "short",
+    year:
+      d.getFullYear() !== today.getFullYear() ? "numeric" : undefined,
+  });
+}
+
 export function AuditLogPage() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -105,6 +122,16 @@ export function AuditLogPage() {
     }
     return true;
   });
+
+  const grouped = useMemo(() => {
+    const map = new Map<string, AuditLog[]>();
+    for (const l of filtered) {
+      const key = new Date(l.createdAt).toDateString();
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(l);
+    }
+    return [...map.entries()];
+  }, [filtered]);
 
   const totalToday = logs.filter(
     (l) => new Date(l.createdAt).toDateString() === new Date().toDateString(),

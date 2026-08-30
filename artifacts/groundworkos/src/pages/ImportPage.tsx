@@ -513,20 +513,25 @@ export function ImportPage() {
               noPad
               title={`Preview — ${rows.length} row${rows.length !== 1 ? "s" : ""}`}
               actions={
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2.5">
                   {done && (
-                    <div className="flex items-center gap-3 text-xs font-mono">
-                      <span style={{ color: "#2a6e45" }}>✓ {success}</span>
+                    <div className="flex items-center gap-3 text-xs font-mono tnum">
+                      <span style={{ color: "var(--success)" }}>✓ {success}</span>
                       {errors > 0 && (
                         <span style={{ color: "var(--danger)" }}>✗ {errors}</span>
                       )}
                     </div>
                   )}
+                  {!done && !importing && (
+                    <Btn size="sm" variant="outline" onClick={() => setReviewed(false)}>
+                      Back
+                    </Btn>
+                  )}
                   <button
                     onClick={reset}
-                    className="p-1 rounded hover:bg-[var(--surface-2)]"
+                    className="p-1 hover:bg-[var(--surface-2)]"
                   >
-                    <X className="w-4 h-4" style={{ color: "var(--muted)" }} />
+                    <X className="w-4 h-4" style={{ color: "var(--muted)" }} strokeWidth={1.5} />
                   </button>
                 </div>
               }
@@ -574,14 +579,14 @@ export function ImportPage() {
                           borderBottom: "1px solid var(--surface-3)",
                           backgroundColor:
                             row.status === "success"
-                              ? "rgba(42,110,69,0.04)"
+                              ? "var(--success-bg)"
                               : row.status === "error"
-                                ? "rgba(178,58,38,0.04)"
+                                ? "var(--danger-bg)"
                                 : undefined,
                         }}
                       >
                         <td
-                          className="py-2 px-3 font-mono"
+                          className="py-2 px-3 font-mono tnum"
                           style={{ color: "var(--muted-2)" }}
                         >
                           {i + 1}
@@ -605,9 +610,9 @@ export function ImportPage() {
                           {row.status === "success" && (
                             <span
                               className="flex items-center gap-1"
-                              style={{ color: "#2a6e45" }}
+                              style={{ color: "var(--success)" }}
                             >
-                              <CheckCircle className="w-3 h-3" /> Imported
+                              <CheckCircle className="w-3 h-3" strokeWidth={1.5} /> Imported
                             </span>
                           )}
                           {row.status === "error" && (
@@ -616,7 +621,7 @@ export function ImportPage() {
                               style={{ color: "var(--danger)" }}
                               title={row.error}
                             >
-                              <AlertCircle className="w-3 h-3" />{" "}
+                              <AlertCircle className="w-3 h-3" strokeWidth={1.5} />{" "}
                               {row.error?.slice(0, 24)}
                             </span>
                           )}
@@ -666,7 +671,7 @@ export function ImportPage() {
               className="w-full justify-center"
               onClick={() => downloadCSV(sampleCSV, sampleFile)}
             >
-              <Download className="w-3.5 h-3.5" /> Download sample CSV
+              <Download className="w-3.5 h-3.5" strokeWidth={1.5} /> Download sample CSV
             </Btn>
           </Panel>
 
@@ -677,6 +682,7 @@ export function ImportPage() {
                   <FileText
                     className="w-3 h-3 flex-shrink-0"
                     style={{ color: "var(--muted-2)" }}
+                    strokeWidth={1.5}
                   />
                   <code
                     className="text-xs font-mono"

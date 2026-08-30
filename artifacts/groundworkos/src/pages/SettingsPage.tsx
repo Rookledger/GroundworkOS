@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import type { ReactNode } from "react";
 import {
   ShieldCheck,
   Info,
@@ -11,6 +12,11 @@ import {
   Save,
   Upload,
   X,
+  Building2,
+  Receipt,
+  Landmark,
+  Signpost,
+  type LucideIcon,
 } from "lucide-react";
 import { Panel } from "../components/ui/Panel";
 import { Btn } from "../components/ui/Btn";
@@ -18,8 +24,44 @@ import { useApp } from "../store/AppContext";
 import { toast } from "sonner";
 import type { CompanySettings } from "../store/AppContext";
 
+function CardTitle({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
+  return (
+    <span className="flex items-center gap-2.5">
+      <span
+        className="flex items-center justify-center flex-shrink-0"
+        style={{ width: 26, height: 26, backgroundColor: "var(--accent-bg)" }}
+      >
+        <Icon className="w-3.5 h-3.5" style={{ color: "var(--accent)" }} strokeWidth={1.5} />
+      </span>
+      {label}
+    </span>
+  );
+}
+
+function CardDescription({ children }: { children: ReactNode }) {
+  return (
+    <p
+      className="text-xs px-5 pt-3.5 pb-0.5"
+      style={{ color: "var(--muted)" }}
+    >
+      {children}
+    </p>
+  );
+}
+
+function relativeTime(d: Date): string {
+  const s = Math.max(0, Math.round((Date.now() - d.getTime()) / 1000));
+  if (s < 5) return "just now";
+  if (s < 60) return `${s}s ago`;
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m} min ago`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h} hr ago`;
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+}
+
 const inputCls =
-  "w-full py-2 px-3 rounded-md text-sm focus:outline-none transition-colors";
+  "w-full py-2 px-3 text-sm focus:outline-none transition-colors";
 const inputStyle = {
   backgroundColor: "#ffffff",
   border: "1px solid var(--border)",
@@ -74,7 +116,7 @@ function SettingsRow({
           className="block text-[11px] font-bold uppercase tracking-widest"
           style={{
             color: "var(--ink-2)",
-            fontFamily: "'Space Grotesk', sans-serif",
+            fontFamily: "var(--font-heading)",
           }}
         >
           {label}
@@ -90,20 +132,46 @@ function SettingsRow({
   );
 }
 
-function SaveBar({ onSave, saving }: { onSave: () => void; saving: boolean }) {
+function SaveBar({
+  onSave,
+  onDiscard,
+  saving,
+  dirty,
+  lastSavedAt,
+}: {
+  onSave: () => void;
+  onDiscard: () => void;
+  saving: boolean;
+  dirty: boolean;
+  lastSavedAt?: Date;
+}) {
   return (
     <div
-      className="px-5 py-4"
+      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-5 py-3.5"
       style={{ backgroundColor: "var(--bg)", borderTop: "1px solid var(--border)" }}
     >
-      <Btn size="sm" onClick={onSave} disabled={saving}>
-        {saving ? (
-          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-        ) : (
-          <Save className="w-3.5 h-3.5" />
+      <span className="text-xs" style={{ color: "var(--muted-2)" }}>
+        {lastSavedAt
+          ? `Last saved ${relativeTime(lastSavedAt)}`
+          : dirty
+            ? "Unsaved changes"
+            : "No changes yet"}
+      </span>
+      <div className="flex items-center gap-2">
+        {dirty && (
+          <Btn size="sm" variant="outline" onClick={onDiscard} disabled={saving}>
+            Discard
+          </Btn>
         )}
-        {saving ? "Saving…" : "Save"}
-      </Btn>
+        <Btn size="sm" onClick={onSave} disabled={saving || !dirty}>
+          {saving ? (
+            <RefreshCw className="w-3.5 h-3.5 animate-spin" strokeWidth={1.5} />
+          ) : (
+            <Save className="w-3.5 h-3.5" strokeWidth={1.5} />
+          )}
+          {saving ? "Saving…" : "Save changes"}
+        </Btn>
+      </div>
     </div>
   );
 }
@@ -137,7 +205,7 @@ function LogoUpload({
   return (
     <div className="flex items-center gap-3">
       <div
-        className="w-14 h-14 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden"
+        className="w-14 h-14 flex items-center justify-center flex-shrink-0 overflow-hidden"
         style={{ backgroundColor: "var(--bg)", border: "1px solid var(--border)" }}
       >
         {value ? (
@@ -147,7 +215,7 @@ function LogoUpload({
             className="w-full h-full object-contain"
           />
         ) : (
-          <Upload className="w-5 h-5" style={{ color: "var(--muted-2)" }} />
+          <Upload className="w-5 h-5" style={{ color: "var(--muted-2)" }} strokeWidth={1.5} />
         )}
       </div>
       <input
@@ -158,12 +226,12 @@ function LogoUpload({
         onChange={(e) => handleFile(e.target.files?.[0])}
       />
       <Btn size="sm" variant="outline" onClick={() => fileInputRef.current?.click()}>
-        <Upload className="w-3.5 h-3.5" />
+        <Upload className="w-3.5 h-3.5" strokeWidth={1.5} />
         {value ? "Replace" : "Upload"}
       </Btn>
       {value && (
         <Btn size="sm" variant="outline" onClick={() => onChange("")}>
-          <X className="w-3.5 h-3.5" />
+          <X className="w-3.5 h-3.5" strokeWidth={1.5} />
           Remove
         </Btn>
       )}
@@ -346,13 +414,13 @@ function AccountingProviderPanel({
           onClick={() => runSync(syncKey, path)}
           disabled={!!syncing}
         >
-          {busy ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : icon}
+          {busy ? <RefreshCw className="w-3.5 h-3.5 animate-spin" strokeWidth={1.5} /> : icon}
           {busy ? "Syncing…" : label}
         </Btn>
         {res && (
           <span
             className="text-xs font-mono tnum"
-            style={{ color: res.failed > 0 ? "var(--warning)" : "#2a6e45" }}
+            style={{ color: res.failed > 0 ? "var(--warning)" : "var(--success)" }}
           >
             {res.synced} synced{res.failed > 0 ? `, ${res.failed} failed` : ""}
           </span>
@@ -371,7 +439,7 @@ function AccountingProviderPanel({
 
   return (
     <Panel
-      title={`${provider.label} Integration`}
+      title={<CardTitle icon={Link2} label={`${provider.label} integration`} />}
       badge={connected ? "Connected" : undefined}
       noPad
     >
@@ -379,15 +447,15 @@ function AccountingProviderPanel({
         <div
           className="flex items-center gap-3 px-5 py-3 text-sm"
           style={{
-            backgroundColor: banner.type === "success" ? "var(--accent-bg)" : "#fdf2f2",
+            backgroundColor: banner.type === "success" ? "var(--accent-bg)" : "var(--danger-bg)",
             borderBottom: "1px solid var(--border)",
             color: banner.type === "success" ? "var(--accent)" : "var(--danger)",
           }}
         >
           {banner.type === "success" ? (
-            <CheckCircle className="w-4 h-4 flex-shrink-0" />
+            <CheckCircle className="w-4 h-4 flex-shrink-0" strokeWidth={1.5} />
           ) : (
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <AlertCircle className="w-4 h-4 flex-shrink-0" strokeWidth={1.5} />
           )}
           <span>{banner.message}</span>
           <button
@@ -413,7 +481,7 @@ function AccountingProviderPanel({
               window.location.href = `/api/${provider.key}/auth`;
             }}
           >
-            <Link2 className="w-3.5 h-3.5" />
+            <Link2 className="w-3.5 h-3.5" strokeWidth={1.5} />
             Connect to {provider.label}
           </Btn>
           <p className="text-xs mt-3" style={{ color: "var(--muted)" }}>
@@ -429,14 +497,14 @@ function AccountingProviderPanel({
           >
             <div className="flex items-center gap-2 mb-1">
               <div
-                className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{ backgroundColor: "#2a6e45" }}
+                className="w-2 h-2 flex-shrink-0"
+                style={{ backgroundColor: "var(--success)" }}
               />
               <span
                 className="text-sm font-medium"
                 style={{
                   color: "var(--ink)",
-                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontFamily: "var(--font-heading)",
                 }}
               >
                 {orgName ?? provider.orgFallback}
@@ -462,7 +530,7 @@ function AccountingProviderPanel({
               className="text-[11px] font-bold uppercase tracking-widest mb-3"
               style={{
                 color: "var(--muted)",
-                fontFamily: "'Space Grotesk', sans-serif",
+                fontFamily: "var(--font-heading)",
               }}
             >
               Push to {provider.label}
@@ -471,19 +539,19 @@ function AccountingProviderPanel({
               label="Sync Clients"
               syncKey="contacts"
               path={`/api/${provider.key}/sync/contacts`}
-              icon={<RefreshCw className="w-3.5 h-3.5" />}
+              icon={<RefreshCw className="w-3.5 h-3.5" strokeWidth={1.5} />}
             />
             <SyncBtn
               label="Sync Invoices"
               syncKey="invoices"
               path={`/api/${provider.key}/sync/invoices`}
-              icon={<RefreshCw className="w-3.5 h-3.5" />}
+              icon={<RefreshCw className="w-3.5 h-3.5" strokeWidth={1.5} />}
             />
             <SyncBtn
               label="Sync Quotes"
               syncKey="quotes"
               path={`/api/${provider.key}/sync/quotes`}
-              icon={<RefreshCw className="w-3.5 h-3.5" />}
+              icon={<RefreshCw className="w-3.5 h-3.5" strokeWidth={1.5} />}
             />
           </div>
 
@@ -495,7 +563,7 @@ function AccountingProviderPanel({
               className="text-[11px] font-bold uppercase tracking-widest mb-3"
               style={{
                 color: "var(--muted)",
-                fontFamily: "'Space Grotesk', sans-serif",
+                fontFamily: "var(--font-heading)",
               }}
             >
               Pull from {provider.label}
@@ -504,7 +572,7 @@ function AccountingProviderPanel({
               label="Pull Payment Status"
               syncKey="payments"
               path={`/api/${provider.key}/pull/payments`}
-              icon={<Download className="w-3.5 h-3.5" />}
+              icon={<Download className="w-3.5 h-3.5" strokeWidth={1.5} />}
             />
             <p className="text-xs mt-2" style={{ color: "var(--muted)" }}>
               Marks invoices as paid in GroundworkOS when they're marked paid in{" "}
@@ -519,7 +587,7 @@ function AccountingProviderPanel({
               onClick={handleDisconnect}
               disabled={disconnecting}
             >
-              <Unlink className="w-3.5 h-3.5" />
+              <Unlink className="w-3.5 h-3.5" strokeWidth={1.5} />
               {disconnecting
                 ? "Disconnecting…"
                 : `Disconnect ${provider.label}`}
@@ -542,11 +610,8 @@ async function saveSettings(body: Record<string, unknown>): Promise<void> {
   if (!r.ok) throw new Error("Save failed");
 }
 
-export function SettingsPage() {
-  const { state, dispatch } = useApp();
-  const s = state.settings;
-
-  const [company, setCompany] = useState({
+function companyFromSettings(s: CompanySettings) {
+  return {
     companyName: s.companyName,
     companyLogo: s.companyLogo,
     companyNumber: s.companyNumber,
@@ -554,66 +619,68 @@ export function SettingsPage() {
     utrNumber: s.utrNumber,
     cisReference: s.cisReference,
     address: s.address,
-  });
-
-  const [invoiceSettings, setInvoiceSettings] = useState({
+  };
+}
+function invoiceFromSettings(s: CompanySettings) {
+  return {
     invoicePrefix: s.invoicePrefix,
     quotePrefix: s.quotePrefix,
     jobPrefix: s.jobPrefix,
     paymentTerms: s.paymentTerms,
-  });
-
-  const [nrswa, setNrswa] = useState({
+  };
+}
+function nrswaFromSettings(s: CompanySettings) {
+  return {
     streetWorksLicenceRef: s.streetWorksLicenceRef,
     defaultPermitAuthority: s.defaultPermitAuthority,
-  });
-
-  const [bankDetails, setBankDetails] = useState({
+  };
+}
+function bankFromSettings(s: CompanySettings) {
+  return {
     bankName: s.bankName,
     sortCode: s.sortCode,
     accountNumber: s.accountNumber,
-  });
-
-  const [cisSettings, setCisSettings] = useState({
+  };
+}
+function cisFromSettings(s: CompanySettings) {
+  return {
     taxYearStart: s.taxYearStart,
     filingReminderDays: s.filingReminderDays,
-  });
+  };
+}
+
+export function SettingsPage() {
+  const { state, dispatch } = useApp();
+  const s = state.settings;
+
+  const [company, setCompany] = useState(companyFromSettings(s));
+  const [invoiceSettings, setInvoiceSettings] = useState(invoiceFromSettings(s));
+  const [nrswa, setNrswa] = useState(nrswaFromSettings(s));
+  const [bankDetails, setBankDetails] = useState(bankFromSettings(s));
+  const [cisSettings, setCisSettings] = useState(cisFromSettings(s));
 
   const [savingSection, setSavingSection] = useState<string | null>(null);
+  const [lastSaved, setLastSaved] = useState<Record<string, Date>>({});
 
   const prevSettings = useRef(s);
   useEffect(() => {
     if (prevSettings.current === s) return;
     prevSettings.current = s;
-    setCompany({
-      companyName: s.companyName,
-      companyLogo: s.companyLogo,
-      companyNumber: s.companyNumber,
-      vatNumber: s.vatNumber,
-      utrNumber: s.utrNumber,
-      cisReference: s.cisReference,
-      address: s.address,
-    });
-    setInvoiceSettings({
-      invoicePrefix: s.invoicePrefix,
-      quotePrefix: s.quotePrefix,
-      jobPrefix: s.jobPrefix,
-      paymentTerms: s.paymentTerms,
-    });
-    setNrswa({
-      streetWorksLicenceRef: s.streetWorksLicenceRef,
-      defaultPermitAuthority: s.defaultPermitAuthority,
-    });
-    setBankDetails({
-      bankName: s.bankName,
-      sortCode: s.sortCode,
-      accountNumber: s.accountNumber,
-    });
-    setCisSettings({
-      taxYearStart: s.taxYearStart,
-      filingReminderDays: s.filingReminderDays,
-    });
+    setCompany(companyFromSettings(s));
+    setInvoiceSettings(invoiceFromSettings(s));
+    setNrswa(nrswaFromSettings(s));
+    setBankDetails(bankFromSettings(s));
+    setCisSettings(cisFromSettings(s));
   }, [s]);
+
+  const companyDirty =
+    JSON.stringify(company) !== JSON.stringify(companyFromSettings(s));
+  const invoiceDirty =
+    JSON.stringify(invoiceSettings) !== JSON.stringify(invoiceFromSettings(s));
+  const nrswaDirty = JSON.stringify(nrswa) !== JSON.stringify(nrswaFromSettings(s));
+  const bankDirty =
+    JSON.stringify(bankDetails) !== JSON.stringify(bankFromSettings(s));
+  const cisDirty = JSON.stringify(cisSettings) !== JSON.stringify(cisFromSettings(s));
 
   async function save(section: string, patch: Partial<CompanySettings>) {
     setSavingSection(section);
@@ -621,6 +688,7 @@ export function SettingsPage() {
       const merged = { ...s, ...patch };
       await saveSettings(merged as unknown as Record<string, unknown>);
       dispatch({ type: "INIT_SETTINGS", settings: patch });
+      setLastSaved((prev) => ({ ...prev, [section]: new Date() }));
       toast.success("Settings saved");
     } catch {
       toast.error("Failed to save settings");

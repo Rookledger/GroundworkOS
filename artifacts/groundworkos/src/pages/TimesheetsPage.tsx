@@ -164,6 +164,51 @@ export function TimesheetsPage() {
     ? timesheets.find((t) => t.id === selected)
     : null;
 
+  // Operative x day-of-week grid for the "This Week" tab: rows are the
+  // operatives with an entry this week, columns Mon-Sun, cell = hours
+  // logged that day.
+  const weekDays = useMemo(() => {
+    const days: Date[] = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(mon);
+      d.setDate(mon.getDate() + i);
+      days.push(d);
+    }
+    return days;
+  }, [mon]);
+
+  const weekGridRows = useMemo(() => {
+    if (tab !== "week") return [];
+    const map = new Map<
+      string,
+      { worker: string; cells: number[]; total: number; ids: string[] }
+    >();
+    for (const t of filtered) {
+      if (!map.has(t.worker_name)) {
+        map.set(t.worker_name, {
+          worker: t.worker_name,
+          cells: [0, 0, 0, 0, 0, 0, 0],
+          total: 0,
+          ids: [],
+        });
+      }
+      const row = map.get(t.worker_name)!;
+      const dayIdx = weekDays.findIndex(
+        (d) => d.toISOString().slice(0, 10) === t.work_date.slice(0, 10),
+      );
+      if (dayIdx >= 0) row.cells[dayIdx] += t.hours_worked;
+      row.total += t.hours_worked;
+      row.ids.push(t.id);
+    }
+    return [...map.values()].sort((a, b) => a.worker.localeCompare(b.worker));
+  }, [filtered, tab, weekDays]);
+
+  function rowStatus(ids: string[]): "approved" | "pending" | "query" {
+    if (ids.some((id) => getStatus(id) === "query")) return "query";
+    if (ids.every((id) => getStatus(id) === "approved")) return "approved";
+    return "pending";
+  }
+
   function openNew() {
     setForm(emptyForm);
     setErrors({});
@@ -412,6 +457,136 @@ export function TimesheetsPage() {
             </Panel>
           ) : (
             <div className="space-y-4">
+              {tab === "week" && (
+              <Panel
+                title="Week Grid"
+                badge={`${weekGridRows.length} operative${weekGridRows.length === 1 ? "" : "s"}`}
+                noPad
+              >
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse min-w-[760px]">
+                    <thead>
+                      <tr
+                        style={{
+                          borderBottom: "1px solid var(--border)",
+                          backgroundColor: "var(--surface-2)",
+                        }}
+                      >
+                        <th
+                          className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-widest"
+                          style={{ color: "var(--muted)" }}
+                        >
+                          Operative
+                        </th>
+                        {weekDays.map((d) => (
+                          <th
+                            key={d.toISOString()}
+                            className="py-2.5 px-2 text-center text-[10px] font-bold uppercase tracking-widest"
+                            style={{ color: "var(--muted)" }}
+                          >
+                            {d.toLocaleDateString("en-GB", { weekday: "short" })}
+                          </th>
+                        ))}
+                        <th
+                          className="py-2.5 px-4 text-center text-[10px] font-bold uppercase tracking-widest"
+                          style={{ color: "var(--muted)" }}
+                        >
+                          Total
+                        </th>
+                        <th
+                          className="py-2.5 px-4 text-center text-[10px] font-bold uppercase tracking-widest"
+                          style={{ color: "var(--muted)" }}
+                        >
+                          Status
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {weekGridRows.map((row, i) => {
+                        const status = rowStatus(row.ids);
+                        const isQuery = status === "query";
+                        return (
+                          <tr
+                            key={row.worker}
+                            style={{
+                              borderBottom:
+                                i < weekGridRows.length - 1
+                                  ? "1px solid var(--surface-3)"
+                                  : "none",
+                              backgroundColor: isQuery
+                                ? "var(--danger-bg)"
+                                : undefined,
+                              borderLeft: isQuery
+                                ? "3px solid var(--danger)"
+                                : "3px solid transparent",
+                            }}
+                          >
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-2.5">
+                                <div
+                                  className="w-7 h-7 flex items-center justify-center flex-shrink-0 text-[11px] font-bold"
+                                  style={{
+                                    backgroundColor: "var(--accent-bg)",
+                                    color: "var(--accent)",
+                                    fontFamily: "var(--font-heading)",
+                                  }}
+                                >
+                                  {row.worker
+                                    .split(" ")
+                                    .map((n) => n[0])
+                                    .join("")
+                                    .toUpperCase()
+                                    .slice(0, 2)}
+                                </div>
+                                <span
+                                  className="text-sm font-semibold whitespace-nowrap"
+                                  style={{ color: "var(--ink)" }}
+                                >
+                                  {row.worker}
+                                </span>
+                              </div>
+                            </td>
+                            {row.cells.map((h, di) => (
+                              <td
+                                key={di}
+                                className="py-3 px-2 text-center text-xs tnum"
+                                style={{
+                                  color: h > 0 ? "var(--ink)" : "var(--muted-2)",
+                                }}
+                              >
+                                {h > 0 ? h.toFixed(1) : "–"}
+                              </td>
+                            ))}
+                            <td
+                              className="py-3 px-4 text-center text-sm font-semibold tnum"
+                              style={{ color: "var(--ink)" }}
+                            >
+                              {row.total.toFixed(1)}h
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              <Badge status={status} />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <div
+                  className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 p-4"
+                  style={{ borderTop: "1px solid var(--border)" }}
+                >
+                  <Btn variant="outline" size="sm" onClick={handleExport}>
+                    <Download strokeWidth={1.5} className="w-3.5 h-3.5" />
+                    Export for payroll
+                  </Btn>
+                  <Btn size="sm" onClick={handleApproveAll}>
+                    <CheckCheck strokeWidth={1.5} className="w-3.5 h-3.5" />
+                    Approve all
+                  </Btn>
+                </div>
+              </Panel>
+              )}
               {grouped.map(([date, entries]) => {
                 const dayHours = entries.reduce(
                   (s, t) => s + t.hours_worked,
@@ -425,103 +600,117 @@ export function TimesheetsPage() {
                     badge={`${dayHours.toFixed(1)}h${dayCost > 0 ? ` · ${formatCurrency(dayCost)}` : ""}`}
                     noPad
                   >
-                    {entries.map((entry, i) => (
+                    {entries.map((entry, i) => {
+                      const status = getStatus(entry.id);
+                      const isQuery = status === "query";
+                      return (
                       <div
                         key={entry.id}
                         onClick={() =>
                           setSelected(selected === entry.id ? null : entry.id)
                         }
-                        className="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-4 sm:py-3.5 cursor-pointer transition-colors hover:bg-[var(--surface-2)] group min-h-[64px]"
+                        className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 px-4 sm:px-5 py-4 sm:py-3.5 cursor-pointer transition-colors hover:bg-[var(--surface-2)] group min-h-[64px]"
                         style={{
                           borderBottom:
                             i < entries.length - 1
                               ? "1px solid var(--surface-3)"
                               : "none",
-                          backgroundColor:
-                            selected === entry.id ? "var(--surface-2)" : undefined,
-                          borderLeft:
-                            selected === entry.id
+                          backgroundColor: isQuery
+                            ? "var(--danger-bg)"
+                            : selected === entry.id
+                              ? "var(--surface-2)"
+                              : undefined,
+                          borderLeft: isQuery
+                            ? "3px solid var(--danger)"
+                            : selected === entry.id
                               ? "3px solid var(--accent)"
                               : "3px solid transparent",
                         }}
                       >
-                        <div
-                          className="w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center flex-shrink-0 text-xs font-bold"
-                          style={{
-                            backgroundColor: "var(--accent-bg)",
-                            color: "var(--accent)",
-                            fontFamily: "var(--font-heading)",
-                          }}
-                        >
-                          {entry.worker_name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")
-                            .toUpperCase()
-                            .slice(0, 2)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <span
-                              className="text-sm font-semibold"
-                              style={{ color: "var(--ink)" }}
-                            >
-                              {entry.worker_name}
-                            </span>
-                            {entry.job_title && (
+                        <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                          <div
+                            className="w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center flex-shrink-0 text-xs font-bold"
+                            style={{
+                              backgroundColor: "var(--accent-bg)",
+                              color: "var(--accent)",
+                              fontFamily: "var(--font-heading)",
+                            }}
+                          >
+                            {entry.worker_name
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")
+                              .toUpperCase()
+                              .slice(0, 2)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
                               <span
-                                className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 flex-shrink-0 hidden sm:inline"
-                                style={{
-                                  backgroundColor: "var(--surface-3)",
-                                  color: "var(--ink-2)",
-                                }}
+                                className="text-sm font-semibold"
+                                style={{ color: "var(--ink)" }}
                               >
-                                {entry.job_number}
+                                {entry.worker_name}
                               </span>
+                              {entry.job_title && (
+                                <span
+                                  className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 flex-shrink-0 hidden sm:inline"
+                                  style={{
+                                    backgroundColor: "var(--surface-3)",
+                                    color: "var(--ink-2)",
+                                  }}
+                                >
+                                  {entry.job_number}
+                                </span>
+                              )}
+                            </div>
+                            {entry.description && (
+                              <p
+                                className="text-xs truncate"
+                                style={{ color: "var(--muted)" }}
+                              >
+                                {entry.description}
+                              </p>
+                            )}
+                            {entry.job_title && !entry.description && (
+                              <p
+                                className="text-xs truncate"
+                                style={{ color: "var(--muted)" }}
+                              >
+                                {entry.job_title}
+                              </p>
                             )}
                           </div>
-                          {entry.description && (
-                            <p
-                              className="text-xs truncate"
-                              style={{ color: "var(--muted)" }}
-                            >
-                              {entry.description}
-                            </p>
-                          )}
-                          {entry.job_title && !entry.description && (
-                            <p
-                              className="text-xs truncate"
-                              style={{ color: "var(--muted)" }}
-                            >
-                              {entry.job_title}
-                            </p>
-                          )}
                         </div>
-                        <div className="text-right flex-shrink-0">
-                          <div
-                            className="text-sm font-semibold font-mono"
-                            style={{ color: "var(--ink)" }}
-                          >
-                            {entry.hours_worked % 1 === 0
-                              ? entry.hours_worked
-                              : entry.hours_worked.toFixed(1)}
-                            h
-                          </div>
-                          {entry.cost != null && entry.cost > 0 && (
+                        <div className="flex items-center gap-3 sm:gap-4 justify-between sm:justify-end flex-shrink-0 pl-[52px] sm:pl-0">
+                          <Badge status={status} />
+                          <div className="text-right flex-shrink-0">
                             <div
-                              className="text-xs font-mono"
-                              style={{ color: "var(--muted)" }}
+                              className="text-sm font-semibold tnum"
+                              style={{ color: "var(--ink)" }}
                             >
-                              {formatCurrency(entry.cost)}
+                              {entry.hours_worked % 1 === 0
+                                ? entry.hours_worked
+                                : entry.hours_worked.toFixed(1)}
+                              h
                             </div>
-                          )}
+                            {entry.cost != null && entry.cost > 0 && (
+                              <div
+                                className="text-xs tnum"
+                                style={{ color: "var(--muted)" }}
+                              >
+                                {formatCurrency(entry.cost)}
+                              </div>
+                            )}
+                          </div>
+                          <ChevronRight
+                            strokeWidth={1.5}
+                            className="w-5 h-5 sm:w-4 sm:h-4 flex-shrink-0 opacity-40 group-hover:opacity-70 transition-opacity"
+                            style={{ color: "var(--accent)" }}
+                          />
                         </div>
-                        <ChevronRight strokeWidth={1.5}
-                          className="w-5 h-5 sm:w-4 sm:h-4 flex-shrink-0 opacity-40 group-hover:opacity-70 transition-opacity"
-                          style={{ color: "var(--accent)" }}
-                        />
                       </div>
-                    ))}
+                      );
+                    })}
                   </Panel>
                 );
               })}

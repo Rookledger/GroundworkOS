@@ -197,15 +197,46 @@ export function ClientsPage() {
         />
       </div>
 
-      <SearchInput
-        value={search}
-        onChange={setSearch}
-        placeholder="Search clients..."
-        className="py-2 w-full max-w-sm focus:outline-none transition-colors"
-      />
+      <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3">
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Search clients..."
+          className="py-2 w-full max-w-sm focus:outline-none transition-colors"
+        />
+        {clients.length > 0 && (
+          <span className="text-xs" style={{ color: "var(--muted-2)" }}>
+            Sorted by lifetime value
+          </span>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className={selectedClient ? "xl:col-span-2" : "xl:col-span-3"}>
+          {clients.length === 0 ? (
+            <Panel title="Client Directory" noPad>
+              <EmptyState
+                icon={Users}
+                title="No clients yet"
+                description="Clients are the companies and contacts you work for — every job, quote and invoice is tied back to one."
+                primaryLabel="Add your first client"
+                onPrimary={openNew}
+                secondaryLabel="Import from spreadsheet"
+                onSecondary={() => navigate("/import")}
+                hint="You can also import an existing client list as a CSV."
+              />
+            </Panel>
+          ) : filtered.length === 0 ? (
+            <Panel title="Client Directory" noPad>
+              <EmptyState
+                icon={Search}
+                title="No clients match your search"
+                description={`No results for "${search}". Try a different name or email.`}
+                primaryLabel="Clear search"
+                onPrimary={() => setSearch("")}
+              />
+            </Panel>
+          ) : (
           <ListPanel
             title="Client Directory"
             items={filtered}
@@ -217,7 +248,7 @@ export function ClientsPage() {
                   setSelected(selected === client.id ? null : client.id)
                 }
                 className={cn(
-                  "flex items-center gap-5 px-5 py-4 cursor-pointer transition-colors group",
+                  "flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5 px-5 py-4 cursor-pointer transition-colors group",
                   selected === client.id
                     ? "bg-[var(--surface-2)]"
                     : "hover:bg-[var(--surface-2)]",
@@ -230,79 +261,84 @@ export function ClientsPage() {
                       : "3px solid transparent",
                 }}
               >
-                <div
-                  className="w-10 h-10 flex items-center justify-center text-sm font-bold flex-shrink-0"
-                  style={{
-                    backgroundColor: "var(--surface-3)",
-                    color: "var(--ink-2)",
-                    border: "1px solid var(--border)",
-                  }}
-                >
-                  {client.company_name[0]}
-                </div>
-                <div className="flex-1 min-w-0">
+                <div className="flex items-start gap-3 flex-1 min-w-0">
                   <div
-                    className="text-sm font-semibold truncate"
-                    style={{ color: "var(--ink)" }}
+                    className="w-10 h-10 flex items-center justify-center text-sm font-bold flex-shrink-0"
+                    style={{
+                      backgroundColor: "var(--surface-3)",
+                      color: "var(--ink-2)",
+                      border: "1px solid var(--border)",
+                    }}
                   >
-                    {client.company_name}
+                    {client.company_name[0]}
                   </div>
-                  <div
-                    className="text-xs mt-0.5 truncate"
-                    style={{ color: "var(--muted)" }}
-                  >
-                    {client.contact_name ?? "No contact"}
-                  </div>
-                </div>
-                {client.email && (
-                  <div
-                    className="hidden md:flex items-center gap-1.5 w-48 flex-shrink-0 text-xs"
-                    style={{ color: "var(--muted)" }}
-                  >
-                    <Mail className="w-3.5 h-3.5" strokeWidth={1.5} />
-                    <span className="truncate font-mono">{client.email}</span>
-                  </div>
-                )}
-                <div className="text-right hidden sm:block w-28 flex-shrink-0">
-                  <div
-                    className="text-[10px] font-bold uppercase tracking-widest mb-1"
-                    style={{ color: "var(--muted)" }}
-                  >
-                    Jobs
-                  </div>
-                  <div
-                    className="text-sm font-medium font-mono tnum"
-                    style={{ color: "var(--ink)" }}
-                  >
-                    {client.total_jobs}
+                  <div className="flex-1 min-w-0">
+                    <div
+                      className="text-sm font-semibold truncate"
+                      style={{ color: "var(--ink)" }}
+                    >
+                      {client.company_name}
+                    </div>
+                    <div
+                      className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs mt-0.5"
+                      style={{ color: "var(--muted)" }}
+                    >
+                      <span className="truncate">
+                        {client.contact_name ?? "No contact"}
+                      </span>
+                      {client.email && (
+                        <span className="flex items-center gap-1.5 truncate">
+                          <Mail className="w-3 h-3 flex-shrink-0" strokeWidth={1.5} />
+                          <span className="truncate font-mono">{client.email}</span>
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <div className="text-right hidden sm:block w-28 flex-shrink-0">
-                  <div
-                    className="text-[10px] font-bold uppercase tracking-widest mb-1"
+                <div className="flex items-center justify-between sm:justify-end gap-6 pl-[52px] sm:pl-0 flex-shrink-0">
+                  <div className="text-right w-16 sm:w-28 flex-shrink-0">
+                    <div
+                      className="text-[10px] font-bold uppercase tracking-widest mb-1"
+                      style={{ color: "var(--muted)" }}
+                    >
+                      Jobs
+                    </div>
+                    <div
+                      className="text-sm font-medium tnum"
+                      style={{ color: "var(--ink)" }}
+                    >
+                      {client.total_jobs}
+                    </div>
+                  </div>
+                  <div className="text-right w-24 sm:w-28 flex-shrink-0">
+                    <div
+                      className="text-[10px] font-bold uppercase tracking-widest mb-1"
+                      style={{ color: "var(--muted)" }}
+                    >
+                      Value
+                    </div>
+                    <div
+                      className="text-sm font-medium tnum"
+                      style={{ color: "var(--ink)" }}
+                    >
+                      {formatCurrency(client.total_value)}
+                    </div>
+                  </div>
+                  <ChevronRight
+                    className={cn(
+                      "w-4 h-4 flex-shrink-0 transition-opacity hidden sm:block",
+                      selected === client.id
+                        ? "opacity-100"
+                        : "opacity-0 group-hover:opacity-100",
+                    )}
                     style={{ color: "var(--muted)" }}
-                  >
-                    Value
-                  </div>
-                  <div
-                    className="text-sm font-medium font-mono tnum"
-                    style={{ color: "var(--ink)" }}
-                  >
-                    {formatCurrency(client.total_value)}
-                  </div>
+                    strokeWidth={1.5}
+                  />
                 </div>
-                <ChevronRight
-                  className={cn(
-                    "w-4 h-4 flex-shrink-0 transition-opacity ml-2",
-                    selected === client.id
-                      ? "opacity-100"
-                      : "opacity-0 group-hover:opacity-100",
-                  )}
-                  style={{ color: "var(--muted)" }}
-                strokeWidth={1.5} />
               </div>
             )}
           />
+          )}
         </div>
 
         {selectedClient && (

@@ -77,10 +77,13 @@ const statusConfig: Record<
 
 interface BadgeProps {
   status: BadgeStatus;
+  /** Override the displayed text while still using `status` to look up color/bg
+   * (e.g. tagging a generic entity type like "job" with its own label). */
+  label?: string;
   className?: string;
 }
 
-export function Badge({ status, className }: BadgeProps) {
+export function Badge({ status, label, className }: BadgeProps) {
   const config = statusConfig[status] ?? {
     label: status,
     color: "#5d5d60",
@@ -100,7 +103,7 @@ export function Badge({ status, className }: BadgeProps) {
         borderRadius: 0,
       }}
     >
-      {config.label}
+      {label ?? config.label}
     </span>
   );
 }
