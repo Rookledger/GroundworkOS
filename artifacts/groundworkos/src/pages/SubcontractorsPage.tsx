@@ -874,5 +874,6 @@ export function SubcontractorsPage() {
         </div>
       </Modal>
     </div>
+  </div>
   );
 }
