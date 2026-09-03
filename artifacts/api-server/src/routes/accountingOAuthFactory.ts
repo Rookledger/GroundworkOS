@@ -93,7 +93,15 @@ export function createAccountingOAuthRouter<TConn extends ConnectionBase>(
   router.get(`/${provider}/auth`, requireRole("admin"), async (c) => {
     try {
       const state = randomStateToken();
-      await c.env.KV.put(stateKey(state), "1", { expirationTtl: 600 }); // 10 min
+      // Fire-and-forget: don't let a KV write failure (e.g. the account's
+      // daily write quota being exhausted - see rateLimits.ts's comment on
+      // the same underlying limit) block the redirect to the provider's own
+      // login page. Worst case if this write is lost, the callback below
+      // fails its state check and the user has to click "Connect" again -
+      // far better than never leaving this app's own error page.
+      c.executionCtx.waitUntil(
+        c.env.KV.put(stateKey(state), "1", { expirationTtl: 600 }), // 10 min
+      );
       return c.redirect(buildAuthUrl(c, state));
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Configuration error";

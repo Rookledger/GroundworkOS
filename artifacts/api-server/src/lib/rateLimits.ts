@@ -58,7 +58,21 @@ function authedUserId(c: Parameters<MiddlewareHandler<AppEnv>>[0]) {
  * an accepted trade-off for a zero-infra limiter backed by KV rather than a
  * Durable Object. It still does its job: bounding sustained abuse over a
  * 15-minute window, not enforcing an exact quota.
+ *
+ * The counter is only WRITTEN back to KV every WRITE_EVERY_N increments,
+ * not on every request - Cloudflare's free plan caps KV at 1,000 writes/day,
+ * and this limiter used to write on every single request across nearly the
+ * whole authenticated /api surface, which exhausted that quota within a
+ * normal day of usage and took every route down with "KV put() limit
+ * exceeded for the day." once it did. Reads (KV.get) aren't reduced - only
+ * the free tier's write cap is scarce (100,000 reads/day vs 1,000 writes).
+ * The trade-off: up to WRITE_EVERY_N-1 extra requests can slip through in a
+ * window before the persisted count catches up. Acceptable for this app's
+ * traffic and budgets - see the file-level comment above for the existing,
+ * similarly-accepted race-condition trade-off this extends.
  */
+const WRITE_EVERY_N = 5;
+
 function kvFixedWindowLimiter(opts: {
   limit: number;
   windowSec: number;
@@ -79,13 +93,19 @@ function kvFixedWindowLimiter(opts: {
       );
     }
 
-    // Best-effort increment - a lost write under a race just means the
-    // window slightly undercounts, which is the same trade-off noted above.
-    c.executionCtx.waitUntil(
-      c.env.KV.put(key, String(count + 1), {
-        expirationTtl: opts.windowSec + 60,
-      }),
-    );
+    const nextCount = count + 1;
+
+    // Best-effort increment, persisted only every WRITE_EVERY_N-th request
+    // (see the file-level comment above) - a lost write under a race, or a
+    // skipped batch write here, just means the window slightly undercounts,
+    // which is the same trade-off already accepted for the race condition.
+    if (nextCount % WRITE_EVERY_N === 0) {
+      c.executionCtx.waitUntil(
+        c.env.KV.put(key, String(nextCount), {
+          expirationTtl: opts.windowSec + 60,
+        }),
+      );
+    }
     return next();
   };
 }
