@@ -9,19 +9,29 @@ export const HEALTH_CHECK_PATHS = ["/api/healthz", "/api/readyz"] as const;
 
 /**
  * Unauthenticated routes that are a genuine abuse surface: the OAuth
- * provider callbacks and Better Auth's own endpoints (sign-in, session
- * refresh, etc - see app.ts, which mounts the Better Auth handler
- * unauthenticated by design, same as Clerk's hosted endpoints used to be).
- * Anyone can hit these without any auth, and a legitimate caller only ever
- * hits them a handful of times per session, so they keep a deliberately
- * tight limit.
+ * provider callbacks and the public sign-up surface. Anyone can hit these
+ * without any auth, and a legitimate caller only ever hits them a handful
+ * of times per session, so they keep a deliberately tight limit.
+ *
+ * Better Auth's own endpoints (sign-in, get-session, etc) used to share
+ * this same bucket, which was a mistake: get-session is polled on nearly
+ * every page load/component mount (RouteGuard's useSession(), the
+ * setup-status/bootstrap-status checks, etc), so ordinary browsing alone
+ * could exhaust the 30-request/15-minute budget - and the next real
+ * sign-in attempt, sharing that same IP-keyed window, would then 429 with
+ * nothing in the response for the frontend to show beyond a generic
+ * "Failed to sign in". Better Auth already does its own internal rate
+ * limiting on sensitive endpoints like sign-in, correctly IP-keyed since
+ * the ipAddressHeaders fix in lib/betterAuth.ts, so it doesn't depend on
+ * this outer limiter for brute-force protection - see
+ * createAuthRouteLimiter below for its own, more generous bucket that
+ * exists purely as a coarse abuse ceiling.
  */
 export const PUBLIC_ROUTE_PATHS = [
   "/api/xero/callback",
   "/api/quickbooks/callback",
   "/api/sage/callback",
   "/api/freeagent/callback",
-  "/api/auth/*",
   // Public sign-up (routes/admin.ts's /setup/status and /setup/first-admin)
   // - only reachable while the workspace has zero users, but still a
   // genuine unauthenticated abuse surface (account creation) up to that
@@ -29,6 +39,15 @@ export const PUBLIC_ROUTE_PATHS = [
   // rather than the more generous general anon limit.
   "/api/setup/*",
 ] as const;
+
+/**
+ * Better Auth's own endpoints (sign-in, sign-out, get-session, session
+ * refresh, etc - see app.ts, which mounts the Better Auth handler
+ * unauthenticated by design). Split out from PUBLIC_ROUTE_PATHS above - see
+ * the comment there for why sharing that tight bucket broke ordinary
+ * sign-in - and given its own, more generous limiter below.
+ */
+export const AUTH_ROUTE_PATH = "/api/auth/*";
 
 /**
  * The storage upload relay. PUT'd once per file (see routes/storage.ts), so
@@ -188,10 +207,30 @@ export const createHealthCheckLimiter = (): MiddlewareHandler<AppEnv> =>
     keyFn: (c) => `ip:${c.req.header("CF-Connecting-IP") ?? "unknown"}`,
   });
 
-/** Tight limit for the unauthenticated OAuth callbacks. */
+/** Tight limit for the unauthenticated OAuth callbacks and public sign-up. */
 export const createPublicRouteLimiter = (): MiddlewareHandler<AppEnv> =>
   kvFixedWindowLimiter({
     limit: 30,
+    windowSec: FIFTEEN_MINUTES_SEC,
+    keyFn: (c) => `ip:${c.req.header("CF-Connecting-IP") ?? "unknown"}`,
+  });
+
+/**
+ * More generous IP-keyed budget for Better Auth's own endpoint surface
+ * (see AUTH_ROUTE_PATH above for why this is split out of
+ * createPublicRouteLimiter). get-session alone can legitimately fire
+ * several times per page load across RouteGuard, AutoAdminBootstrap, and
+ * useSetupOpen, on top of whatever a real sign-in/sign-out/session-refresh
+ * flow adds - 300 requests per 15 minutes gives that headroom while still
+ * bounding an IP that does nothing but hammer this surface. Better Auth's
+ * own internal, per-endpoint rate limiting (see lib/betterAuth.ts) is what
+ * actually guards sign-in against brute-forcing; this is just the outer
+ * coarse ceiling shared with the rest of the unauthenticated abuse
+ * surface's KV-backed limiter implementation.
+ */
+export const createAuthRouteLimiter = (): MiddlewareHandler<AppEnv> =>
+  kvFixedWindowLimiter({
+    limit: 300,
     windowSec: FIFTEEN_MINUTES_SEC,
     keyFn: (c) => `ip:${c.req.header("CF-Connecting-IP") ?? "unknown"}`,
   });
