@@ -16,6 +16,7 @@ import {
   Receipt,
   Landmark,
   Signpost,
+  History,
   type LucideIcon,
 } from "lucide-react";
 import { Panel } from "../components/ui/Panel";
@@ -31,7 +32,11 @@ function CardTitle({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
         className="flex items-center justify-center flex-shrink-0"
         style={{ width: 26, height: 26, backgroundColor: "var(--accent-bg)" }}
       >
-        <Icon className="w-3.5 h-3.5" style={{ color: "var(--accent)" }} strokeWidth={1.5} />
+        <Icon
+          className="w-3.5 h-3.5"
+          style={{ color: "var(--accent)" }}
+          strokeWidth={1.5}
+        />
       </span>
       {label}
     </span>
@@ -40,10 +45,7 @@ function CardTitle({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
 
 function CardDescription({ children }: { children: ReactNode }) {
   return (
-    <p
-      className="text-xs px-5 pt-3.5 pb-0.5"
-      style={{ color: "var(--muted)" }}
-    >
+    <p className="text-xs px-5 pt-3.5 pb-0.5" style={{ color: "var(--muted)" }}>
       {children}
     </p>
   );
@@ -148,7 +150,10 @@ function SaveBar({
   return (
     <div
       className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-5 py-3.5"
-      style={{ backgroundColor: "var(--bg)", borderTop: "1px solid var(--border)" }}
+      style={{
+        backgroundColor: "var(--bg)",
+        borderTop: "1px solid var(--border)",
+      }}
     >
       <span className="text-xs" style={{ color: "var(--muted-2)" }}>
         {lastSavedAt
@@ -159,7 +164,12 @@ function SaveBar({
       </span>
       <div className="flex items-center gap-2">
         {dirty && (
-          <Btn size="sm" variant="outline" onClick={onDiscard} disabled={saving}>
+          <Btn
+            size="sm"
+            variant="outline"
+            onClick={onDiscard}
+            disabled={saving}
+          >
             Discard
           </Btn>
         )}
@@ -206,7 +216,10 @@ function LogoUpload({
     <div className="flex items-center gap-3">
       <div
         className="w-14 h-14 flex items-center justify-center flex-shrink-0 overflow-hidden"
-        style={{ backgroundColor: "var(--bg)", border: "1px solid var(--border)" }}
+        style={{
+          backgroundColor: "var(--bg)",
+          border: "1px solid var(--border)",
+        }}
       >
         {value ? (
           <img
@@ -215,7 +228,11 @@ function LogoUpload({
             className="w-full h-full object-contain"
           />
         ) : (
-          <Upload className="w-5 h-5" style={{ color: "var(--muted-2)" }} strokeWidth={1.5} />
+          <Upload
+            className="w-5 h-5"
+            style={{ color: "var(--muted-2)" }}
+            strokeWidth={1.5}
+          />
         )}
       </div>
       <input
@@ -225,7 +242,11 @@ function LogoUpload({
         className="hidden"
         onChange={(e) => handleFile(e.target.files?.[0])}
       />
-      <Btn size="sm" variant="outline" onClick={() => fileInputRef.current?.click()}>
+      <Btn
+        size="sm"
+        variant="outline"
+        onClick={() => fileInputRef.current?.click()}
+      >
         <Upload className="w-3.5 h-3.5" strokeWidth={1.5} />
         {value ? "Replace" : "Upload"}
       </Btn>
@@ -248,8 +269,29 @@ type ProviderStatus =
       orgName: string | null;
       connectedAt: string;
       updatedAt: string;
+      salesAccountCode?: string | null;
+      purchasesAccountCode?: string | null;
     };
 type SyncResult = { synced: number; failed: number } | null;
+
+type ExtraSync = {
+  label: string;
+  syncKey: string;
+  path: string;
+  note?: string;
+};
+
+type SyncLogEntry = {
+  id: string;
+  direction: "push" | "pull";
+  resource: string;
+  succeeded: number;
+  failed: number;
+  detail: string | null;
+  createdAt: string;
+};
+
+type XeroAccount = { code: string; name: string; type: string; class: string };
 
 type AccountingProviderConfig = {
   key: string;
@@ -257,6 +299,17 @@ type AccountingProviderConfig = {
   orgNameField: string;
   orgFallback: string;
   description: string;
+  /** Additional push/pull sync actions beyond the standard clients/invoices/quotes
+   * push and payment-status pull every provider gets. Xero-only for now — the
+   * underlying bill/supplier/credit-note push and account-code mapping only
+   * exist on the Xero side of the API so far. */
+  extraPushSyncs?: ExtraSync[];
+  extraPullSyncs?: ExtraSync[];
+  /** Shows a "Recent activity" panel backed by GET /api/{key}/sync/log. */
+  supportsSyncLog?: boolean;
+  /** Shows default sales/purchases account-code selectors backed by
+   * GET /api/{key}/accounts and PUT /api/{key}/settings. */
+  supportsAccountCodes?: boolean;
 };
 
 const ACCOUNTING_PROVIDERS: AccountingProviderConfig[] = [
@@ -267,6 +320,26 @@ const ACCOUNTING_PROVIDERS: AccountingProviderConfig[] = [
     orgFallback: "Xero Organisation",
     description:
       "Connect to Xero to automatically sync your invoices, quotes, and client contacts — no more double-entry.",
+    extraPushSyncs: [
+      {
+        label: "Sync Subcontractors",
+        syncKey: "suppliers",
+        path: "/api/xero/sync/suppliers",
+      },
+      {
+        label: "Sync Purchase Orders",
+        syncKey: "bills",
+        path: "/api/xero/sync/bills",
+      },
+      {
+        label: "Sync Credit Notes",
+        syncKey: "credit-notes",
+        path: "/api/xero/sync/credit-notes",
+        note: 'Pushes a real Xero credit note for every invoice marked "credited" that hasn\'t been pushed yet.',
+      },
+    ],
+    supportsSyncLog: true,
+    supportsAccountCodes: true,
   },
   {
     key: "quickbooks",
@@ -310,6 +383,12 @@ function AccountingProviderPanel({
     message: string;
   } | null>(null);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [syncLog, setSyncLog] = useState<SyncLogEntry[]>([]);
+  const [accounts, setAccounts] = useState<XeroAccount[]>([]);
+  const [accountsLoading, setAccountsLoading] = useState(false);
+  const [salesAccountCode, setSalesAccountCode] = useState("");
+  const [purchasesAccountCode, setPurchasesAccountCode] = useState("");
+  const [savingAccountCodes, setSavingAccountCodes] = useState(false);
 
   async function fetchStatus() {
     try {
@@ -321,7 +400,11 @@ function AccountingProviderPanel({
           orgName: data[provider.orgNameField] ?? null,
           connectedAt: data.connectedAt,
           updatedAt: data.updatedAt,
+          salesAccountCode: data.salesAccountCode ?? null,
+          purchasesAccountCode: data.purchasesAccountCode ?? null,
         });
+        setSalesAccountCode(data.salesAccountCode ?? "");
+        setPurchasesAccountCode(data.purchasesAccountCode ?? "");
       } else {
         setStatus({ connected: false });
       }
@@ -332,8 +415,54 @@ function AccountingProviderPanel({
     }
   }
 
+  async function fetchSyncLog() {
+    try {
+      const r = await fetch(`/api/${provider.key}/sync/log`);
+      const data = await r.json();
+      if (Array.isArray(data.entries)) setSyncLog(data.entries);
+    } catch {
+      // Best-effort - the panel just shows nothing if this fails.
+    }
+  }
+
+  async function fetchAccounts() {
+    setAccountsLoading(true);
+    try {
+      const r = await fetch(`/api/${provider.key}/accounts`);
+      const data = await r.json();
+      if (Array.isArray(data.accounts)) setAccounts(data.accounts);
+    } catch {
+      // Best-effort - the selectors just fall back to free text below.
+    } finally {
+      setAccountsLoading(false);
+    }
+  }
+
+  async function saveAccountCodes() {
+    setSavingAccountCodes(true);
+    try {
+      const r = await fetch(`/api/${provider.key}/settings`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          salesAccountCode: salesAccountCode || null,
+          purchasesAccountCode: purchasesAccountCode || null,
+        }),
+      });
+      if (!r.ok) throw new Error("Failed to save account codes");
+      toast.success("Default account codes saved.");
+      fetchStatus();
+    } catch (e) {
+      setBanner({ type: "error", message: String(e) });
+    } finally {
+      setSavingAccountCodes(false);
+    }
+  }
+
   useEffect(() => {
     fetchStatus();
+    if (provider.supportsSyncLog) fetchSyncLog();
+    if (provider.supportsAccountCodes) fetchAccounts();
     const params = new URLSearchParams(window.location.search);
     const providerParam = params.get(provider.key);
     const msg = params.get("msg");
@@ -363,6 +492,7 @@ function AccountingProviderPanel({
       const data = await r.json();
       if (!r.ok) throw new Error(data.error ?? "Sync failed");
       setSyncResults((prev) => ({ ...prev, [key]: data }));
+      if (provider.supportsSyncLog) fetchSyncLog();
     } catch (e) {
       setBanner({ type: "error", message: String(e) });
     } finally {
@@ -414,13 +544,19 @@ function AccountingProviderPanel({
           onClick={() => runSync(syncKey, path)}
           disabled={!!syncing}
         >
-          {busy ? <RefreshCw className="w-3.5 h-3.5 animate-spin" strokeWidth={1.5} /> : icon}
+          {busy ? (
+            <RefreshCw className="w-3.5 h-3.5 animate-spin" strokeWidth={1.5} />
+          ) : (
+            icon
+          )}
           {busy ? "Syncing…" : label}
         </Btn>
         {res && (
           <span
             className="text-xs font-mono tnum"
-            style={{ color: res.failed > 0 ? "var(--warning)" : "var(--success)" }}
+            style={{
+              color: res.failed > 0 ? "var(--warning)" : "var(--success)",
+            }}
           >
             {res.synced} synced{res.failed > 0 ? `, ${res.failed} failed` : ""}
           </span>
@@ -447,9 +583,13 @@ function AccountingProviderPanel({
         <div
           className="flex items-center gap-3 px-5 py-3 text-sm"
           style={{
-            backgroundColor: banner.type === "success" ? "var(--accent-bg)" : "var(--danger-bg)",
+            backgroundColor:
+              banner.type === "success"
+                ? "var(--accent-bg)"
+                : "var(--danger-bg)",
             borderBottom: "1px solid var(--border)",
-            color: banner.type === "success" ? "var(--accent)" : "var(--danger)",
+            color:
+              banner.type === "success" ? "var(--accent)" : "var(--danger)",
           }}
         >
           {banner.type === "success" ? (
@@ -553,6 +693,21 @@ function AccountingProviderPanel({
               path={`/api/${provider.key}/sync/quotes`}
               icon={<RefreshCw className="w-3.5 h-3.5" strokeWidth={1.5} />}
             />
+            {(provider.extraPushSyncs ?? []).map((s) => (
+              <div key={s.syncKey}>
+                <SyncBtn
+                  label={s.label}
+                  syncKey={s.syncKey}
+                  path={s.path}
+                  icon={<RefreshCw className="w-3.5 h-3.5" strokeWidth={1.5} />}
+                />
+                {s.note && (
+                  <p className="text-xs mt-2" style={{ color: "var(--muted)" }}>
+                    {s.note}
+                  </p>
+                )}
+              </div>
+            ))}
           </div>
 
           <div
@@ -578,7 +733,162 @@ function AccountingProviderPanel({
               Marks invoices as paid in GroundworkOS when they're marked paid in{" "}
               {provider.label}.
             </p>
+            {(provider.extraPullSyncs ?? []).map((s) => (
+              <div key={s.syncKey} className="mt-4">
+                <SyncBtn
+                  label={s.label}
+                  syncKey={s.syncKey}
+                  path={s.path}
+                  icon={<Download className="w-3.5 h-3.5" strokeWidth={1.5} />}
+                />
+                {s.note && (
+                  <p className="text-xs mt-2" style={{ color: "var(--muted)" }}>
+                    {s.note}
+                  </p>
+                )}
+              </div>
+            ))}
           </div>
+
+          {provider.supportsAccountCodes && (
+            <div
+              className="px-5 py-4 space-y-3"
+              style={{ borderBottom: "1px solid var(--border)" }}
+            >
+              <p
+                className="text-[11px] font-bold uppercase tracking-widest mb-1"
+                style={{
+                  color: "var(--muted)",
+                  fontFamily: "var(--font-heading)",
+                }}
+              >
+                Default account codes
+              </p>
+              <p className="text-xs" style={{ color: "var(--muted)" }}>
+                Applied to line items when pushing sales documents and purchase
+                bills. Leave blank to use {provider.label}'s own default
+                account.
+              </p>
+              <div className="flex flex-wrap items-end gap-3 pt-1">
+                <label className="flex flex-col gap-1 text-xs">
+                  <span style={{ color: "var(--muted)" }}>Sales account</span>
+                  <select
+                    value={salesAccountCode}
+                    onChange={(e) => setSalesAccountCode(e.target.value)}
+                    className="py-2 px-3 text-sm focus:outline-none min-w-[220px]"
+                    style={{
+                      backgroundColor: "var(--surface)",
+                      border: "1px solid var(--border)",
+                      color: "var(--ink-2)",
+                    }}
+                  >
+                    <option value="">
+                      {accountsLoading ? "Loading…" : "Use default"}
+                    </option>
+                    {accounts
+                      .filter((a) => a.class === "REVENUE")
+                      .map((a) => (
+                        <option key={a.code} value={a.code}>
+                          {a.code} — {a.name}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-xs">
+                  <span style={{ color: "var(--muted)" }}>
+                    Purchases account
+                  </span>
+                  <select
+                    value={purchasesAccountCode}
+                    onChange={(e) => setPurchasesAccountCode(e.target.value)}
+                    className="py-2 px-3 text-sm focus:outline-none min-w-[220px]"
+                    style={{
+                      backgroundColor: "var(--surface)",
+                      border: "1px solid var(--border)",
+                      color: "var(--ink-2)",
+                    }}
+                  >
+                    <option value="">
+                      {accountsLoading ? "Loading…" : "Use default"}
+                    </option>
+                    {accounts
+                      .filter((a) => a.class === "EXPENSE")
+                      .map((a) => (
+                        <option key={a.code} value={a.code}>
+                          {a.code} — {a.name}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                <Btn
+                  size="sm"
+                  variant="outline"
+                  onClick={saveAccountCodes}
+                  disabled={savingAccountCodes}
+                >
+                  <Save className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  {savingAccountCodes ? "Saving…" : "Save"}
+                </Btn>
+              </div>
+            </div>
+          )}
+
+          {provider.supportsSyncLog && (
+            <div
+              className="px-5 py-4"
+              style={{ borderBottom: "1px solid var(--border)" }}
+            >
+              <p
+                className="text-[11px] font-bold uppercase tracking-widest mb-3 flex items-center gap-2"
+                style={{
+                  color: "var(--muted)",
+                  fontFamily: "var(--font-heading)",
+                }}
+              >
+                <History className="w-3.5 h-3.5" strokeWidth={1.5} />
+                Recent activity
+              </p>
+              {syncLog.length === 0 ? (
+                <p className="text-xs" style={{ color: "var(--muted)" }}>
+                  Nothing synced yet.
+                </p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {syncLog.map((entry) => (
+                    <li
+                      key={entry.id}
+                      className="flex items-center gap-2 text-xs font-mono tnum"
+                    >
+                      <span style={{ color: "var(--muted-2)" }}>
+                        {new Date(entry.createdAt).toLocaleString("en-GB", {
+                          day: "numeric",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                      <span style={{ color: "var(--ink-2)" }}>
+                        {entry.direction === "push" ? "→" : "←"}{" "}
+                        {entry.resource}
+                      </span>
+                      <span
+                        style={{
+                          color:
+                            entry.failed > 0
+                              ? "var(--warning)"
+                              : "var(--success)",
+                        }}
+                      >
+                        {entry.detail
+                          ? entry.detail
+                          : `${entry.succeeded} ok${entry.failed > 0 ? `, ${entry.failed} failed` : ""}`}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
 
           <div className="px-5 py-4" style={{ backgroundColor: "var(--bg)" }}>
             <Btn
@@ -654,7 +964,9 @@ export function SettingsPage() {
   const s = state.settings;
 
   const [company, setCompany] = useState(companyFromSettings(s));
-  const [invoiceSettings, setInvoiceSettings] = useState(invoiceFromSettings(s));
+  const [invoiceSettings, setInvoiceSettings] = useState(
+    invoiceFromSettings(s),
+  );
   const [nrswa, setNrswa] = useState(nrswaFromSettings(s));
   const [bankDetails, setBankDetails] = useState(bankFromSettings(s));
   const [cisSettings, setCisSettings] = useState(cisFromSettings(s));
@@ -677,10 +989,12 @@ export function SettingsPage() {
     JSON.stringify(company) !== JSON.stringify(companyFromSettings(s));
   const invoiceDirty =
     JSON.stringify(invoiceSettings) !== JSON.stringify(invoiceFromSettings(s));
-  const nrswaDirty = JSON.stringify(nrswa) !== JSON.stringify(nrswaFromSettings(s));
+  const nrswaDirty =
+    JSON.stringify(nrswa) !== JSON.stringify(nrswaFromSettings(s));
   const bankDirty =
     JSON.stringify(bankDetails) !== JSON.stringify(bankFromSettings(s));
-  const cisDirty = JSON.stringify(cisSettings) !== JSON.stringify(cisFromSettings(s));
+  const cisDirty =
+    JSON.stringify(cisSettings) !== JSON.stringify(cisFromSettings(s));
 
   async function save(section: string, patch: Partial<CompanySettings>) {
     setSavingSection(section);
@@ -715,80 +1029,89 @@ export function SettingsPage() {
         </p>
       </div>
 
-      <Panel title={<CardTitle icon={Building2} label="Company details" />} noPad>
+      <Panel
+        title={<CardTitle icon={Building2} label="Company details" />}
+        noPad
+      >
         <CardDescription>
-          Core company information used across quotes, invoices, and the
-          client portal.
+          Core company information used across quotes, invoices, and the client
+          portal.
         </CardDescription>
         <div className="grid grid-cols-1 sm:grid-cols-2 sm:gap-x-2">
-        <SettingsRow
-          label="Company Logo"
-          description="Shown in the sidebar and on quotes, invoices, and purchase orders. PNG or SVG, up to 1MB."
-        >
-          <LogoUpload
-            value={company.companyLogo}
-            onChange={(v) => setCompany((c) => ({ ...c, companyLogo: v }))}
-          />
-        </SettingsRow>
-        <SettingsRow
-          label="Company Name"
-          description="The legal or trading name shown on all documents."
-        >
-          <Inp
-            value={company.companyName}
-            onChange={(v) => setCompany((c) => ({ ...c, companyName: v }))}
-            placeholder="Company name"
-          />
-        </SettingsRow>
-        <SettingsRow
-          label="Company Number"
-          description="Companies House registration number."
-        >
-          <Inp
-            value={company.companyNumber}
-            onChange={(v) => setCompany((c) => ({ ...c, companyNumber: v }))}
-            placeholder="Companies House number"
-            isMono
-          />
-        </SettingsRow>
-        <SettingsRow
-          label="VAT Number"
-          description="Printed on invoices when VAT registered."
-        >
-          <Inp
-            value={company.vatNumber}
-            onChange={(v) => setCompany((c) => ({ ...c, vatNumber: v }))}
-            placeholder="VAT registration number"
-            isMono
-          />
-        </SettingsRow>
-        <SettingsRow label="UTR Number" description="Unique Taxpayer Reference, used for CIS filings.">
-          <Inp
-            value={company.utrNumber}
-            onChange={(v) => setCompany((c) => ({ ...c, utrNumber: v }))}
-            placeholder="Unique Taxpayer Reference"
-            isMono
-          />
-        </SettingsRow>
-        <SettingsRow label="CIS Reference" description="Your HMRC contractor reference.">
-          <Inp
-            value={company.cisReference}
-            onChange={(v) => setCompany((c) => ({ ...c, cisReference: v }))}
-            placeholder="CIS contractor reference"
-            isMono
-          />
-        </SettingsRow>
-        <SettingsRow
-          label="Registered Address"
-          description="Shown on the footer of PDF documents."
-          isLast
-        >
-          <Inp
-            value={company.address}
-            onChange={(v) => setCompany((c) => ({ ...c, address: v }))}
-            placeholder="Address"
-          />
-        </SettingsRow>
+          <SettingsRow
+            label="Company Logo"
+            description="Shown in the sidebar and on quotes, invoices, and purchase orders. PNG or SVG, up to 1MB."
+          >
+            <LogoUpload
+              value={company.companyLogo}
+              onChange={(v) => setCompany((c) => ({ ...c, companyLogo: v }))}
+            />
+          </SettingsRow>
+          <SettingsRow
+            label="Company Name"
+            description="The legal or trading name shown on all documents."
+          >
+            <Inp
+              value={company.companyName}
+              onChange={(v) => setCompany((c) => ({ ...c, companyName: v }))}
+              placeholder="Company name"
+            />
+          </SettingsRow>
+          <SettingsRow
+            label="Company Number"
+            description="Companies House registration number."
+          >
+            <Inp
+              value={company.companyNumber}
+              onChange={(v) => setCompany((c) => ({ ...c, companyNumber: v }))}
+              placeholder="Companies House number"
+              isMono
+            />
+          </SettingsRow>
+          <SettingsRow
+            label="VAT Number"
+            description="Printed on invoices when VAT registered."
+          >
+            <Inp
+              value={company.vatNumber}
+              onChange={(v) => setCompany((c) => ({ ...c, vatNumber: v }))}
+              placeholder="VAT registration number"
+              isMono
+            />
+          </SettingsRow>
+          <SettingsRow
+            label="UTR Number"
+            description="Unique Taxpayer Reference, used for CIS filings."
+          >
+            <Inp
+              value={company.utrNumber}
+              onChange={(v) => setCompany((c) => ({ ...c, utrNumber: v }))}
+              placeholder="Unique Taxpayer Reference"
+              isMono
+            />
+          </SettingsRow>
+          <SettingsRow
+            label="CIS Reference"
+            description="Your HMRC contractor reference."
+          >
+            <Inp
+              value={company.cisReference}
+              onChange={(v) => setCompany((c) => ({ ...c, cisReference: v }))}
+              placeholder="CIS contractor reference"
+              isMono
+            />
+          </SettingsRow>
+          <SettingsRow
+            label="Registered Address"
+            description="Shown on the footer of PDF documents."
+            isLast
+          >
+            <Inp
+              value={company.address}
+              onChange={(v) => setCompany((c) => ({ ...c, address: v }))}
+              placeholder="Address"
+            />
+          </SettingsRow>
         </div>
         <SaveBar
           onSave={() => save("company", company)}
@@ -799,55 +1122,67 @@ export function SettingsPage() {
         />
       </Panel>
 
-      <Panel title={<CardTitle icon={Receipt} label="Invoicing defaults" />} noPad>
+      <Panel
+        title={<CardTitle icon={Receipt} label="Invoicing defaults" />}
+        noPad
+      >
         <CardDescription>
-          Numbering prefixes and default terms applied to new quotes,
-          invoices, and jobs.
+          Numbering prefixes and default terms applied to new quotes, invoices,
+          and jobs.
         </CardDescription>
         <div className="grid grid-cols-1 sm:grid-cols-2 sm:gap-x-2">
-        <SettingsRow label="Invoice Prefix" description="Prepended to every new invoice number.">
-          <Inp
-            value={invoiceSettings.invoicePrefix}
-            onChange={(v) =>
-              setInvoiceSettings((i) => ({ ...i, invoicePrefix: v }))
-            }
-            placeholder="INV"
-            isMono
-          />
-        </SettingsRow>
-        <SettingsRow label="Quote Prefix" description="Prepended to every new quote number.">
-          <Inp
-            value={invoiceSettings.quotePrefix}
-            onChange={(v) =>
-              setInvoiceSettings((i) => ({ ...i, quotePrefix: v }))
-            }
-            placeholder="QT"
-            isMono
-          />
-        </SettingsRow>
-        <SettingsRow label="Job Number Prefix" description="Prepended to every new job reference.">
-          <Inp
-            value={invoiceSettings.jobPrefix}
-            onChange={(v) =>
-              setInvoiceSettings((i) => ({ ...i, jobPrefix: v }))
-            }
-            placeholder="GW"
-            isMono
-          />
-        </SettingsRow>
-        <SettingsRow
-          label="Default Payment Terms"
-          description="Shown on invoices unless overridden per client."
-          isLast
-        >
-          <Inp
-            value={invoiceSettings.paymentTerms}
-            onChange={(v) =>
-              setInvoiceSettings((i) => ({ ...i, paymentTerms: v }))
-            }
-            placeholder="e.g. 30 days"
-          />
-        </SettingsRow>
+          <SettingsRow
+            label="Invoice Prefix"
+            description="Prepended to every new invoice number."
+          >
+            <Inp
+              value={invoiceSettings.invoicePrefix}
+              onChange={(v) =>
+                setInvoiceSettings((i) => ({ ...i, invoicePrefix: v }))
+              }
+              placeholder="INV"
+              isMono
+            />
+          </SettingsRow>
+          <SettingsRow
+            label="Quote Prefix"
+            description="Prepended to every new quote number."
+          >
+            <Inp
+              value={invoiceSettings.quotePrefix}
+              onChange={(v) =>
+                setInvoiceSettings((i) => ({ ...i, quotePrefix: v }))
+              }
+              placeholder="QT"
+              isMono
+            />
+          </SettingsRow>
+          <SettingsRow
+            label="Job Number Prefix"
+            description="Prepended to every new job reference."
+          >
+            <Inp
+              value={invoiceSettings.jobPrefix}
+              onChange={(v) =>
+                setInvoiceSettings((i) => ({ ...i, jobPrefix: v }))
+              }
+              placeholder="GW"
+              isMono
+            />
+          </SettingsRow>
+          <SettingsRow
+            label="Default Payment Terms"
+            description="Shown on invoices unless overridden per client."
+            isLast
+          >
+            <Inp
+              value={invoiceSettings.paymentTerms}
+              onChange={(v) =>
+                setInvoiceSettings((i) => ({ ...i, paymentTerms: v }))
+              }
+              placeholder="e.g. 30 days"
+            />
+          </SettingsRow>
         </div>
         <SaveBar
           onSave={() => save("invoiceSettings", invoiceSettings)}
