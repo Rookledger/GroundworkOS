@@ -140,8 +140,13 @@ export function buildAuthUrl(env: Bindings, state: string) {
     // accounting.transactions was retired for apps created after 2 Mar 2026;
     // Xero rejects it with invalid_scope. accounting.invoices is its granular
     // replacement and also covers Quotes (see Xero's scope migration guide).
+    // accounting.settings.read is required for GET /Accounts (chart of
+    // accounts). Without it the Default Account Codes dropdowns on the
+    // Settings page can never populate, invoices/bills/credit notes push
+    // with no AccountCode, and Xero rejects them with a 400
+    // ValidationException ("Account code or ID must be specified").
     scope:
-      "openid profile email accounting.contacts accounting.invoices offline_access",
+      "openid profile email accounting.contacts accounting.invoices accounting.settings.read offline_access",
     state,
   });
   return `https://login.xero.com/identity/connect/authorize?${params}`;
