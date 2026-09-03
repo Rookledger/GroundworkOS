@@ -37,8 +37,8 @@ jobs:
 
       # Runs @workspace/api-server's integration suite inside a real Workers
       # runtime (Miniflare/workerd) against a real local D1 database - see
-      # artifacts/api-server/vitest.integration.config.ts. Replaces the old
-      # Railway/Express version's Postgres service container + schema
+      # artifacts/api-server/vitest.integration.config.ts. Replaces the
+      # old Express version's Postgres service container + schema
       # push/seed steps, which no longer apply now that the backend runs on
       # D1/Workers (see @workspace/db's package.json, which dropped the
       # push-force script this used to call).

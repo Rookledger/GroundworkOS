@@ -19,7 +19,7 @@ Manage jobs, CIS compliance, quotes, invoices, plant, subcontractors, timesheets
 | Monorepo       | pnpm workspaces                                      |
 | Email          | Resend                                               |
 
-The frontend deploys to Cloudflare Pages and the backend deploys as a separate Cloudflare Worker — there is no single combined process serving both, unlike the project's earlier Express/Railway architecture (see `RAILWAY.md`'s git history if you need the old setup for reference).
+The frontend deploys to Cloudflare Pages and the backend deploys as a separate Cloudflare Worker — there is no single combined process serving both, unlike the project's earlier Express architecture.
 
 ---
 

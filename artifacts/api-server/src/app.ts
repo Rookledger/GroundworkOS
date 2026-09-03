@@ -82,7 +82,7 @@ app.use(async (c, next) =>
  * When APP_URL is set (required in production - see validateEnv.ts), only
  * that origin may make credentialed cross-origin requests. The frontend now
  * deploys separately to Cloudflare Pages (rather than being served by this
- * same process, as the old STATIC_DIR single-service setup did on Railway),
+ * same process, as the old STATIC_DIR single-service setup did previously),
  * so this is the only thing standing between the API and an arbitrary
  * origin.
  */

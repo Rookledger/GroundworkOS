@@ -7,7 +7,7 @@ import type { Bindings } from "../types";
  * a route deep in the app throwing on whichever var it happens to read
  * first.
  *
- * This dropped a few checks the old Railway/Express version had that no
+ * This dropped a few checks the old Express version had that no
  * longer apply on Workers:
  *  - PORT / DATABASE_URL / S3_* - gone with Express's own listener and the
  *    S3-compatible object storage backend (see objectStorage.ts / R2).
