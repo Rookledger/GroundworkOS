@@ -152,8 +152,11 @@ Local dev also needs `artifacts/api-server/.dev.vars` set with at least `APP_URL
 │   ├── shared-role/         # Shared role types/logic (frontend + backend)
 │   └── object-storage-web/  # File upload utilities
 ├── scripts/                 # Standalone scripts (workspace package)
+├── docs/adr/                # Architecture decision records (why the stack looks the way it does)
 └── pnpm-workspace.yaml
 ```
+
+See **[docs/adr](./docs/adr)** for the rationale behind this stack — this project has been through several major migrations (Express → Hono/Workers, Postgres → D1, Clerk → Better Auth, Railway → Cloudflare), and the ADRs there are the single place that history is written down instead of scattered across code comments.
 
 ---
 

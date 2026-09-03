@@ -29,7 +29,11 @@ export default tseslint.config(
       // noUnusedLocals: false), so this is the only thing that catches
       // dead imports/locals - block CI on it rather than just warn.
       "@typescript-eslint/no-unused-vars": "error",
-      "@typescript-eslint/no-explicit-any": "off",
+      // Baselined as a warning rather than off (tech-debt audit #6) so new
+      // `any` usage is at least visible in CI output; the existing ~75
+      // sites (mostly OAuth provider clients and integration test JSON
+      // parsing) are being fixed incrementally rather than all at once.
+      "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-empty-object-type": "off",
       "no-empty": ["error", { allowEmptyCatch: true }],
     },
