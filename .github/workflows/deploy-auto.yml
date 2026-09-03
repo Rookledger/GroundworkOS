@@ -1,0 +1,39 @@
+name: Deploy (auto)
+
+# Tech-debt audit finding #5: the API Worker previously never redeployed
+# itself on push - DEPLOYMENT.md documented that as a manual "run `wrangler
+# deploy` yourself" step, and that gap already caused a real incident (a
+# commit briefly pointed D1/KV bindings at a nonexistent database/namespace,
+# caught in the dashboard and reverted rather than by CI). This closes that
+# gap for the one client actually running today ("ktr" - see
+# artifacts/api-server/wrangler.jsonc's "Multi-client deployment" comment):
+# every push to `main` applies pending D1 migrations and redeploys both
+# Workers for it, the same steps deploy.yml runs manually, via the shared
+# deploy-reusable.yml.
+#
+# Deliberately NOT wired to every `env.<slug>` block: GroundworkOS is
+# multi-tenant-by-repo (each client is its own Cloudflare account, D1
+# database, and set of secrets - see DEPLOYMENT.md's "Multiple clients"
+# section), so blindly deploying every client on every push to `main` would
+# mean one team's commit immediately rolling out, unreviewed, to every other
+# client's production instance. Onboarding a second client (say "acme") does
+# NOT get it auto-deploy for free - it stays on deploy.yml's manual
+# `workflow_dispatch` path unless a maintainer deliberately adds it below,
+# which is exactly the deliberate-per-client-rollout behavior multi-client
+# operators want.
+#
+# Needs no new secrets: it reuses the exact CLOUDFLARE_API_TOKEN (and
+# CLOUDFLARE_ACCOUNT_ID/BETTER_AUTH_SECRET, if configured) already sitting
+# on the "ktr" GitHub Environment for the manual workflow.
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy-ktr:
+    uses: ./.github/workflows/deploy-reusable.yml
+    with:
+      client: ktr
+      run_migrations: true
+    secrets: inherit

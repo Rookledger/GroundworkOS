@@ -1,17 +1,19 @@
 name: Deploy
 
-# Deploys one client's GroundworkOS instance (its API Worker + frontend
-# Worker) to that client's own Cloudflare account. Each client is a named
-# Wrangler environment (see artifacts/api-server/wrangler.jsonc and
+# Manually deploys one client's GroundworkOS instance (its API Worker +
+# frontend Worker) to that client's own Cloudflare account. Each client is a
+# named Wrangler environment (see artifacts/api-server/wrangler.jsonc and
 # artifacts/groundworkos/wrangler.jsonc's `env.<client>` blocks) and a
 # matching GitHub Environment of the same name holding that client's
 # CLOUDFLARE_API_TOKEN (and CLOUDFLARE_ACCOUNT_ID, if not set inline in
 # wrangler.jsonc) as environment secrets - see DEPLOYMENT.md's "Multiple
 # clients, multiple Cloudflare accounts" section.
 #
-# Manual trigger only: deploys are deliberate, per-client actions, not tied
-# to every push to main (multiple clients would otherwise all redeploy
-# together off one branch).
+# Manual trigger, any client: this is what you run to onboard a new client,
+# or to deliberately redeploy/rollback an existing one on demand. It shares
+# its actual deploy steps with deploy-auto.yml (which auto-deploys on every
+# push to `main`, but only for the "ktr" client) via deploy-reusable.yml -
+# see that file's header for why the two are split.
 
 on:
   workflow_dispatch:
@@ -28,69 +30,8 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
-    environment: ${{ inputs.client }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.0
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Set BETTER_AUTH_SECRET
-        # Optional: only runs if this environment has a BETTER_AUTH_SECRET
-        # GitHub secret configured. Lets a client be fully onboarded via
-        # GitHub Environment secrets alone, with no local `wrangler login`
-        # needed. Safe to run on every deploy - `wrangler secret put` just
-        # overwrites with the same value when it hasn't changed.
-        working-directory: artifacts/api-server
-        run: |
-          if [ -z "$BETTER_AUTH_SECRET" ]; then
-            echo "No BETTER_AUTH_SECRET GitHub secret set for this environment - skipping. Set one locally with 'wrangler secret put BETTER_AUTH_SECRET --env ${{ inputs.client }}', or add a BETTER_AUTH_SECRET environment secret in GitHub to have this step manage it instead."
-            exit 0
-          fi
-          echo "$BETTER_AUTH_SECRET" | pnpm exec wrangler secret put BETTER_AUTH_SECRET --env "${{ inputs.client }}"
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
-
-      - name: Apply D1 migrations
-        if: ${{ inputs.run_migrations }}
-        working-directory: artifacts/api-server
-        run: pnpm exec wrangler d1 migrations apply groundworkos --env "${{ inputs.client }}" --remote
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-      - name: Deploy API Worker
-        working-directory: artifacts/api-server
-        run: pnpm exec wrangler deploy --env "${{ inputs.client }}"
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-      - name: Build frontend
-        working-directory: artifacts/groundworkos
-        run: pnpm run build
-        env:
-          BASE_PATH: /
-
-      - name: Deploy frontend Worker
-        working-directory: artifacts/groundworkos
-        run: pnpm exec wrangler deploy --env "${{ inputs.client }}"
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    uses: ./.github/workflows/deploy-reusable.yml
+    with:
+      client: ${{ inputs.client }}
+      run_migrations: ${{ inputs.run_migrations }}
+    secrets: inherit

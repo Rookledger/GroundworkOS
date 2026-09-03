@@ -3,7 +3,10 @@ import type { Context } from "hono";
 import { eq, sql } from "drizzle-orm";
 import { userTable, invitationsTable, sessionTable } from "@workspace/db";
 import { isRole, resolveRole } from "@workspace/shared-role";
-import { emailDomainAllowed, parseAllowedDomains } from "../lib/signupPolicy.js";
+import {
+  emailDomainAllowed,
+  parseAllowedDomains,
+} from "../lib/signupPolicy.js";
 import { createAuth } from "../lib/betterAuth.js";
 import type { AppEnv } from "../types";
 
@@ -17,20 +20,28 @@ function getUserId(c: Context<AppEnv>): string | null {
 }
 
 /**
- * Optional lockdown for the bootstrap escape hatch below. Left unset,
- * POST /admin/bootstrap grants admin to whichever signed-in user calls it
- * first on an admin-less workspace - fine as a one-time setup step on a
- * workspace nobody else can reach yet, but a land grab if the service is
- * already publicly reachable: whoever accepts an invitation first (or, on a
- * misconfigured deployment, whoever otherwise gets a session first) can also
- * bootstrap first and permanently own the instance. Setting
- * BOOTSTRAP_ADMIN_EMAIL restricts that first grab to a single known email
- * address, matched case-insensitively against the caller's own email.
+ * Required lockdown for the bootstrap escape hatch below. attemptBootstrap()
+ * refuses to run at all while this is unset (tech-debt audit finding #2 -
+ * previously this only logged a warning and let the first caller through,
+ * which was a real land-grab window on any workspace the service was
+ * already reachable on). This is deliberately safe to require unconditionally:
+ * the *other* first-admin path, POST /setup/first-admin above, only ever
+ * runs on a genuinely empty workspace (zero users at all) and needs no such
+ * lock - a truly empty workspace has no invited users who could race for
+ * it. attemptBootstrap() only exists for the narrower fallback case where
+ * some non-admin users already exist but none of them is an admin (e.g.
+ * every admin account was later removed) - since GroundworkOS is
+ * invite-only, those users can only exist because an admin invited them at
+ * some point, so requiring the deployer to explicitly name who should
+ * reclaim admin, rather than letting it go to whichever of them opens
+ * Settings -> Users first, is not a meaningful loss of convenience. An
+ * operator locked out with BOOTSTRAP_ADMIN_EMAIL unset still has the direct
+ * D1 query fallback documented in README.md's bootstrap section.
  *
  * Unlike the original Express version, this can't be read and warned about
  * once at process startup - Workers have no module-level env, only
  * per-request c.env - so bootstrapAdminEmail() below reads it fresh on each
- * bootstrap call, and the "not set" warning (if any) is logged there too.
+ * bootstrap call.
  */
 function bootstrapAdminEmail(c: Context<AppEnv>): string | null {
   return c.env.BOOTSTRAP_ADMIN_EMAIL?.trim().toLowerCase() || null;
@@ -198,7 +209,9 @@ router.patch("/admin/users/:id/active", async (c) => {
     return c.json(
       {
         error:
-          err instanceof Error ? err.message : "Failed to update account status",
+          err instanceof Error
+            ? err.message
+            : "Failed to update account status",
       },
       500,
     );
@@ -253,7 +266,9 @@ router.post("/admin/invitations", async (c) => {
     return c.json({ error: "Invalid role" }, 400);
   }
 
-  const allowedDomains = parseAllowedDomains(c.env.SIGNUP_ALLOWED_EMAIL_DOMAINS);
+  const allowedDomains = parseAllowedDomains(
+    c.env.SIGNUP_ALLOWED_EMAIL_DOMAINS,
+  );
   if (!emailDomainAllowed(email, allowedDomains)) {
     return c.json(
       { error: "This email domain is not allowed to be invited" },
@@ -511,9 +526,14 @@ router.post("/setup/first-admin", async (c) => {
     return c.json({ error: "name, email and password are required" }, 400);
   }
 
-  const allowedDomains = parseAllowedDomains(c.env.SIGNUP_ALLOWED_EMAIL_DOMAINS);
+  const allowedDomains = parseAllowedDomains(
+    c.env.SIGNUP_ALLOWED_EMAIL_DOMAINS,
+  );
   if (!emailDomainAllowed(email, allowedDomains)) {
-    return c.json({ error: "This email domain is not allowed to sign up" }, 400);
+    return c.json(
+      { error: "This email domain is not allowed to sign up" },
+      400,
+    );
   }
 
   try {
@@ -614,12 +634,8 @@ router.post("/setup/first-admin", async (c) => {
 //   keeps working exactly as before, and callers get a real HTTP status
 //   they can act on instead of having to poll bootstrap-status.
 //
-// Two things this can't fix on its own, and how they're handled:
+// One more thing this can't fix on its own, and how it's handled:
 //
-// - Land grab: on an admin-less workspace, this grants admin to whichever
-//   signed-in user is resolved first. If BOOTSTRAP_ADMIN_EMAIL is set,
-//   bootstrap is restricted to that one email address; if unset, this route
-//   logs a warning (see below).
 // - TOCTOU: the adminExists() check and the role write below are two
 //   separate D1 statements, not one atomic operation, so two concurrent
 //   callers can both observe "no admin" and both write "admin" before
@@ -653,24 +669,31 @@ async function attemptBootstrap(
     const adminEmail = bootstrapAdminEmail(c);
     if (!adminEmail) {
       c.get("logger").warn(
-        "BOOTSTRAP_ADMIN_EMAIL is not set - POST /admin/bootstrap will grant admin to whichever " +
-          "signed-in user calls it first on this admin-less workspace. Set BOOTSTRAP_ADMIN_EMAIL " +
-          "to lock the bootstrap route to one known email address.",
+        "BOOTSTRAP_ADMIN_EMAIL is not set - bootstrap is disabled until it is. " +
+          "Set BOOTSTRAP_ADMIN_EMAIL to the email address that should reclaim admin, or " +
+          "promote a user directly with a D1 query (see README.md).",
       );
+      return {
+        status: 403,
+        body: {
+          error:
+            "This workspace has no admin and BOOTSTRAP_ADMIN_EMAIL is not configured, so " +
+            "self-service bootstrap is disabled. Ask whoever deployed this instance to set " +
+            "BOOTSTRAP_ADMIN_EMAIL (see README.md), or promote a user directly with a D1 query.",
+        },
+      };
     }
 
-    if (adminEmail) {
-      const callerEmail = caller?.email?.toLowerCase();
-      if (callerEmail !== adminEmail) {
-        return {
-          status: 403,
-          body: {
-            error:
-              "Bootstrap is restricted to a specific admin email for this workspace. " +
-              "Ask that person to sign in and bootstrap, or ask an existing admin to promote you.",
-          },
-        };
-      }
+    const callerEmail = caller?.email?.toLowerCase();
+    if (callerEmail !== adminEmail) {
+      return {
+        status: 403,
+        body: {
+          error:
+            "Bootstrap is restricted to a specific admin email for this workspace. " +
+            "Ask that person to sign in and bootstrap, or ask an existing admin to promote you.",
+        },
+      };
     }
 
     if (await adminExists(c)) {
@@ -736,11 +759,14 @@ router.get("/admin/bootstrap-status", async (c) => {
   try {
     // Auto-bootstrap: UsersPage calls this route for any signed-in,
     // non-admin user as soon as they open Settings -> Users, so on a still
-    // admin-less workspace this promotes the first person to land there -
-    // no separate "Make me admin" click required. attemptBootstrap() still
-    // enforces BOOTSTRAP_ADMIN_EMAIL (if set) and the TOCTOU-safe
-    // single-winner logic, so a caller who doesn't match the configured
-    // email, or who loses a concurrent race, simply doesn't get promoted.
+    // admin-less workspace with BOOTSTRAP_ADMIN_EMAIL configured, this
+    // promotes that one named person the moment they land there - no
+    // separate "Make me admin" click required. attemptBootstrap() requires
+    // BOOTSTRAP_ADMIN_EMAIL to be set at all (see the comment on it above)
+    // and enforces the TOCTOU-safe single-winner logic, so a caller who
+    // doesn't match the configured email, or who loses a concurrent race,
+    // simply doesn't get promoted - and if it isn't configured, nobody
+    // does, silently, every time this route is hit.
     //
     // `justBootstrapped` tells the frontend this exact call is what did it,
     // so it can reload immediately instead of rendering "Admin access

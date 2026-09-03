@@ -193,8 +193,20 @@ sign-up endpoint at all. Every account is normally created by an admin
 inviting an email from **Settings → Users** (`POST /api/admin/invitations`),
 which the invitee accepts at `/accept-invite?token=...`. On a brand-new
 deployment that's a chicken-and-egg problem — there are zero users, and
-creating an invitation itself requires an admin — so the very first account
-has to be seeded directly in D1:
+creating an invitation itself requires an admin.
+
+**Easiest: the built-in setup page.** Visit
+`https://app.yourdomain.com/setup` and create your account there directly —
+this is the one self-service registration surface the app has
+(`GET /api/setup/status` + `POST /api/setup/first-admin`, see
+`artifacts/api-server/src/routes/admin.ts` and the frontend's `SetupPage` in
+`artifacts/groundworkos/src/App.tsx`). It only works while the workspace has
+zero users at all; once your account exists, the route starts refusing and
+the page redirects to `/sign-in`. No `wrangler d1 execute` needed.
+
+Alternatively — e.g. if you'd rather not expose that route, or want to
+review its use of Better Auth's server API before relying on it in
+production — you can seed the very first account directly in D1:
 
 1. Insert an invitation row for yourself, with `role` set straight to
    `admin` (this skips the bootstrap flow below entirely). Generate a random
@@ -210,29 +222,29 @@ has to be seeded directly in D1:
 
    (from `artifacts/api-server`; `unixepoch() + 604800` gives the invite a
    7-day expiry, matching `INVITATION_TTL_MS` in `routes/admin.ts`.)
+
 2. Visit `https://app.yourdomain.com/accept-invite?token=REPLACE_WITH_A_RANDOM_TOKEN`
    and set your name and password. This creates your Better Auth account,
    stamps the `admin` role onto it, and signs you in.
 3. Go to **Settings → Users** — the full admin view should already be
    visible, since your account was invited straight in as `admin`.
 
-Alternatively, you can seed the first invitation with a lower role (e.g.
-`foreman`) and rely on the automatic bootstrap flow instead: the first
-signed-in, non-admin user to open **Settings → Users** on an admin-less
-workspace is promoted to admin automatically (that page calls
+There's also a separate, narrower "bootstrap" flow for a workspace that
+already has some non-admin users but nobody with `role: "admin"` any more
+(e.g. every admin account was later removed) — the setup page above only
+ever runs on a truly empty workspace, so it doesn't cover that case. On an
+admin-less workspace, the first signed-in, non-admin user to open
+**Settings → Users** is auto-promoted (that page calls
 `GET /api/admin/bootstrap-status`, which performs the promotion itself
 rather than only reporting on it, then reloads), and a "Make me admin"
-button (`POST /api/admin/bootstrap`) remains as a manual fallback for the
-rare case the automatic path doesn't apply to you. Either way, that means
-whoever accepts an invitation and opens Settings → Users first — not
-necessarily you — can also bootstrap first, automatically, with no click
-required. If you go this route, set `BOOTSTRAP_ADMIN_EMAIL` (Step 3) to your
-own email address first, so bootstrap is restricted to you even if someone
-else's invitation gets accepted before yours — left unset, the server logs a
-warning on every bootstrap attempt that it's open to whoever gets there
-first. Once any account has `role: "admin"`, both bootstrap paths stop
-working for everyone else, and further role changes go through the same
-**Settings → Users** page.
+button (`POST /api/admin/bootstrap`) remains as a manual fallback. **This
+path requires `BOOTSTRAP_ADMIN_EMAIL` (Step 3) to already be set** to the
+one email address that should reclaim admin — with it unset, both routes
+refuse with a 403 rather than letting whoever gets there first win the
+race (tech-debt audit finding #2: this used to just log a warning and let
+the first caller through). Once any account has `role: "admin"`, both
+bootstrap routes stop working for everyone else, and further role changes
+go through the same **Settings → Users** page.
 
 Fallback: if you're ever locked out with no admin account at all (e.g.
 restoring from a backup), you can set a user's `role` column to `admin`
@@ -246,16 +258,24 @@ pnpm exec wrangler d1 execute groundworkos --remote --command "
 
 ## Updating the app later
 
-Push new commits to the connected branch:
+Push new commits to `main`:
 
-- The Cloudflare Pages project rebuilds and redeploys the frontend
-  automatically, if it's connected via Cloudflare's Git integration.
-- The Worker does **not** redeploy itself on push — run `wrangler deploy`
-  again yourself (or wire it into CI/CD, e.g. a GitHub Actions step running
-  `wrangler deploy` with an API token).
-- Any new D1 migrations need `wrangler d1 migrations apply groundworkos
---remote` re-run after deploying — this doesn't happen automatically the
-  way the old Express version's start-command migration step did.
+- `.github/workflows/deploy-auto.yml` runs automatically: it applies any
+  pending D1 migrations (`wrangler d1 migrations apply groundworkos
+  --remote`) and redeploys both the API Worker and the frontend Worker for
+  the primary ("ktr") client, using the same `CLOUDFLARE_API_TOKEN` GitHub
+  Environment secret the manual Deploy workflow already uses — no extra
+  setup needed. (Previously this was a fully manual step, and the gap
+  already caused a real incident — see tech-debt audit finding #5 — so
+  don't turn this off without another way to keep migrations and the
+  deployed Worker in sync.)
+- If the frontend is *also* connected via Cloudflare Pages' own Git
+  integration (Step 5), that project rebuilds and redeploys independently
+  of the above.
+- Any additional client (Step "Onboarding a new client" below) is **not**
+  auto-deployed by the above — it only redeploys when you manually run the
+  **Deploy** workflow with its `client` slug. See `deploy-auto.yml`'s header
+  comment for why auto-deploy is intentionally scoped to one client.
 
 ## Custom domain
 
