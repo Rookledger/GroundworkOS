@@ -897,7 +897,10 @@ export function SettingsPage() {
         </SettingsRow>
         <SaveBar
           onSave={() => save("bankDetails", bankDetails)}
+          onDiscard={() => setBankDetails(bankFromSettings(s))}
           saving={savingSection === "bankDetails"}
+          dirty={bankDirty}
+          lastSavedAt={lastSaved.bankDetails}
         />
       </Panel>
 
@@ -950,7 +953,10 @@ export function SettingsPage() {
         </SettingsRow>
         <SaveBar
           onSave={() => save("cisSettings", cisSettings)}
+          onDiscard={() => setCisSettings(cisFromSettings(s))}
           saving={savingSection === "cisSettings"}
+          dirty={cisDirty}
+          lastSavedAt={lastSaved.cisSettings}
         />
       </Panel>
 
@@ -1001,7 +1007,10 @@ export function SettingsPage() {
         </SettingsRow>
         <SaveBar
           onSave={() => save("nrswa", nrswa)}
+          onDiscard={() => setNrswa(nrswaFromSettings(s))}
           saving={savingSection === "nrswa"}
+          dirty={nrswaDirty}
+          lastSavedAt={lastSaved.nrswa}
         />
       </Panel>
 
