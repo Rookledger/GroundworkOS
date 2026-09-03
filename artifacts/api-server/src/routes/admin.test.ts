@@ -179,16 +179,35 @@ describe("GET /admin/bootstrap-status", () => {
     });
   });
 
-  it("auto-bootstraps the caller on a genuinely admin-less workspace, with no separate click", async () => {
-    const users = [makeUser({ id: "user_1", role: "foreman" })];
+  it("auto-bootstraps the configured caller on a genuinely admin-less workspace, with no separate click", async () => {
+    const users = [
+      makeUser({ id: "user_1", role: "foreman", email: "owner@example.com" }),
+    ];
     const app = buildApp({ userId: "user_1", users, logger: makeLogger() });
 
-    const res = await app.request("/admin/bootstrap-status", {}, makeEnv());
+    const res = await app.request(
+      "/admin/bootstrap-status",
+      {},
+      makeEnv({ BOOTSTRAP_ADMIN_EMAIL: "owner@example.com" }),
+    );
 
     expect(users[0].role).toBe("admin");
     await expect(res.json()).resolves.toEqual({
       adminExists: true,
       justBootstrapped: true,
+    });
+  });
+
+  it("does not auto-bootstrap anyone when BOOTSTRAP_ADMIN_EMAIL is not configured (default-deny)", async () => {
+    const users = [makeUser({ id: "user_1", role: "foreman" })];
+    const app = buildApp({ userId: "user_1", users, logger: makeLogger() });
+
+    const res = await app.request("/admin/bootstrap-status", {}, makeEnv());
+
+    expect(users[0].role).toBe("foreman");
+    await expect(res.json()).resolves.toEqual({
+      adminExists: false,
+      justBootstrapped: false,
     });
   });
 
@@ -238,7 +257,24 @@ describe("POST /admin/bootstrap", () => {
     expect(res.status).toBe(401);
   });
 
-  it("promotes the caller to admin on a genuinely admin-less workspace", async () => {
+  it("promotes the configured caller to admin on a genuinely admin-less workspace", async () => {
+    const users = [
+      makeUser({ id: "user_1", role: "foreman", email: "owner@example.com" }),
+    ];
+    const app = buildApp({ userId: "user_1", users, logger: makeLogger() });
+
+    const res = await app.request(
+      "/admin/bootstrap",
+      { method: "POST" },
+      makeEnv({ BOOTSTRAP_ADMIN_EMAIL: "owner@example.com" }),
+    );
+
+    expect(users[0].role).toBe("admin");
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({ ok: true });
+  });
+
+  it("refuses to bootstrap anyone when BOOTSTRAP_ADMIN_EMAIL is not configured (default-deny, 403)", async () => {
     const users = [makeUser({ id: "user_1", role: "foreman" })];
     const app = buildApp({ userId: "user_1", users, logger: makeLogger() });
 
@@ -248,14 +284,13 @@ describe("POST /admin/bootstrap", () => {
       makeEnv(),
     );
 
-    expect(users[0].role).toBe("admin");
-    expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({ ok: true });
+    expect(users[0].role).toBe("foreman");
+    expect(res.status).toBe(403);
   });
 
   it("refuses to bootstrap when an admin already exists (409)", async () => {
     const users = [
-      makeUser({ id: "user_1", role: "foreman" }),
+      makeUser({ id: "user_1", role: "foreman", email: "owner@example.com" }),
       makeUser({ id: "existing_admin", role: "admin" }),
     ];
     const app = buildApp({ userId: "user_1", users, logger: makeLogger() });
@@ -263,7 +298,7 @@ describe("POST /admin/bootstrap", () => {
     const res = await app.request(
       "/admin/bootstrap",
       { method: "POST" },
-      makeEnv(),
+      makeEnv({ BOOTSTRAP_ADMIN_EMAIL: "owner@example.com" }),
     );
 
     expect(users[0].role).toBe("foreman");
@@ -271,16 +306,22 @@ describe("POST /admin/bootstrap", () => {
   });
 
   describe("BOOTSTRAP_ADMIN_EMAIL restriction", () => {
-    it("warns when a bootstrap is attempted with BOOTSTRAP_ADMIN_EMAIL unset", async () => {
+    it("warns and refuses (403) when a bootstrap is attempted with BOOTSTRAP_ADMIN_EMAIL unset", async () => {
       const logger = makeLogger();
       const users = [makeUser({ id: "user_1", role: "foreman" })];
       const app = buildApp({ userId: "user_1", users, logger });
 
-      await app.request("/admin/bootstrap", { method: "POST" }, makeEnv());
+      const res = await app.request(
+        "/admin/bootstrap",
+        { method: "POST" },
+        makeEnv(),
+      );
 
       expect(logger.warn).toHaveBeenCalledWith(
         expect.stringContaining("BOOTSTRAP_ADMIN_EMAIL is not set"),
       );
+      expect(res.status).toBe(403);
+      expect(users[0].role).toBe("foreman");
     });
 
     it("does not warn when BOOTSTRAP_ADMIN_EMAIL is set", async () => {
@@ -365,7 +406,11 @@ describe("POST /admin/bootstrap", () => {
       // The racer already committed its (losing) write at t=200 before this
       // test starts.
       const users = [
-        makeUser({ id: "user_winner", role: "foreman" }),
+        makeUser({
+          id: "user_winner",
+          role: "foreman",
+          email: "owner@example.com",
+        }),
         makeUser({ id: "user_racer", role: "admin", updatedAt: new Date(200) }),
       ];
       const app = buildApp({
@@ -389,7 +434,7 @@ describe("POST /admin/bootstrap", () => {
       const res = await app.request(
         "/admin/bootstrap",
         { method: "POST" },
-        makeEnv(),
+        makeEnv({ BOOTSTRAP_ADMIN_EMAIL: "owner@example.com" }),
       );
 
       await expect(res.json()).resolves.toEqual({ ok: true });
@@ -400,7 +445,11 @@ describe("POST /admin/bootstrap", () => {
       // The other caller already committed its (winning) write at t=100
       // before this test starts.
       const users = [
-        makeUser({ id: "user_loser", role: "manager" }),
+        makeUser({
+          id: "user_loser",
+          role: "manager",
+          email: "owner@example.com",
+        }),
         makeUser({
           id: "user_winner",
           role: "admin",
@@ -422,7 +471,7 @@ describe("POST /admin/bootstrap", () => {
       const res = await app.request(
         "/admin/bootstrap",
         { method: "POST" },
-        makeEnv(),
+        makeEnv({ BOOTSTRAP_ADMIN_EMAIL: "owner@example.com" }),
       );
 
       expect(res.status).toBe(409);

@@ -86,7 +86,9 @@ Everything else is optional:
 # invite (checked in POST /admin/invitations).
 SIGNUP_ALLOWED_EMAIL_DOMAINS=yourcompany.co.uk
 
-# Locks the first-admin bootstrap flow to one email address (see User Roles below)
+# Required to use the admin-reclaim bootstrap fallback at all (see the
+# "Bootstrap fallback" note under User Roles below) - the normal /setup
+# first-run flow doesn't need this.
 BOOTSTRAP_ADMIN_EMAIL=owner@yourcompany.co.uk
 
 # Email (get from resend.com)
