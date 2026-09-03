@@ -15,7 +15,6 @@ import {
   Building2,
   Receipt,
   Landmark,
-  Signpost,
   History,
   type LucideIcon,
 } from "lucide-react";

@@ -23,10 +23,12 @@ function buildApp() {
     c.set("db", createDb(env.DB));
     c.set("userId", "integration-test-user");
     c.set("_role", "admin");
-    c.set(
-      "logger",
-      { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() } as never,
-    );
+    c.set("logger", {
+      warn: vi.fn(),
+      error: vi.fn(),
+      info: vi.fn(),
+      debug: vi.fn(),
+    } as never);
     await next();
   });
   app.route("/", rateBookRouter);
@@ -53,14 +55,14 @@ describe("full write cycle for /rate-book/:id", () => {
       }),
     });
     expect(createRes.status).toBe(201);
-    const created = await createRes.json();
+    const created = (await createRes.json()) as any;
     expect(created.totalRate).toBe(17);
 
     // Rate book has no GET /:id route; confirm the created row via the list
     // endpoint instead.
     const listRes = await app.request("/rate-book");
     expect(listRes.status).toBe(200);
-    const list = await listRes.json();
+    const list = (await listRes.json()) as any;
     const fetched = list.find((e: any) => e.id === created.id);
     expect(fetched).toBeTruthy();
     expect(fetched.description).toBe("Integration test rate");
@@ -71,7 +73,7 @@ describe("full write cycle for /rate-book/:id", () => {
       body: JSON.stringify({ labourRate: 20, totalRate: 27 }),
     });
     expect(patchRes.status).toBe(200);
-    const patched = await patchRes.json();
+    const patched = (await patchRes.json()) as any;
     expect(patched.labourRate).toBe(20);
     expect(patched.totalRate).toBe(27);
 

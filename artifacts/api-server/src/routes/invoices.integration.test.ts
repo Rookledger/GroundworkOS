@@ -23,10 +23,12 @@ function buildApp() {
     c.set("db", createDb(env.DB));
     c.set("userId", "integration-test-user");
     c.set("_role", "admin");
-    c.set(
-      "logger",
-      { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() } as never,
-    );
+    c.set("logger", {
+      warn: vi.fn(),
+      error: vi.fn(),
+      info: vi.fn(),
+      debug: vi.fn(),
+    } as never);
     await next();
   });
   app.route("/", invoicesRouter);
@@ -61,7 +63,7 @@ describe("POST /invoices", () => {
     });
 
     expect(res.status).toBe(201);
-    const invoice = await res.json();
+    const invoice = (await res.json()) as any;
 
     expect(invoice.invoiceNumber).toMatch(new RegExp(`^INV-${year}-\\d+$`));
 
@@ -80,7 +82,7 @@ describe("POST /invoices", () => {
       body: JSON.stringify({ issuedDate: "2026-06-01", subtotal: 1000 }),
     });
     expect(res.status).toBe(201);
-    const invoice = await res.json();
+    const invoice = (await res.json()) as any;
     expect(invoice.subtotal).toBe(1000);
     expect(invoice.vatAmount).toBe(200);
     expect(invoice.totalAmount).toBe(1200);
@@ -100,7 +102,7 @@ describe("POST /invoices", () => {
       }),
     });
     expect(res.status).toBe(201);
-    const invoice = await res.json();
+    const invoice = (await res.json()) as any;
     expect(invoice.cisDeduction).toBe(200);
   });
 });
@@ -120,13 +122,13 @@ describe("full write cycle for /invoices/:id", () => {
       }),
     });
     expect(createRes.status).toBe(201);
-    const created = await createRes.json();
+    const created = (await createRes.json()) as any;
     expect(created.vatAmount).toBe(200);
     expect(created.cisDeduction).toBe(200);
 
     const getRes = await app.request(`/invoices/${created.id}`);
     expect(getRes.status).toBe(200);
-    const fetched = await getRes.json();
+    const fetched = (await getRes.json()) as any;
     expect(fetched.subtotal).toBe(1000);
 
     // A partial update that touches neither subtotal nor subcontractorId must
@@ -137,7 +139,7 @@ describe("full write cycle for /invoices/:id", () => {
       body: JSON.stringify({ status: "sent" }),
     });
     expect(statusOnlyPatch.status).toBe(200);
-    const statusPatched = await statusOnlyPatch.json();
+    const statusPatched = (await statusOnlyPatch.json()) as any;
     expect(statusPatched.status).toBe("sent");
     expect(statusPatched.subtotal).toBe(1000);
     expect(statusPatched.vatAmount).toBe(200);
@@ -151,7 +153,7 @@ describe("full write cycle for /invoices/:id", () => {
       body: JSON.stringify({ subtotal: 2000 }),
     });
     expect(subtotalPatch.status).toBe(200);
-    const subtotalPatched = await subtotalPatch.json();
+    const subtotalPatched = (await subtotalPatch.json()) as any;
     expect(subtotalPatched.subtotal).toBe(2000);
     expect(subtotalPatched.vatAmount).toBe(400);
     expect(subtotalPatched.totalAmount).toBe(2400);
@@ -191,7 +193,7 @@ describe("PATCH /invoices/:id — mark as paid", () => {
       body: JSON.stringify({ issuedDate: "2026-06-01", subtotal: 500 }),
     });
     expect(createRes.status).toBe(201);
-    const created = await createRes.json();
+    const created = (await createRes.json()) as any;
 
     // Mirrors InvoicesPage.tsx's markPaid(): `paidAt: new Date().toISOString()`
     // sent alongside `status`, with no `subtotal`/`subcontractorId` in the
@@ -204,7 +206,7 @@ describe("PATCH /invoices/:id — mark as paid", () => {
       body: JSON.stringify({ status: "paid", paidAt }),
     });
     expect(patchRes.status).toBe(200);
-    const patched = await patchRes.json();
+    const patched = (await patchRes.json()) as any;
     expect(patched.status).toBe("paid");
     expect(new Date(patched.paidAt).toISOString()).toBe(paidAt);
 

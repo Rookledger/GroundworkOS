@@ -49,4 +49,3 @@ jobs:
         run: pnpm run build
         env:
           BASE_PATH: /
-          VITE_CLERK_PUBLISHABLE_KEY: pk_test_dummy-key-for-ci-build

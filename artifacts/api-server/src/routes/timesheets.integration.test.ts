@@ -23,10 +23,12 @@ function buildApp() {
     c.set("db", createDb(env.DB));
     c.set("userId", "integration-test-user");
     c.set("_role", "admin");
-    c.set(
-      "logger",
-      { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() } as never,
-    );
+    c.set("logger", {
+      warn: vi.fn(),
+      error: vi.fn(),
+      info: vi.fn(),
+      debug: vi.fn(),
+    } as never);
     await next();
   });
   app.route("/", timesheetsRouter);
@@ -49,7 +51,7 @@ describe("POST /timesheets cost derivation", () => {
       }),
     });
     expect(res.status).toBe(201);
-    const row = await res.json();
+    const row = (await res.json()) as any;
     expect(row.cost).toBe(100);
   });
 
@@ -65,7 +67,7 @@ describe("POST /timesheets cost derivation", () => {
       }),
     });
     expect(res.status).toBe(201);
-    const row = await res.json();
+    const row = (await res.json()) as any;
     expect(row.cost).toBeNull();
   });
 });
@@ -85,14 +87,14 @@ describe("full write cycle for /timesheets/:id", () => {
       }),
     });
     expect(createRes.status).toBe(201);
-    const created = await createRes.json();
+    const created = (await createRes.json()) as any;
     expect(created.cost).toBe(160);
 
     // Timesheets has no GET /:id route; confirm the created row via the list
     // endpoint instead.
     const listRes = await app.request("/timesheets");
     expect(listRes.status).toBe(200);
-    const list = await listRes.json();
+    const list = (await listRes.json()) as any;
     expect(list.some((t: any) => t.id === created.id)).toBe(true);
 
     // Updating hoursWorked alone (no dayRate in the body) must re-derive cost
@@ -103,7 +105,7 @@ describe("full write cycle for /timesheets/:id", () => {
       body: JSON.stringify({ hoursWorked: 4 }),
     });
     expect(patchRes.status).toBe(200);
-    const patched = await patchRes.json();
+    const patched = (await patchRes.json()) as any;
     expect(patched.hoursWorked).toBe(4);
     expect(patched.cost).toBe(80);
 

@@ -23,10 +23,12 @@ function buildApp() {
     c.set("db", createDb(env.DB));
     c.set("userId", "integration-test-user");
     c.set("_role", "admin");
-    c.set(
-      "logger",
-      { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() } as never,
-    );
+    c.set("logger", {
+      warn: vi.fn(),
+      error: vi.fn(),
+      info: vi.fn(),
+      debug: vi.fn(),
+    } as never);
     await next();
   });
   app.route("/", purchaseOrdersRouter);
@@ -57,12 +59,12 @@ describe("POST /purchase-orders sequence numbering", () => {
 
     const firstRes = await makePO();
     expect(firstRes.status).toBe(201);
-    const first = await firstRes.json();
+    const first = (await firstRes.json()) as any;
     expect(first.poNumber).toMatch(new RegExp(`^PO-${year}-\\d+$`));
 
     const secondRes = await makePO();
     expect(secondRes.status).toBe(201);
-    const second = await secondRes.json();
+    const second = (await secondRes.json()) as any;
     expect(second.poNumber).toMatch(new RegExp(`^PO-${year}-\\d+$`));
 
     expect(second.poNumber).not.toBe(first.poNumber);
@@ -92,7 +94,7 @@ describe("POST /purchase-orders financial computation", () => {
       }),
     });
     expect(res.status).toBe(201);
-    const po = await res.json();
+    const po = (await res.json()) as any;
     expect(po.amount).toBe(500);
     expect(po.vatAmount).toBe(100);
     expect(po.totalAmount).toBe(600);
@@ -115,14 +117,14 @@ describe("full write cycle for /purchase-orders/:id", () => {
       }),
     });
     expect(createRes.status).toBe(201);
-    const created = await createRes.json();
+    const created = (await createRes.json()) as any;
     expect(created.totalAmount).toBe(600);
 
     // Purchase orders has no GET /:id route; confirm the created row via the
     // list endpoint instead.
     const listRes = await app.request("/purchase-orders");
     expect(listRes.status).toBe(200);
-    const list = await listRes.json();
+    const list = (await listRes.json()) as any;
     const fetched = list.find((p: any) => p.id === created.id);
     expect(fetched).toBeTruthy();
     expect(fetched.supplier).toBe("Cycle Supplier Ltd");
@@ -133,7 +135,7 @@ describe("full write cycle for /purchase-orders/:id", () => {
       body: JSON.stringify({ amount: 1000, status: "ordered" }),
     });
     expect(patchRes.status).toBe(200);
-    const patched = await patchRes.json();
+    const patched = (await patchRes.json()) as any;
     expect(patched.status).toBe("ordered");
     expect(patched.amount).toBe(1000);
     expect(patched.vatAmount).toBe(200);

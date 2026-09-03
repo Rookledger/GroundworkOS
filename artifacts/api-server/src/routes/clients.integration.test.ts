@@ -24,10 +24,12 @@ function buildApp() {
     c.set("db", createDb(env.DB));
     c.set("userId", "integration-test-user");
     c.set("_role", "admin");
-    c.set(
-      "logger",
-      { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() } as never,
-    );
+    c.set("logger", {
+      warn: vi.fn(),
+      error: vi.fn(),
+      info: vi.fn(),
+      debug: vi.fn(),
+    } as never);
     await next();
   });
   app.route("/", clientsRouter);
@@ -50,7 +52,7 @@ describe("full write cycle for /clients/:id", () => {
       }),
     });
     expect(createRes.status).toBe(201);
-    const created = await createRes.json();
+    const created = (await createRes.json()) as any;
     expect(created.id).toBeTruthy();
     expect(created.companyName).toBe("Integration Test Ltd");
     // A brand-new client has no jobs yet, so the join-derived stats must be
@@ -60,7 +62,7 @@ describe("full write cycle for /clients/:id", () => {
 
     const getRes = await app.request(`/clients/${created.id}`);
     expect(getRes.status).toBe(200);
-    const fetched = await getRes.json();
+    const fetched = (await getRes.json()) as any;
     expect(fetched.companyName).toBe("Integration Test Ltd");
     expect(fetched.contactName).toBe("Ada Lovelace");
 
@@ -70,7 +72,7 @@ describe("full write cycle for /clients/:id", () => {
       body: JSON.stringify({ companyName: "Integration Test Holdings Ltd" }),
     });
     expect(patchRes.status).toBe(200);
-    const patched = await patchRes.json();
+    const patched = (await patchRes.json()) as any;
     expect(patched.companyName).toBe("Integration Test Holdings Ltd");
 
     const [persisted] = await db

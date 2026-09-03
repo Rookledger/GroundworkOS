@@ -8,16 +8,16 @@ Manage jobs, CIS compliance, quotes, invoices, plant, subcontractors, timesheets
 
 ## Stack
 
-| Layer          | Technology                                          |
-| -------------- | ---------------------------------------------------- |
-| Frontend       | React 19 + Vite + Tailwind v4 + wouter               |
-| Backend        | Hono + TypeScript, on Cloudflare Workers             |
-| Database       | Cloudflare D1 (SQLite) + Drizzle ORM                 |
-| Object storage | Cloudflare R2 (RAMS PDFs, insurance certs, photos)   |
-| Rate limiting  | Cloudflare KV (also OAuth CSRF state)                |
-| Auth           | Better Auth (email + password, invite-only)          |
-| Monorepo       | pnpm workspaces                                      |
-| Email          | Resend                                               |
+| Layer          | Technology                                         |
+| -------------- | -------------------------------------------------- |
+| Frontend       | React 19 + Vite + Tailwind v4 + wouter             |
+| Backend        | Hono + TypeScript, on Cloudflare Workers           |
+| Database       | Cloudflare D1 (SQLite) + Drizzle ORM               |
+| Object storage | Cloudflare R2 (RAMS PDFs, insurance certs, photos) |
+| Rate limiting  | Cloudflare KV (also OAuth CSRF state)              |
+| Auth           | Better Auth (email + password, invite-only)        |
+| Monorepo       | pnpm workspaces                                    |
+| Email          | Resend                                             |
 
 The frontend deploys to Cloudflare Pages and the backend deploys as a separate Cloudflare Worker — there is no single combined process serving both, unlike the project's earlier Express architecture.
 
@@ -173,8 +173,8 @@ Sign-in is email + password only (Better Auth) — no Google or other social/OAu
 Roles are stored in the `role` column of D1's `user` table (Better Auth's user schema, extended with this project's own field — see `lib/db/src/schema/auth.ts`). Set via the **Settings → Users** page (admin only), or directly with a D1 query if you're locked out.
 
 | Role      | Access                                                              |
-| --------- | --------------------------------------------------------------------- |
-| `admin`   | Full access including Users, Audit Log, Deploy Guide                |
+| --------- | ------------------------------------------------------------------- |
+| `admin`   | Full access including Users, Audit Log                              |
 | `manager` | All operational features: jobs, quotes, invoices, reports, settings |
 | `foreman` | Dashboard, jobs, schedule, timesheets                               |
 
@@ -199,8 +199,6 @@ Roles are stored in the `role` column of D1's `user` table (Better Auth's user s
 GroundworkOS deploys as two separate Cloudflare projects: the frontend as a **Cloudflare Pages** static site, and the API as a **Cloudflare Worker** (Hono) backed by **D1** (database), **R2** (file storage) and **KV** (rate limiting / OAuth state) bindings. The two are wired together in production by binding a Worker Route for `/api/*` on the same domain the Pages project serves — the frontend calls relative `/api/...` paths, so this keeps everything same-origin.
 
 See **[DEPLOYMENT.md](./DEPLOYMENT.md)** for the full step-by-step guide: provisioning D1/R2/KV, applying migrations, setting `wrangler.jsonc` vars vs. `wrangler secret put` secrets vs. Pages build variables, deploying both projects, binding the `/api/*` route, first login and the admin bootstrap flow, and troubleshooting.
-
-The in-app Deploy Guide (`/deploy`, admin only) predates this Cloudflare migration and still describes the old Postgres/VPS setup — use DEPLOYMENT.md instead until that page is rewritten.
 
 ---
 

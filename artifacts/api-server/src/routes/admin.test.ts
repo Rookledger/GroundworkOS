@@ -1,7 +1,6 @@
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { eq } from "drizzle-orm";
 import adminRouter, { adminExists } from "./admin";
 import type { AppEnv, Bindings } from "../types";
 
@@ -29,7 +28,7 @@ function makeFakeDb(
   let roleScanCount = 0;
   const db = {
     _users: users,
-    select(_cols?: unknown) {
+    select() {
       return {
         from() {
           return {
@@ -333,7 +332,11 @@ describe("POST /admin/bootstrap", () => {
 
     it("rejects a caller whose email doesn't match BOOTSTRAP_ADMIN_EMAIL (land-grab prevention)", async () => {
       const users = [
-        makeUser({ id: "attacker", role: "foreman", email: "attacker@evil.com" }),
+        makeUser({
+          id: "attacker",
+          role: "foreman",
+          email: "attacker@evil.com",
+        }),
       ];
       const app = buildApp({ userId: "attacker", users, logger: makeLogger() });
 
