@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "wrangler types && tsc -p tsconfig.json --noEmit",
     "cf-typegen": "wrangler types",
     "seed": "tsx src/seed.ts",
     "test:integration": "vitest run --config vitest.integration.config.ts"
@@ -23,7 +23,7 @@
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.22.0",
-    "@cloudflare/workers-types": "^4.20250906.0",
+    "@cloudflare/workers-types": "^4.20260702.1",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "catalog:",
     "better-sqlite3": "^12.4.1",

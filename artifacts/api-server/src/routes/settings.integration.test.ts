@@ -28,10 +28,12 @@ function buildApp(role: "admin" | "manager" | "foreman" = "admin") {
     c.set("db", createDb(env.DB));
     c.set("userId", "integration-test-user");
     c.set("_role", role);
-    c.set(
-      "logger",
-      { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() } as never,
-    );
+    c.set("logger", {
+      warn: vi.fn(),
+      error: vi.fn(),
+      info: vi.fn(),
+      debug: vi.fn(),
+    } as never);
     await next();
   });
   app.route("/", settingsRouter);
@@ -85,7 +87,7 @@ describe("PUT /settings/company bootstrap gating", () => {
       body: JSON.stringify({ companyName: "Bootstrap Onboarding Ltd" }),
     });
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = (await res.json()) as any;
     expect(body.ok).toBe(true);
 
     const [persisted] = await db
@@ -114,7 +116,7 @@ describe("full write cycle for PUT /settings/company", () => {
 
     const getAfterFirst = await app.request("/settings/company");
     expect(getAfterFirst.status).toBe(200);
-    const afterFirst = await getAfterFirst.json();
+    const afterFirst = (await getAfterFirst.json()) as any;
     expect(afterFirst.companyName).toBe("GroundworkOS Ltd");
     expect(afterFirst.vatNumber).toBe("GB 123 4567 89");
 
@@ -130,7 +132,7 @@ describe("full write cycle for PUT /settings/company", () => {
     expect(secondPut.status).toBe(200);
 
     const getAfterSecond = await app.request("/settings/company");
-    const afterSecond = await getAfterSecond.json();
+    const afterSecond = (await getAfterSecond.json()) as any;
     expect(afterSecond.companyName).toBe("GroundworkOS Holdings Ltd");
     expect(afterSecond.vatNumber).toBeUndefined();
 

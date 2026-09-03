@@ -23,10 +23,12 @@ function buildApp() {
     c.set("db", createDb(env.DB));
     c.set("userId", "integration-test-user");
     c.set("_role", "admin");
-    c.set(
-      "logger",
-      { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() } as never,
-    );
+    c.set("logger", {
+      warn: vi.fn(),
+      error: vi.fn(),
+      info: vi.fn(),
+      debug: vi.fn(),
+    } as never);
     await next();
   });
   app.route("/", documentsRouter);
@@ -50,7 +52,7 @@ describe("POST /documents status derivation", () => {
       body: JSON.stringify({ name: "No-expiry cert", type: "certification" }),
     });
     expect(res.status).toBe(201);
-    const doc = await res.json();
+    const doc = (await res.json()) as any;
     expect(doc.status).toBe("valid");
   });
 
@@ -66,7 +68,7 @@ describe("POST /documents status derivation", () => {
       }),
     });
     expect(res.status).toBe(201);
-    const doc = await res.json();
+    const doc = (await res.json()) as any;
     expect(doc.status).toBe("expired");
   });
 
@@ -82,7 +84,7 @@ describe("POST /documents status derivation", () => {
       }),
     });
     expect(res.status).toBe(201);
-    const doc = await res.json();
+    const doc = (await res.json()) as any;
     expect(doc.status).toBe("expiring_soon");
   });
 
@@ -98,7 +100,7 @@ describe("POST /documents status derivation", () => {
       }),
     });
     expect(res.status).toBe(201);
-    const doc = await res.json();
+    const doc = (await res.json()) as any;
     expect(doc.status).toBe("valid");
   });
 });
@@ -117,14 +119,14 @@ describe("full write cycle for /documents/:id", () => {
       }),
     });
     expect(createRes.status).toBe(201);
-    const created = await createRes.json();
+    const created = (await createRes.json()) as any;
     expect(created.status).toBe("valid");
 
     // Documents has no GET /:id route; confirm the created row is visible
     // through the list endpoint instead.
     const listRes = await app.request("/documents");
     expect(listRes.status).toBe(200);
-    const list = await listRes.json();
+    const list = (await listRes.json()) as any;
     expect(list.some((d: any) => d.id === created.id)).toBe(true);
 
     // Moving expiryDate into the past must flip status to expired, proving
@@ -135,7 +137,7 @@ describe("full write cycle for /documents/:id", () => {
       body: JSON.stringify({ expiryDate: "2020-01-01" }),
     });
     expect(patchRes.status).toBe(200);
-    const patched = await patchRes.json();
+    const patched = (await patchRes.json()) as any;
     expect(patched.status).toBe("expired");
 
     const [persisted] = await db

@@ -31,10 +31,12 @@ function buildApp() {
     c.set("db", createDb(env.DB));
     c.set("userId", "integration-test-user");
     c.set("_role", "admin");
-    c.set(
-      "logger",
-      { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() } as never,
-    );
+    c.set("logger", {
+      warn: vi.fn(),
+      error: vi.fn(),
+      info: vi.fn(),
+      debug: vi.fn(),
+    } as never);
     await next();
   });
   app.route("/", xeroRouter);
@@ -54,7 +56,7 @@ describe.each([
     const app = buildApp();
     const res = await app.request(path);
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = (await res.json()) as any;
     expect(body).toEqual({ connected: false });
   });
 });

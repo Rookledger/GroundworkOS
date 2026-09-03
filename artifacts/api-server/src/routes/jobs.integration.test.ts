@@ -24,10 +24,12 @@ function buildApp() {
     c.set("db", createDb(env.DB));
     c.set("userId", "integration-test-user");
     c.set("_role", "admin");
-    c.set(
-      "logger",
-      { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() } as never,
-    );
+    c.set("logger", {
+      warn: vi.fn(),
+      error: vi.fn(),
+      info: vi.fn(),
+      debug: vi.fn(),
+    } as never);
     await next();
   });
   app.route("/", jobsRouter);
@@ -48,27 +50,27 @@ describe("POST /jobs", () => {
     });
 
     expect(res.status).toBe(201);
-    const job = await res.json();
+    const job = (await res.json()) as any;
     expect(job.jobNumber).toMatch(new RegExp(`^GW-${year}-\\d+$`));
   });
 
   it("never reuses a job number for two jobs created back to back", async () => {
     const app = buildApp();
 
-    const first = await (
+    const first = (await (
       await app.request("/jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: "First" }),
       })
-    ).json();
-    const second = await (
+    ).json()) as any;
+    const second = (await (
       await app.request("/jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: "Second" }),
       })
-    ).json();
+    ).json()) as any;
 
     expect(first.jobNumber).not.toBe(second.jobNumber);
   });
@@ -88,14 +90,14 @@ describe("full write cycle for /jobs/:id", () => {
       }),
     });
     expect(createRes.status).toBe(201);
-    const created = await createRes.json();
+    const created = (await createRes.json()) as any;
     expect(created.id).toBeTruthy();
     expect(created.title).toBe("Integration cycle job");
     expect(created.status).toBe("enquiry");
 
     const getRes = await app.request(`/jobs/${created.id}`);
     expect(getRes.status).toBe(200);
-    const fetched = await getRes.json();
+    const fetched = (await getRes.json()) as any;
     expect(fetched.id).toBe(created.id);
     expect(fetched.title).toBe("Integration cycle job");
 
@@ -105,7 +107,7 @@ describe("full write cycle for /jobs/:id", () => {
       body: JSON.stringify({ status: "active", progressPercent: 40 }),
     });
     expect(patchRes.status).toBe(200);
-    const patched = await patchRes.json();
+    const patched = (await patchRes.json()) as any;
     expect(patched.status).toBe("active");
     expect(patched.progressPercent).toBe(40);
 

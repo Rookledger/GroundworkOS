@@ -23,10 +23,12 @@ function buildApp() {
     c.set("db", createDb(env.DB));
     c.set("userId", "integration-test-user");
     c.set("_role", "admin");
-    c.set(
-      "logger",
-      { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() } as never,
-    );
+    c.set("logger", {
+      warn: vi.fn(),
+      error: vi.fn(),
+      info: vi.fn(),
+      debug: vi.fn(),
+    } as never);
     await next();
   });
   app.route("/", quotesRouter);
@@ -47,7 +49,7 @@ describe("POST /quotes", () => {
     });
 
     expect(res.status).toBe(201);
-    const quote = await res.json();
+    const quote = (await res.json()) as any;
 
     expect(quote.quoteNumber).toMatch(new RegExp(`^QT-${year}-\\d+$`));
 
@@ -82,7 +84,7 @@ describe("POST /quotes", () => {
       }),
     });
     expect(res.status).toBe(201);
-    const quote = await res.json();
+    const quote = (await res.json()) as any;
 
     // 10*25 + 1*50 = 300, VAT at 20% = 60, total = 360.
     expect(quote.subtotal).toBe(300);
@@ -109,7 +111,7 @@ describe("POST /quotes", () => {
       body: JSON.stringify({ title: "Empty quote" }),
     });
     expect(res.status).toBe(201);
-    const quote = await res.json();
+    const quote = (await res.json()) as any;
     expect(quote.subtotal).toBe(0);
     expect(quote.vatAmount).toBe(0);
     expect(quote.totalAmount).toBe(0);
@@ -138,12 +140,12 @@ describe("full write cycle for /quotes/:id", () => {
       }),
     });
     expect(createRes.status).toBe(201);
-    const created = await createRes.json();
+    const created = (await createRes.json()) as any;
     expect(created.subtotal).toBe(20);
 
     const getRes = await app.request(`/quotes/${created.id}`);
     expect(getRes.status).toBe(200);
-    const fetched = await getRes.json();
+    const fetched = (await getRes.json()) as any;
     expect(fetched.lineItems).toHaveLength(1);
 
     // Replacing line items on PATCH must delete the old rows and re-price
@@ -164,7 +166,7 @@ describe("full write cycle for /quotes/:id", () => {
       }),
     });
     expect(patchRes.status).toBe(200);
-    const patched = await patchRes.json();
+    const patched = (await patchRes.json()) as any;
     expect(patched.status).toBe("sent");
     expect(patched.subtotal).toBe(400);
     expect(patched.vatAmount).toBe(80);

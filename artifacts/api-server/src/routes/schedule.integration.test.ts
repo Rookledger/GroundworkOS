@@ -23,10 +23,12 @@ function buildApp() {
     c.set("db", createDb(env.DB));
     c.set("userId", "integration-test-user");
     c.set("_role", "admin");
-    c.set(
-      "logger",
-      { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() } as never,
-    );
+    c.set("logger", {
+      warn: vi.fn(),
+      error: vi.fn(),
+      info: vi.fn(),
+      debug: vi.fn(),
+    } as never);
     await next();
   });
   app.route("/", scheduleRouter);
@@ -69,7 +71,7 @@ describe("full write cycle for /schedule/:id", () => {
       }),
     });
     expect(createRes.status).toBe(201);
-    const created = await createRes.json();
+    const created = (await createRes.json()) as any;
     expect(created.jobNumber).toBe(job.jobNumber);
     expect(created.jobTitle).toBe(job.title);
     expect(created.startDatetime).toBe("2026-06-01T07:00:00.000Z");
@@ -79,7 +81,7 @@ describe("full write cycle for /schedule/:id", () => {
     // endpoint instead.
     const listRes = await app.request("/schedule");
     expect(listRes.status).toBe(200);
-    const list = await listRes.json();
+    const list = (await listRes.json()) as any;
     const fetched = list.find((e: any) => e.id === created.id);
     expect(fetched).toBeTruthy();
     expect(fetched.title).toBe("Integration cycle entry");
@@ -93,7 +95,7 @@ describe("full write cycle for /schedule/:id", () => {
       }),
     });
     expect(patchRes.status).toBe(200);
-    const patched = await patchRes.json();
+    const patched = (await patchRes.json()) as any;
     expect(patched.startDatetime).toBe("2026-06-02T08:00:00.000Z");
     expect(patched.crewCount).toBe(5);
     // endDatetime was not part of the PATCH body, so it must survive untouched.

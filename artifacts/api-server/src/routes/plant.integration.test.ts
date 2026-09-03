@@ -23,10 +23,12 @@ function buildApp() {
     c.set("db", createDb(env.DB));
     c.set("userId", "integration-test-user");
     c.set("_role", "admin");
-    c.set(
-      "logger",
-      { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() } as never,
-    );
+    c.set("logger", {
+      warn: vi.fn(),
+      error: vi.fn(),
+      info: vi.fn(),
+      debug: vi.fn(),
+    } as never);
     await next();
   });
   app.route("/", plantRouter);
@@ -69,14 +71,14 @@ describe("full write cycle for /plant/:id", () => {
       }),
     });
     expect(createRes.status).toBe(201);
-    const created = await createRes.json();
+    const created = (await createRes.json()) as any;
     expect(created.currentJobTitle).toBe(job.title);
 
     // Plant has no GET /:id route; confirm the created row via the list
     // endpoint instead.
     const listRes = await app.request("/plant");
     expect(listRes.status).toBe(200);
-    const list = await listRes.json();
+    const list = (await listRes.json()) as any;
     const fetched = list.find((p: any) => p.id === created.id);
     expect(fetched).toBeTruthy();
     expect(fetched.name).toBe("Integration Test Excavator");
@@ -87,7 +89,7 @@ describe("full write cycle for /plant/:id", () => {
       body: JSON.stringify({ status: "maintenance", dailyRate: 300 }),
     });
     expect(patchRes.status).toBe(200);
-    const patched = await patchRes.json();
+    const patched = (await patchRes.json()) as any;
     expect(patched.status).toBe("maintenance");
     expect(patched.dailyRate).toBe(300);
     // currentJobId was not part of the PATCH body, so the enrichment must

@@ -17,6 +17,7 @@ export default tseslint.config(
       "**/.generated/**",
       "**/generated/**",
       "**/*.tsbuildinfo",
+      "**/worker-configuration.d.ts",
       "pnpm-lock.yaml",
     ],
   },
@@ -24,10 +25,10 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   {
     rules: {
-      // The codebase relies on TS's own unused-var checking being off
-      // (tsconfig.base.json sets noUnusedLocals: false); keep ESLint's
-      // check but only flag it, don't block on it.
-      "@typescript-eslint/no-unused-vars": "warn",
+      // TS's own unused-var checking is off (tsconfig.base.json sets
+      // noUnusedLocals: false), so this is the only thing that catches
+      // dead imports/locals - block CI on it rather than just warn.
+      "@typescript-eslint/no-unused-vars": "error",
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-empty-object-type": "off",
       "no-empty": ["error", { allowEmptyCatch: true }],

@@ -27,10 +27,12 @@ function buildApp() {
     c.set("db", createDb(env.DB));
     c.set("userId", "integration-test-user");
     c.set("_role", state.role);
-    c.set(
-      "logger",
-      { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() } as never,
-    );
+    c.set("logger", {
+      warn: vi.fn(),
+      error: vi.fn(),
+      info: vi.fn(),
+      debug: vi.fn(),
+    } as never);
     await next();
   });
   app.route("/", subcontractorsRouter);
@@ -53,13 +55,13 @@ describe("full write cycle for /subcontractors/:id", () => {
       }),
     });
     expect(createRes.status).toBe(201);
-    const created = await createRes.json();
+    const created = (await createRes.json()) as any;
     expect(created.id).toBeTruthy();
     expect(created.companyName).toBe("Integration Groundworks Ltd");
 
     const getRes = await app.request(`/subcontractors/${created.id}`);
     expect(getRes.status).toBe(200);
-    const fetched = await getRes.json();
+    const fetched = (await getRes.json()) as any;
     expect(fetched.trade).toBe("Groundworks");
 
     const patchRes = await app.request(`/subcontractors/${created.id}`, {
@@ -68,7 +70,7 @@ describe("full write cycle for /subcontractors/:id", () => {
       body: JSON.stringify({ phone: "07000 000000" }),
     });
     expect(patchRes.status).toBe(200);
-    const patched = await patchRes.json();
+    const patched = (await patchRes.json()) as any;
     expect(patched.phone).toBe("07000 000000");
 
     const [persisted] = await db
@@ -101,7 +103,10 @@ describe("PATCH /subcontractors/:id admin-only field gating", () => {
   beforeAll(async () => {
     [existing] = await db
       .insert(subcontractorsTable)
-      .values({ id: "subcontractor-gating-fixture", companyName: "Fixture Ltd" })
+      .values({
+        id: "subcontractor-gating-fixture",
+        companyName: "Fixture Ltd",
+      })
       .onConflictDoUpdate({
         target: subcontractorsTable.id,
         set: { companyName: "Fixture Ltd" },
@@ -133,7 +138,7 @@ describe("PATCH /subcontractors/:id admin-only field gating", () => {
       body: JSON.stringify({ notes: "Manager-editable note" }),
     });
     expect(allowedRes.status).toBe(200);
-    const allowed = await allowedRes.json();
+    const allowed = (await allowedRes.json()) as any;
     expect(allowed.notes).toBe("Manager-editable note");
   });
 
@@ -145,7 +150,7 @@ describe("PATCH /subcontractors/:id admin-only field gating", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ companyName: "Admin CIS Test Ltd" }),
     });
-    const created = await createRes.json();
+    const created = (await createRes.json()) as any;
 
     const patchRes = await app.request(`/subcontractors/${created.id}`, {
       method: "PATCH",
@@ -157,7 +162,7 @@ describe("PATCH /subcontractors/:id admin-only field gating", () => {
       }),
     });
     expect(patchRes.status).toBe(200);
-    const patched = await patchRes.json();
+    const patched = (await patchRes.json()) as any;
     expect(patched.cisStatus).toBe("gross");
     expect(patched.cisDeductionRate).toBe(0);
     expect(patched.utrNumber).toBe("1111 22222 33");
