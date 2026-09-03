@@ -9,11 +9,13 @@ import { buildCspDirectives } from "./lib/csp";
 import { validateEnv } from "./lib/validateEnv";
 import { logger } from "./lib/logger";
 import {
+  AUTH_ROUTE_PATH,
   HEALTH_CHECK_PATHS,
   PUBLIC_ROUTE_PATHS,
   STORAGE_UPLOAD_RELAY_PATH,
   createApiAnonLimiter,
   createApiUserLimiter,
+  createAuthRouteLimiter,
   createHealthCheckLimiter,
   createPublicRouteLimiter,
   createStorageUploadLimiter,
@@ -126,12 +128,16 @@ app.use(async (c, next) => {
  * for authenticated API traffic, a separate and tighter IP-keyed budget for
  * unauthenticated traffic, a more generous per-user budget for the bulk
  * photo/document upload relay, a much tighter limit on the unauthenticated
- * OAuth callbacks and Better Auth's own endpoints, and a deliberately high
- * limit on the health/readiness probes so uptime monitors can never
- * rate-limit themselves into a false "down".
+ * OAuth callbacks and public sign-up, a separate and more generous budget
+ * for Better Auth's own endpoint surface (get-session polling shouldn't
+ * compete with OAuth-callback-grade abuse protection - see
+ * AUTH_ROUTE_PATH's comment), and a deliberately high limit on the
+ * health/readiness probes so uptime monitors can never rate-limit
+ * themselves into a false "down".
  */
 for (const path of HEALTH_CHECK_PATHS) app.use(path, createHealthCheckLimiter());
 for (const path of PUBLIC_ROUTE_PATHS) app.use(path, createPublicRouteLimiter());
+app.use(AUTH_ROUTE_PATH, createAuthRouteLimiter());
 app.use(`${STORAGE_UPLOAD_RELAY_PATH}/*`, createStorageUploadLimiter());
 
 app.use("/api/*", createApiUserLimiter());
