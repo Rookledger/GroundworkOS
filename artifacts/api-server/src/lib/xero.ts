@@ -130,8 +130,11 @@ export function buildAuthUrl(env: Bindings, state: string) {
     response_type: "code",
     client_id: id,
     redirect_uri: redirectUri,
+    // accounting.transactions was retired for apps created after 2 Mar 2026;
+    // Xero rejects it with invalid_scope. accounting.invoices is its granular
+    // replacement and also covers Quotes (see Xero's scope migration guide).
     scope:
-      "openid profile email accounting.contacts accounting.transactions offline_access",
+      "openid profile email accounting.contacts accounting.invoices offline_access",
     state,
   });
   return `https://login.xero.com/identity/connect/authorize?${params}`;
