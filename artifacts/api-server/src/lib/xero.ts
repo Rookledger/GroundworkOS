@@ -318,7 +318,10 @@ export async function syncInvoice(
     Status: INVOICE_STATUS[invoice.status] ?? "DRAFT",
     Date: invoice.issuedDate,
     DueDate: invoice.dueDate ?? invoice.issuedDate,
-    LineAmountTypes: "EXCLUSIVE",
+    // Xero's LineAmountTypes enum is Pascal-case ("Exclusive" / "Inclusive" /
+    // "NoTax"). Sending "EXCLUSIVE" trips a 400 ValidationException on every
+    // invoice sync.
+    LineAmountTypes: "Exclusive",
     LineItems: [
       {
         Description: `Construction services — ${invoice.invoiceNumber}`,
@@ -406,7 +409,8 @@ export async function syncQuote(
     QuoteNumber: quote.quoteNumber,
     Status: QUOTE_STATUS[quote.status] ?? "DRAFT",
     Date: quote.createdAt.toISOString().slice(0, 10),
-    LineAmountTypes: "EXCLUSIVE",
+    // See the matching comment in syncInvoice: Xero expects Pascal-case here.
+    LineAmountTypes: "Exclusive",
     LineItems:
       lineItems.length > 0
         ? lineItems.map((li) => ({
