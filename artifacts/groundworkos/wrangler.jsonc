@@ -19,7 +19,17 @@
     // worker/index.js's comment for why this replaced a hand-rolled
     // "/index.html" fetch that was silently redirecting every client-side
     // route (e.g. /accept-invite, /setup, /portal/:token) to "/".
-    "not_found_handling": "single-page-application"
+    "not_found_handling": "single-page-application",
+    // Without this, Cloudflare's assets layer serves the SPA shell
+    // directly for ANY unmatched path - including /api/* - without ever
+    // invoking worker/index.js. That silently broke every API call
+    // (e.g. "Connect to Xero" 404ing into the app's own not-found page
+    // instead of reaching groundworkos-api): the request never got as far
+    // as this Worker's `url.pathname.startsWith("/api/")` forwarding
+    // check. Listing /api/* here forces the Worker script to run first
+    // for those paths so the service-binding forward actually happens;
+    // everything else still falls through to the SPA shell as before.
+    "run_worker_first": ["/api/*"]
   },
   "services": [
     {
