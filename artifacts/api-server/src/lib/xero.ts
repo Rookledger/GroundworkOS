@@ -3,14 +3,21 @@ import {
   xeroClientMapTable,
   xeroInvoiceMapTable,
   xeroQuoteMapTable,
+  xeroSupplierMapTable,
+  xeroBillMapTable,
+  xeroCreditNoteMapTable,
+  xeroSyncLogTable,
   clientsTable,
   invoicesTable,
   quotesTable,
   lineItemsTable,
+  subcontractorsTable,
+  purchaseOrdersTable,
 } from "@workspace/db";
 import type { Database } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import type { Bindings } from "../types";
+import { generateId } from "./generateId.js";
 
 const XERO_TOKEN_URL = "https://identity.xero.com/connect/token";
 const XERO_CONNECTIONS_URL = "https://api.xero.com/connections";
@@ -205,6 +212,62 @@ export async function disconnect(db: Database) {
   await db.delete(xeroClientMapTable);
   await db.delete(xeroInvoiceMapTable);
   await db.delete(xeroQuoteMapTable);
+  await db.delete(xeroSupplierMapTable);
+  await db.delete(xeroBillMapTable);
+  await db.delete(xeroCreditNoteMapTable);
+  // Sync log is kept intentionally - it's an audit trail of what was pushed
+  // or pulled while connected, which stays useful (e.g. "when did we last
+  // push invoices to Xero?") even after disconnecting.
+}
+
+// ─── Settings (default account codes) ────────────────────────────────────────
+
+export async function updateSettings(
+  db: Database,
+  fields: {
+    salesAccountCode?: string | null;
+    purchasesAccountCode?: string | null;
+  },
+) {
+  const conn = await getConnection(db);
+  if (!conn) throw new Error("Xero not connected");
+  const [updated] = await db
+    .update(xeroConnectionTable)
+    .set({ ...fields, updatedAt: new Date() })
+    .where(eq(xeroConnectionTable.id, conn.id))
+    .returning();
+  return updated;
+}
+
+// ─── Sync activity log ───────────────────────────────────────────────────────
+
+export async function recordSyncLog(
+  db: Database,
+  entry: {
+    direction: "push" | "pull";
+    resource: string;
+    succeeded: number;
+    failed: number;
+    detail?: string;
+  },
+) {
+  await db.insert(xeroSyncLogTable).values({
+    id: generateId(),
+    direction: entry.direction,
+    resource: entry.resource,
+    succeeded: entry.succeeded,
+    failed: entry.failed,
+    detail: entry.detail ?? null,
+    createdAt: new Date(),
+  });
+}
+
+export async function getSyncLog(db: Database, limit = 20) {
+  return db
+    .select()
+    .from(xeroSyncLogTable)
+    .orderBy(desc(xeroSyncLogTable.createdAt))
+    .limit(limit);
 }
 
 // ─── Contact sync ─────────────────────────────────────────────────────────────
@@ -306,6 +369,7 @@ export async function syncInvoice(
   if (!invoice) throw new Error(`Invoice ${invoiceId} not found`);
 
   const xeroContactId = await ensureContact(db, env, invoice.clientId);
+  const conn = await getConnection(db);
 
   const [existingMap] = await db
     .select()
@@ -330,6 +394,9 @@ export async function syncInvoice(
         TaxType: invoice.vatAmount > 0 ? "OUTPUT2" : "NONE",
         TaxAmount: invoice.vatAmount,
         LineAmount: invoice.subtotal,
+        ...(conn?.salesAccountCode
+          ? { AccountCode: conn.salesAccountCode }
+          : {}),
       },
     ],
   };
@@ -382,11 +449,7 @@ const QUOTE_STATUS: Record<string, string> = {
   expired: "DELETED",
 };
 
-export async function syncQuote(
-  db: Database,
-  env: Bindings,
-  quoteId: string,
-) {
+export async function syncQuote(db: Database, env: Bindings, quoteId: string) {
   const [quote] = await db
     .select()
     .from(quotesTable)
@@ -399,6 +462,10 @@ export async function syncQuote(
     .where(eq(lineItemsTable.quoteId, quoteId));
 
   const xeroContactId = await ensureContact(db, env, quote.clientId);
+  const conn = await getConnection(db);
+  const accountCode = conn?.salesAccountCode
+    ? { AccountCode: conn.salesAccountCode }
+    : {};
 
   const [existingMap] = await db
     .select()
@@ -419,6 +486,7 @@ export async function syncQuote(
             UnitAmount: li.unitPrice,
             TaxType: "OUTPUT2",
             LineAmount: li.total,
+            ...accountCode,
           }))
         : [
             {
@@ -427,6 +495,7 @@ export async function syncQuote(
               UnitAmount: quote.subtotal,
               TaxType: "OUTPUT2",
               LineAmount: quote.subtotal,
+              ...accountCode,
             },
           ],
   };
@@ -498,4 +567,344 @@ export async function pullPayments(db: Database, env: Bindings) {
   }
 
   return { checked: maps.length, updated };
+}
+
+// ─── Supplier sync (subcontractors pushed as Xero supplier contacts) ────────
+
+export async function syncSupplier(
+  db: Database,
+  env: Bindings,
+  subcontractorId: string,
+) {
+  const [sub] = await db
+    .select()
+    .from(subcontractorsTable)
+    .where(eq(subcontractorsTable.id, subcontractorId));
+  if (!sub) throw new Error(`Subcontractor ${subcontractorId} not found`);
+
+  const [existing] = await db
+    .select()
+    .from(xeroSupplierMapTable)
+    .where(eq(xeroSupplierMapTable.subcontractorId, subcontractorId));
+
+  const contact: Record<string, unknown> = {
+    Name: sub.companyName,
+    IsSupplier: true,
+  };
+  if (existing) contact.ContactID = existing.xeroContactId;
+  if (sub.email) contact.EmailAddress = sub.email;
+  if (sub.phone)
+    contact.Phones = [{ PhoneType: "DEFAULT", PhoneNumber: sub.phone }];
+  if (sub.address)
+    contact.Addresses = [{ AddressType: "POBOX", AddressLine1: sub.address }];
+
+  const r = (await xeroFetch(db, env, "/Contacts", {
+    method: "POST",
+    body: JSON.stringify({ Contacts: [contact] }),
+  })) as { Contacts?: Array<{ ContactID: string }> };
+
+  const xeroContactId = r.Contacts?.[0]?.ContactID;
+  if (!xeroContactId) throw new Error("No ContactID returned from Xero");
+
+  await db
+    .insert(xeroSupplierMapTable)
+    .values({ subcontractorId, xeroContactId, syncedAt: new Date() })
+    .onConflictDoUpdate({
+      target: xeroSupplierMapTable.subcontractorId,
+      set: { xeroContactId, syncedAt: new Date() },
+    });
+
+  return { subcontractorId, xeroContactId };
+}
+
+export async function syncAllSuppliers(db: Database, env: Bindings) {
+  const subs = await db.select().from(subcontractorsTable);
+  return Promise.all(
+    subs.map((s) =>
+      syncSupplier(db, env, s.id).catch((e) => ({
+        error: String(e),
+        subcontractorId: s.id,
+      })),
+    ),
+  );
+}
+
+/**
+ * Best-effort match of a purchase order's free-text `supplier` field to a
+ * known subcontractor, so bills for CIS-registered subcontractors carry the
+ * right Xero contact and CIS deduction. Purchase orders don't have a formal
+ * subcontractorId FK (the field predates the subcontractors table), so this
+ * matches on company name case-insensitively - it's a heuristic, not a hard
+ * link, and simply falls through to a plain Name-only Xero contact when
+ * nothing matches.
+ */
+async function matchSupplierSubcontractor(db: Database, supplierName: string) {
+  const subs = await db.select().from(subcontractorsTable);
+  return (
+    subs.find(
+      (s) =>
+        s.companyName.trim().toLowerCase() ===
+        supplierName.trim().toLowerCase(),
+    ) ?? null
+  );
+}
+
+async function ensureSupplierContact(
+  db: Database,
+  env: Bindings,
+  supplierName: string,
+) {
+  const sub = await matchSupplierSubcontractor(db, supplierName);
+  if (!sub) return { xeroContactId: undefined, subcontractor: null };
+
+  const [map] = await db
+    .select()
+    .from(xeroSupplierMapTable)
+    .where(eq(xeroSupplierMapTable.subcontractorId, sub.id));
+  if (map) return { xeroContactId: map.xeroContactId, subcontractor: sub };
+
+  const r = await syncSupplier(db, env, sub.id);
+  return { xeroContactId: r.xeroContactId, subcontractor: sub };
+}
+
+// ─── Bill sync (purchase orders pushed as Xero ACCPAY bills) ────────────────
+
+// Matches PurchaseOrderStatus in artifacts/groundworkos/src/types.ts.
+const PO_STATUS: Record<string, string> = {
+  draft: "DRAFT",
+  ordered: "AUTHORISED",
+  received: "AUTHORISED",
+  invoiced: "AUTHORISED",
+};
+
+export async function syncBill(
+  db: Database,
+  env: Bindings,
+  purchaseOrderId: string,
+) {
+  const [po] = await db
+    .select()
+    .from(purchaseOrdersTable)
+    .where(eq(purchaseOrdersTable.id, purchaseOrderId));
+  if (!po) throw new Error(`Purchase order ${purchaseOrderId} not found`);
+
+  const { xeroContactId, subcontractor } = await ensureSupplierContact(
+    db,
+    env,
+    po.supplier,
+  );
+  const conn = await getConnection(db);
+
+  const [existingMap] = await db
+    .select()
+    .from(xeroBillMapTable)
+    .where(eq(xeroBillMapTable.purchaseOrderId, purchaseOrderId));
+
+  const xeroBill: Record<string, unknown> = {
+    Type: "ACCPAY",
+    InvoiceNumber: po.poNumber,
+    Status: PO_STATUS[po.status] ?? "DRAFT",
+    Date: po.orderDate,
+    DueDate: po.deliveryDate ?? po.expectedDelivery ?? po.orderDate,
+    LineAmountTypes: "Exclusive",
+    LineItems: [
+      {
+        Description: po.description,
+        Quantity: 1,
+        UnitAmount: po.amount,
+        TaxType: po.vatAmount > 0 ? "INPUT2" : "NONE",
+        TaxAmount: po.vatAmount,
+        LineAmount: po.amount,
+        ...(conn?.purchasesAccountCode
+          ? { AccountCode: conn.purchasesAccountCode }
+          : {}),
+      },
+    ],
+  };
+
+  if (xeroContactId) xeroBill.Contact = { ContactID: xeroContactId };
+  else xeroBill.Contact = { Name: po.supplier };
+  if (existingMap) xeroBill.InvoiceID = existingMap.xeroBillId;
+  if (po.notes) xeroBill.Reference = po.notes;
+
+  // CIS deduction only applies to subcontractors verified for net payment -
+  // "gross" subcontractors are paid without deduction, and "unverified"
+  // subcontractors shouldn't be paid (let alone deducted) until HMRC
+  // verification completes, so leave that case alone rather than guessing.
+  if (subcontractor && subcontractor.cisStatus === "net") {
+    const deduction =
+      Math.round(po.amount * (subcontractor.cisDeductionRate / 100) * 100) /
+      100;
+    if (deduction > 0) xeroBill.CISDeduction = deduction;
+  }
+
+  const r = (await xeroFetch(db, env, "/Invoices", {
+    method: "POST",
+    body: JSON.stringify({ Invoices: [xeroBill] }),
+  })) as { Invoices?: Array<{ InvoiceID: string }> };
+
+  const xeroBillId = r.Invoices?.[0]?.InvoiceID;
+  if (!xeroBillId) throw new Error("No InvoiceID returned from Xero");
+
+  await db
+    .insert(xeroBillMapTable)
+    .values({ purchaseOrderId, xeroBillId, syncedAt: new Date() })
+    .onConflictDoUpdate({
+      target: xeroBillMapTable.purchaseOrderId,
+      set: { xeroBillId, syncedAt: new Date() },
+    });
+
+  return { purchaseOrderId, xeroBillId };
+}
+
+export async function syncAllBills(db: Database, env: Bindings) {
+  const orders = await db.select().from(purchaseOrdersTable);
+  return Promise.all(
+    orders.map((po) =>
+      syncBill(db, env, po.id).catch((e) => ({
+        error: String(e),
+        purchaseOrderId: po.id,
+      })),
+    ),
+  );
+}
+
+// ─── Credit notes (credited invoices pushed as Xero ACCRECCREDIT notes) ─────
+
+/**
+ * Pushes a real Xero credit note (ACCRECCREDIT) for every invoice marked
+ * "credited" in GroundworkOS that doesn't already have one, and allocates it
+ * against the original Xero invoice when that invoice was itself synced.
+ * This is deliberately a separate, opt-in action rather than something
+ * syncInvoice does automatically on status change - voiding or crediting an
+ * invoice that's already been reconciled in Xero has real accounting
+ * consequences, so it stays a manual, explicit push.
+ */
+export async function syncCreditNote(
+  db: Database,
+  env: Bindings,
+  invoiceId: string,
+) {
+  const [invoice] = await db
+    .select()
+    .from(invoicesTable)
+    .where(eq(invoicesTable.id, invoiceId));
+  if (!invoice) throw new Error(`Invoice ${invoiceId} not found`);
+  if (invoice.status !== "credited")
+    throw new Error(`Invoice ${invoiceId} is not marked as credited`);
+
+  const [existing] = await db
+    .select()
+    .from(xeroCreditNoteMapTable)
+    .where(eq(xeroCreditNoteMapTable.invoiceId, invoiceId));
+  if (existing)
+    return { invoiceId, xeroCreditNoteId: existing.xeroCreditNoteId };
+
+  const xeroContactId = await ensureContact(db, env, invoice.clientId);
+  const conn = await getConnection(db);
+
+  const creditNote: Record<string, unknown> = {
+    Type: "ACCRECCREDIT",
+    Date: new Date().toISOString().slice(0, 10),
+    LineAmountTypes: "Exclusive",
+    LineItems: [
+      {
+        Description: `Credit — ${invoice.invoiceNumber}`,
+        Quantity: 1,
+        UnitAmount: invoice.subtotal,
+        TaxType: invoice.vatAmount > 0 ? "OUTPUT2" : "NONE",
+        TaxAmount: invoice.vatAmount,
+        LineAmount: invoice.subtotal,
+        ...(conn?.salesAccountCode
+          ? { AccountCode: conn.salesAccountCode }
+          : {}),
+      },
+    ],
+  };
+  if (xeroContactId) creditNote.Contact = { ContactID: xeroContactId };
+  if (invoice.notes) creditNote.Reference = invoice.notes;
+
+  const r = (await xeroFetch(db, env, "/CreditNotes", {
+    method: "POST",
+    body: JSON.stringify({ CreditNotes: [creditNote] }),
+  })) as { CreditNotes?: Array<{ CreditNoteID: string }> };
+
+  const xeroCreditNoteId = r.CreditNotes?.[0]?.CreditNoteID;
+  if (!xeroCreditNoteId) throw new Error("No CreditNoteID returned from Xero");
+
+  // Allocate against the original invoice when we know its Xero ID, so the
+  // credit actually offsets the invoice in Xero rather than sitting
+  // unapplied. Best-effort: allocation failing (e.g. the original invoice
+  // was already fully paid or voided in Xero) shouldn't block recording that
+  // the credit note itself was created successfully.
+  const [invoiceMap] = await db
+    .select()
+    .from(xeroInvoiceMapTable)
+    .where(eq(xeroInvoiceMapTable.invoiceId, invoiceId));
+  if (invoiceMap) {
+    try {
+      await xeroFetch(db, env, `/CreditNotes/${xeroCreditNoteId}/Allocations`, {
+        method: "PUT",
+        body: JSON.stringify({
+          Allocations: [
+            {
+              Invoice: { InvoiceID: invoiceMap.xeroInvoiceId },
+              Amount: invoice.subtotal + invoice.vatAmount,
+            },
+          ],
+        }),
+      });
+    } catch {
+      // Allocation is a nice-to-have on top of the credit note existing at
+      // all - swallow and let the caller see the credit note was created.
+    }
+  }
+
+  await db
+    .insert(xeroCreditNoteMapTable)
+    .values({ invoiceId, xeroCreditNoteId, syncedAt: new Date() })
+    .onConflictDoUpdate({
+      target: xeroCreditNoteMapTable.invoiceId,
+      set: { xeroCreditNoteId, syncedAt: new Date() },
+    });
+
+  return { invoiceId, xeroCreditNoteId };
+}
+
+export async function syncAllCreditNotes(db: Database, env: Bindings) {
+  const credited = await db
+    .select()
+    .from(invoicesTable)
+    .where(eq(invoicesTable.status, "credited"));
+  return Promise.all(
+    credited.map((inv) =>
+      syncCreditNote(db, env, inv.id).catch((e) => ({
+        error: String(e),
+        invoiceId: inv.id,
+      })),
+    ),
+  );
+}
+
+// ─── Chart of accounts ───────────────────────────────────────────────────────
+
+export async function fetchAccounts(db: Database, env: Bindings) {
+  const r = (await xeroFetch(db, env, "/Accounts")) as {
+    Accounts?: Array<{
+      AccountID: string;
+      Code?: string;
+      Name: string;
+      Type: string;
+      Class: string;
+      Status: string;
+    }>;
+  };
+  return (r.Accounts ?? [])
+    .filter((a) => a.Status === "ACTIVE" && a.Code)
+    .map((a) => ({
+      code: a.Code as string,
+      name: a.Name,
+      type: a.Type,
+      class: a.Class,
+    }));
 }
