@@ -221,6 +221,77 @@ export const UpdateDocumentInput = z
   })
   .strict();
 
+// A single hazard/control-measure row within a RAMS record's method
+// statement. `riskBefore`/`riskAfter` are free-text ratings (e.g.
+// "high"/"low") rather than an enum, since firms score risk differently
+// (some use a numeric matrix, some low/medium/high) and this is authored
+// content, not a value the server branches on.
+const RamsHazardInput = z
+  .object({
+    hazard: z.string(),
+    whoAtRisk: z.string().optional(),
+    controls: z.string().optional(),
+    riskBefore: z.string().optional(),
+    riskAfter: z.string().optional(),
+  })
+  .strict();
+
+// One attendee's toolbox-talk sign-off against a RAMS record. `acknowledged`
+// and `acknowledgedAt` are set when that person confirms they were briefed -
+// see POST /rams/:id/acknowledge in routes/rams.ts, which is the only path
+// allowed to flip them (they're rejected here so a client can't just claim
+// someone's sign-off in a PATCH).
+const RamsAttendeeInput = z
+  .object({
+    name: z.string(),
+    role: z.string().optional(),
+    subcontractorId: z.string().optional(),
+  })
+  .strict();
+
+export const CreateRamsRecordInput = z
+  .object({
+    jobId: z.string().optional(),
+    title: z.string(),
+    activity: z.string(),
+    riskLevel: z.string().optional(),
+    status: z.string().optional(),
+    hazards: z.array(RamsHazardInput).optional(),
+    ppe: z.array(z.string()).optional(),
+    attendees: z.array(RamsAttendeeInput).optional(),
+    reviewDate: z.string().optional(),
+    notes: z.string().optional(),
+  })
+  .strict();
+
+export const UpdateRamsRecordInput = z
+  .object({
+    jobId: z.string().optional(),
+    title: z.string().optional(),
+    activity: z.string().optional(),
+    riskLevel: z.string().optional(),
+    status: z.string().optional(),
+    hazards: z.array(RamsHazardInput).optional(),
+    ppe: z.array(z.string()).optional(),
+    attendees: z.array(RamsAttendeeInput).optional(),
+    reviewDate: z.string().optional(),
+    notes: z.string().optional(),
+  })
+  .strict();
+
+// Body for POST /rams/:id/acknowledge - a worker (or the foreman entering it
+// on their behalf on a shared site tablet) confirming they were briefed on
+// this RAMS. Kept as its own endpoint/schema rather than folded into PATCH
+// so acknowledging a briefing never accidentally rewrites the method
+// statement itself, and so the server (not the client) stamps the time.
+export const AcknowledgeRamsInput = z
+  .object({
+    name: z.string(),
+    role: z.string().optional(),
+    subcontractorId: z.string().optional(),
+  })
+  .strict();
+
 export const CreatePlantInput = z
   .object({
     name: z.string(),

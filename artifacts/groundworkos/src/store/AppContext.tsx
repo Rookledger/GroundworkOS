@@ -8,6 +8,7 @@ import type {
   Document,
   ScheduleEntry,
   Plant,
+  RamsRecord,
   CISReturn,
   Timesheet,
   PurchaseOrder,
@@ -64,6 +65,7 @@ export interface AppState {
   documents: Document[];
   schedule: ScheduleEntry[];
   plant: Plant[];
+  rams: RamsRecord[];
   cisReturns: CISReturn[];
   rateBook: any[];
   timesheets: Timesheet[];
@@ -83,6 +85,7 @@ export type AppAction =
   | { type: "INIT_DOCUMENTS"; documents: Document[] }
   | { type: "INIT_SCHEDULE"; schedule: ScheduleEntry[] }
   | { type: "INIT_PLANT"; plant: Plant[] }
+  | { type: "INIT_RAMS"; rams: RamsRecord[] }
   | { type: "INIT_RATE_BOOK"; rateBook: any[] }
   | { type: "INIT_CIS_RETURNS"; cisReturns: CISReturn[] }
   | { type: "INIT_TIMESHEETS"; timesheets: Timesheet[] }
@@ -123,6 +126,9 @@ export type AppAction =
   | { type: "ADD_PLANT"; plant: Plant }
   | { type: "UPDATE_PLANT"; id: string; updates: Partial<Plant> }
   | { type: "REMOVE_PLANT"; id: string }
+  | { type: "ADD_RAMS"; rams: RamsRecord }
+  | { type: "UPDATE_RAMS"; id: string; updates: Partial<RamsRecord> }
+  | { type: "REMOVE_RAMS"; id: string }
   | { type: "ADD_SCHEDULE"; entry: ScheduleEntry }
   | { type: "UPDATE_SCHEDULE"; id: string; updates: Partial<ScheduleEntry> }
   | { type: "REMOVE_SCHEDULE"; id: string };
@@ -136,6 +142,7 @@ const initialState: AppState = {
   documents: [],
   schedule: [],
   plant: [],
+  rams: [],
   cisReturns: [],
   rateBook: [],
   timesheets: [],
@@ -165,6 +172,8 @@ function reducer(state: AppState, action: AppAction): AppState {
       return { ...state, schedule: action.schedule };
     case "INIT_PLANT":
       return { ...state, plant: action.plant };
+    case "INIT_RAMS":
+      return { ...state, rams: action.rams };
     case "INIT_RATE_BOOK":
       return { ...state, rateBook: action.rateBook };
     case "INIT_CIS_RETURNS":
@@ -305,6 +314,17 @@ function reducer(state: AppState, action: AppAction): AppState {
       };
     case "REMOVE_PLANT":
       return { ...state, plant: state.plant.filter((p) => p.id !== action.id) };
+    case "ADD_RAMS":
+      return { ...state, rams: [action.rams, ...state.rams] };
+    case "UPDATE_RAMS":
+      return {
+        ...state,
+        rams: state.rams.map((r) =>
+          r.id === action.id ? { ...r, ...action.updates } : r,
+        ),
+      };
+    case "REMOVE_RAMS":
+      return { ...state, rams: state.rams.filter((r) => r.id !== action.id) };
     case "ADD_SCHEDULE":
       return { ...state, schedule: [action.entry, ...state.schedule] };
     case "UPDATE_SCHEDULE":

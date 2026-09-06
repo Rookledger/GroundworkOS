@@ -940,6 +940,219 @@ export const DeletePlantItemParams = zod.object({
 
 
 /**
+ * @summary List all RAMS (Risk Assessment & Method Statement) records
+ */
+export const GetRamsResponseItem = zod.object({
+  "id": zod.string(),
+  "jobId": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "title": zod.string(),
+  "activity": zod.string(),
+  "riskLevel": zod.string(),
+  "status": zod.string(),
+  "hazards": zod.array(zod.object({
+  "hazard": zod.string(),
+  "whoAtRisk": zod.string().optional(),
+  "controls": zod.string().optional(),
+  "riskBefore": zod.string().optional(),
+  "riskAfter": zod.string().optional()
+})),
+  "ppe": zod.array(zod.string()),
+  "briefedAt": zod.string().nullish(),
+  "briefedBy": zod.string().nullish(),
+  "attendees": zod.array(zod.object({
+  "name": zod.string(),
+  "role": zod.string().nullish(),
+  "subcontractorId": zod.string().nullish(),
+  "acknowledged": zod.boolean(),
+  "acknowledgedAt": zod.string().nullish()
+})),
+  "reviewDate": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+export const GetRamsResponse = zod.array(GetRamsResponseItem)
+
+
+/**
+ * @summary Create a RAMS record
+ */
+export const CreateRamsRecordBody = zod.object({
+  "jobId": zod.string().optional(),
+  "title": zod.string(),
+  "activity": zod.string(),
+  "riskLevel": zod.string().optional(),
+  "status": zod.string().optional(),
+  "hazards": zod.array(zod.object({
+  "hazard": zod.string(),
+  "whoAtRisk": zod.string().optional(),
+  "controls": zod.string().optional(),
+  "riskBefore": zod.string().optional(),
+  "riskAfter": zod.string().optional()
+})).optional(),
+  "ppe": zod.array(zod.string()).optional(),
+  "attendees": zod.array(zod.object({
+  "name": zod.string().optional(),
+  "role": zod.string().optional(),
+  "subcontractorId": zod.string().optional()
+})).optional(),
+  "reviewDate": zod.string().optional(),
+  "notes": zod.string().optional()
+})
+
+
+/**
+ * @summary Get a single RAMS record
+ */
+export const GetRamsRecordParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const GetRamsRecordResponse = zod.object({
+  "id": zod.string(),
+  "jobId": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "title": zod.string(),
+  "activity": zod.string(),
+  "riskLevel": zod.string(),
+  "status": zod.string(),
+  "hazards": zod.array(zod.object({
+  "hazard": zod.string(),
+  "whoAtRisk": zod.string().optional(),
+  "controls": zod.string().optional(),
+  "riskBefore": zod.string().optional(),
+  "riskAfter": zod.string().optional()
+})),
+  "ppe": zod.array(zod.string()),
+  "briefedAt": zod.string().nullish(),
+  "briefedBy": zod.string().nullish(),
+  "attendees": zod.array(zod.object({
+  "name": zod.string(),
+  "role": zod.string().nullish(),
+  "subcontractorId": zod.string().nullish(),
+  "acknowledged": zod.boolean(),
+  "acknowledgedAt": zod.string().nullish()
+})),
+  "reviewDate": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Update a RAMS record
+ */
+export const UpdateRamsRecordParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const UpdateRamsRecordBody = zod.object({
+  "jobId": zod.string().optional(),
+  "title": zod.string().optional(),
+  "activity": zod.string().optional(),
+  "riskLevel": zod.string().optional(),
+  "status": zod.string().optional(),
+  "hazards": zod.array(zod.object({
+  "hazard": zod.string(),
+  "whoAtRisk": zod.string().optional(),
+  "controls": zod.string().optional(),
+  "riskBefore": zod.string().optional(),
+  "riskAfter": zod.string().optional()
+})).optional(),
+  "ppe": zod.array(zod.string()).optional(),
+  "attendees": zod.array(zod.object({
+  "name": zod.string().optional(),
+  "role": zod.string().optional(),
+  "subcontractorId": zod.string().optional()
+})).optional(),
+  "reviewDate": zod.string().optional(),
+  "notes": zod.string().optional()
+})
+
+export const UpdateRamsRecordResponse = zod.object({
+  "id": zod.string(),
+  "jobId": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "title": zod.string(),
+  "activity": zod.string(),
+  "riskLevel": zod.string(),
+  "status": zod.string(),
+  "hazards": zod.array(zod.object({
+  "hazard": zod.string(),
+  "whoAtRisk": zod.string().optional(),
+  "controls": zod.string().optional(),
+  "riskBefore": zod.string().optional(),
+  "riskAfter": zod.string().optional()
+})),
+  "ppe": zod.array(zod.string()),
+  "briefedAt": zod.string().nullish(),
+  "briefedBy": zod.string().nullish(),
+  "attendees": zod.array(zod.object({
+  "name": zod.string(),
+  "role": zod.string().nullish(),
+  "subcontractorId": zod.string().nullish(),
+  "acknowledged": zod.boolean(),
+  "acknowledgedAt": zod.string().nullish()
+})),
+  "reviewDate": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Delete a RAMS record
+ */
+export const DeleteRamsRecordParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+
+/**
+ * @summary Record a toolbox-talk sign-off against a RAMS record
+ */
+export const AcknowledgeRamsParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const AcknowledgeRamsBody = zod.object({
+  "name": zod.string(),
+  "role": zod.string().optional(),
+  "subcontractorId": zod.string().optional()
+})
+
+export const AcknowledgeRamsResponse = zod.object({
+  "id": zod.string(),
+  "jobId": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "title": zod.string(),
+  "activity": zod.string(),
+  "riskLevel": zod.string(),
+  "status": zod.string(),
+  "hazards": zod.array(zod.object({
+  "hazard": zod.string(),
+  "whoAtRisk": zod.string().optional(),
+  "controls": zod.string().optional(),
+  "riskBefore": zod.string().optional(),
+  "riskAfter": zod.string().optional()
+})),
+  "ppe": zod.array(zod.string()),
+  "briefedAt": zod.string().nullish(),
+  "briefedBy": zod.string().nullish(),
+  "attendees": zod.array(zod.object({
+  "name": zod.string(),
+  "role": zod.string().nullish(),
+  "subcontractorId": zod.string().nullish(),
+  "acknowledged": zod.boolean(),
+  "acknowledgedAt": zod.string().nullish()
+})),
+  "reviewDate": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
  * @summary List rate book entries
  */
 export const GetRateBookResponseItem = zod.object({

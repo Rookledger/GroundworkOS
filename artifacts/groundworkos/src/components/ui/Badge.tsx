@@ -73,6 +73,14 @@ const statusConfig: Record<
   },
   hired_in: { label: "Hired In", color: "#5980a6", bg: "rgba(89,128,166,0.12)" },
   disposed: { label: "Disposed", color: "#5d5d60", bg: "rgba(93,93,96,0.08)" },
+  archived: { label: "Archived", color: "#5d5d60", bg: "rgba(93,93,96,0.08)" },
+  low: { label: "Low Risk", color: "#2a6e45", bg: "rgba(42,110,69,0.1)" },
+  medium: {
+    label: "Medium Risk",
+    color: "#b8730c",
+    bg: "rgba(184,115,12,0.12)",
+  },
+  high: { label: "High Risk", color: "#b23a26", bg: "rgba(178,58,38,0.1)" },
 };
 
 interface BadgeProps {

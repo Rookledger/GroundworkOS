@@ -26,6 +26,7 @@ import {
   AlertTriangle,
   Wrench,
   KeyRound,
+  ShieldAlert,
 } from "lucide-react";
 import { useAlerts } from "../../hooks/useAlerts";
 import { GlobalSearch } from "../ui/GlobalSearch";
@@ -79,6 +80,12 @@ const ALL_NAV = [
     href: "/documents",
     icon: FolderOpen,
     minRole: "manager" as Role,
+  },
+  {
+    name: "RAMS",
+    href: "/rams",
+    icon: ShieldAlert,
+    minRole: "foreman" as Role,
   },
   { name: "Plant", href: "/plant", icon: Truck, minRole: "manager" as Role },
   {
@@ -138,6 +145,7 @@ const ALERT_ICONS = {
   document: FileWarning,
   invoice: Receipt,
   plant: Wrench,
+  rams: ShieldAlert,
 };
 
 function InitialLoadingState() {
@@ -228,6 +236,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     (a) => a.category === "document",
   ).length;
   const plantAlertCount = alerts.filter((a) => a.category === "plant").length;
+  const ramsAlertCount = alerts.filter((a) => a.category === "rams").length;
   const subsUnverifiedCount = state.subcontractors.filter(
     (s) => s.cis_status === "unverified" || s.cis_status === "unmatched",
   ).length;
@@ -236,6 +245,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     "/invoices": { count: invoicesOverdueCount, color: "#b23a26" },
     "/documents": { count: documentsAlertCount, color: "#b8730c" },
     "/plant": { count: plantAlertCount, color: "#b23a26" },
+    "/rams": { count: ramsAlertCount, color: "#b8730c" },
     "/subcontractors": { count: subsUnverifiedCount, color: "#b8730c" },
   };
 

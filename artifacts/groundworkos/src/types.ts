@@ -200,6 +200,43 @@ export interface Plant {
   owned: boolean;
 }
 
+export type RamsRiskLevel = "low" | "medium" | "high";
+export type RamsStatus = "draft" | "active" | "archived";
+
+export interface RamsHazard {
+  hazard: string;
+  who_at_risk: string | null;
+  controls: string | null;
+  risk_before: string | null;
+  risk_after: string | null;
+}
+
+export interface RamsAttendee {
+  name: string;
+  role: string | null;
+  subcontractor_id: string | null;
+  acknowledged: boolean;
+  acknowledged_at: string | null;
+}
+
+export interface RamsRecord {
+  id: string;
+  job_id: string | null;
+  job_title: string | null;
+  title: string;
+  activity: string;
+  risk_level: RamsRiskLevel;
+  status: RamsStatus;
+  hazards: RamsHazard[];
+  ppe: string[];
+  briefed_at: string | null;
+  briefed_by: string | null;
+  attendees: RamsAttendee[];
+  review_date: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
 export interface RateBookEntry {
   id: string;
   category: string;

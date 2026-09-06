@@ -728,6 +728,119 @@ paths:
         "204":
           description: Deleted
 
+  # ── RAMS ─────────────────────────────────────────────────────────────────
+  /rams:
+    get:
+      operationId: getRams
+      tags: [rams]
+      summary: List all RAMS (Risk Assessment & Method Statement) records
+      responses:
+        "200":
+          description: List of RAMS records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RamsRecord"
+    post:
+      operationId: createRamsRecord
+      tags: [rams]
+      summary: Create a RAMS record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RamsInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RamsRecord"
+
+  /rams/{id}:
+    get:
+      operationId: getRamsRecord
+      tags: [rams]
+      summary: Get a single RAMS record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: RAMS record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RamsRecord"
+    patch:
+      operationId: updateRamsRecord
+      tags: [rams]
+      summary: Update a RAMS record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RamsUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RamsRecord"
+    delete:
+      operationId: deleteRamsRecord
+      tags: [rams]
+      summary: Delete a RAMS record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /rams/{id}/acknowledge:
+    post:
+      operationId: acknowledgeRams
+      tags: [rams]
+      summary: Record a toolbox-talk sign-off against a RAMS record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RamsAcknowledgeInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RamsRecord"
+
   # ── RATE BOOK ────────────────────────────────────────────────────────────
   /rate-book:
     get:
@@ -1314,6 +1427,123 @@ components:
         notes: { type: string }
         dailyRate: { type: number }
         owned: { type: boolean }
+
+    # ── RAMS ────────────────────────────────────────────────────────────────
+    RamsHazard:
+      type: object
+      required: [hazard]
+      properties:
+        hazard: { type: string }
+        whoAtRisk: { type: string }
+        controls: { type: string }
+        riskBefore: { type: string }
+        riskAfter: { type: string }
+
+    RamsAttendee:
+      type: object
+      required: [name, acknowledged]
+      properties:
+        name: { type: string }
+        role: { type: ["string", "null"] }
+        subcontractorId: { type: ["string", "null"] }
+        acknowledged: { type: boolean }
+        acknowledgedAt: { type: ["string", "null"] }
+
+    RamsRecord:
+      type: object
+      required:
+        [
+          id,
+          title,
+          activity,
+          riskLevel,
+          status,
+          hazards,
+          ppe,
+          attendees,
+          createdAt,
+        ]
+      properties:
+        id: { type: string }
+        jobId: { type: ["string", "null"] }
+        jobTitle: { type: ["string", "null"] }
+        title: { type: string }
+        activity: { type: string }
+        riskLevel: { type: string }
+        status: { type: string }
+        hazards:
+          type: array
+          items: { $ref: "#/components/schemas/RamsHazard" }
+        ppe:
+          type: array
+          items: { type: string }
+        briefedAt: { type: ["string", "null"] }
+        briefedBy: { type: ["string", "null"] }
+        attendees:
+          type: array
+          items: { $ref: "#/components/schemas/RamsAttendee" }
+        reviewDate: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
+        createdAt: { type: string }
+
+    RamsInput:
+      type: object
+      required: [title, activity]
+      properties:
+        jobId: { type: string }
+        title: { type: string }
+        activity: { type: string }
+        riskLevel: { type: string }
+        status: { type: string }
+        hazards:
+          type: array
+          items: { $ref: "#/components/schemas/RamsHazard" }
+        ppe:
+          type: array
+          items: { type: string }
+        attendees:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              role: { type: string }
+              subcontractorId: { type: string }
+        reviewDate: { type: string }
+        notes: { type: string }
+
+    RamsUpdate:
+      type: object
+      properties:
+        jobId: { type: string }
+        title: { type: string }
+        activity: { type: string }
+        riskLevel: { type: string }
+        status: { type: string }
+        hazards:
+          type: array
+          items: { $ref: "#/components/schemas/RamsHazard" }
+        ppe:
+          type: array
+          items: { type: string }
+        attendees:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              role: { type: string }
+              subcontractorId: { type: string }
+        reviewDate: { type: string }
+        notes: { type: string }
+
+    RamsAcknowledgeInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        role: { type: string }
+        subcontractorId: { type: string }
 
     # ── RATE BOOK ───────────────────────────────────────────────────────────
     RateBookRecord:

@@ -7,6 +7,7 @@ import type {
   DocumentRecord,
   ScheduleEntryRecord,
   PlantRecord,
+  RamsRecord as ApiRamsRecord,
   RateBookRecord,
 } from "@workspace/api-client-react";
 import type {
@@ -18,6 +19,7 @@ import type {
   Document,
   ScheduleEntry,
   Plant,
+  RamsRecord,
   RateBookEntry,
   Timesheet,
   PurchaseOrder,
@@ -229,6 +231,38 @@ export function toPlant(r: PlantRecord): Plant {
     notes: r.notes ?? null,
     daily_rate: r.dailyRate ?? null,
     owned: r.owned,
+  };
+}
+
+export function toRamsRecord(r: ApiRamsRecord): RamsRecord {
+  return {
+    id: r.id,
+    job_id: r.jobId ?? null,
+    job_title: r.jobTitle ?? null,
+    title: r.title,
+    activity: r.activity,
+    risk_level: r.riskLevel as RamsRecord["risk_level"],
+    status: r.status as RamsRecord["status"],
+    hazards: (r.hazards ?? []).map((h) => ({
+      hazard: h.hazard,
+      who_at_risk: h.whoAtRisk ?? null,
+      controls: h.controls ?? null,
+      risk_before: h.riskBefore ?? null,
+      risk_after: h.riskAfter ?? null,
+    })),
+    ppe: r.ppe ?? [],
+    briefed_at: r.briefedAt ?? null,
+    briefed_by: r.briefedBy ?? null,
+    attendees: (r.attendees ?? []).map((a) => ({
+      name: a.name,
+      role: a.role ?? null,
+      subcontractor_id: a.subcontractorId ?? null,
+      acknowledged: a.acknowledged,
+      acknowledged_at: a.acknowledgedAt ?? null,
+    })),
+    review_date: r.reviewDate ?? null,
+    notes: r.notes ?? null,
+    created_at: r.createdAt,
   };
 }
 
