@@ -6,7 +6,7 @@ export type AlertSeverity = "critical" | "warning" | "info";
 export interface AppAlert {
   id: string;
   severity: AlertSeverity;
-  category: "document" | "invoice" | "plant";
+  category: "document" | "invoice" | "plant" | "rams";
   title: string;
   detail: string;
   href: string;
@@ -27,7 +27,7 @@ function daysAgo(dateStr: string | null | undefined): number {
 
 export function useAlerts(): AppAlert[] {
   const { state } = useApp();
-  const { documents, invoices, plant } = state;
+  const { documents, invoices, plant, rams } = state;
 
   return useMemo(() => {
     const alerts: AppAlert[] = [];
@@ -115,10 +115,44 @@ export function useAlerts(): AppAlert[] {
       }
     }
 
+    // RAMS due for review, or active on a job but never briefed to anyone
+    for (const r of rams) {
+      if (r.status !== "active") continue;
+      const days = daysUntil(r.review_date);
+      if (r.review_date && days <= 0) {
+        alerts.push({
+          id: `rams-review-${r.id}`,
+          severity: "critical",
+          category: "rams",
+          title: `${r.title} review overdue`,
+          detail: `Review was due ${Math.abs(days)} day${Math.abs(days) !== 1 ? "s" : ""} ago`,
+          href: "/rams",
+        });
+      } else if (r.review_date && days <= 14) {
+        alerts.push({
+          id: `rams-review-${r.id}`,
+          severity: "warning",
+          category: "rams",
+          title: `${r.title} review due`,
+          detail: `Due in ${days} day${days !== 1 ? "s" : ""}`,
+          href: "/rams",
+        });
+      } else if (!r.briefed_at) {
+        alerts.push({
+          id: `rams-unbriefed-${r.id}`,
+          severity: "warning",
+          category: "rams",
+          title: `${r.title} not yet briefed`,
+          detail: "Active RAMS with no toolbox-talk sign-off recorded",
+          href: "/rams",
+        });
+      }
+    }
+
     // Sort: critical first, then by category
     return alerts.sort((a, b) => {
       const sev = { critical: 0, warning: 1, info: 2 };
       return sev[a.severity] - sev[b.severity];
     });
-  }, [documents, invoices, plant]);
+  }, [documents, invoices, plant, rams]);
 }

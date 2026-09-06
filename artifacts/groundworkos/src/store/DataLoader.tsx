@@ -8,6 +8,7 @@ import {
   useGetDocuments,
   useGetSchedule,
   useGetPlant,
+  useGetRams,
   useGetRateBook,
 } from "@workspace/api-client-react";
 import { useApp } from "./AppContext";
@@ -20,6 +21,7 @@ import {
   toDocument,
   toScheduleEntry,
   toPlant,
+  toRamsRecord,
   toTimesheet,
   toPurchaseOrder,
 } from "../lib/apiTransforms";
@@ -76,6 +78,7 @@ export function DataLoader() {
   const { data: documents } = useGetDocuments();
   const { data: schedule } = useGetSchedule();
   const { data: plant } = useGetPlant();
+  const { data: rams } = useGetRams();
   const { data: rateBook } = useGetRateBook();
 
   useEffect(() => {
@@ -123,6 +126,10 @@ export function DataLoader() {
   useEffect(() => {
     if (plant) dispatch({ type: "INIT_PLANT", plant: plant.map(toPlant) });
   }, [plant, dispatch]);
+
+  useEffect(() => {
+    if (rams) dispatch({ type: "INIT_RAMS", rams: rams.map(toRamsRecord) });
+  }, [rams, dispatch]);
 
   useEffect(() => {
     if (rateBook) dispatch({ type: "INIT_RATE_BOOK", rateBook });

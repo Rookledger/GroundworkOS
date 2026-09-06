@@ -480,6 +480,93 @@ export interface PlantUpdate {
   owned?: boolean;
 }
 
+export interface RamsHazard {
+  hazard: string;
+  whoAtRisk?: string;
+  controls?: string;
+  riskBefore?: string;
+  riskAfter?: string;
+}
+
+export interface RamsAttendee {
+  name: string;
+  /** @nullable */
+  role?: string | null;
+  /** @nullable */
+  subcontractorId?: string | null;
+  acknowledged: boolean;
+  /** @nullable */
+  acknowledgedAt?: string | null;
+}
+
+export interface RamsRecord {
+  id: string;
+  /** @nullable */
+  jobId?: string | null;
+  /** @nullable */
+  jobTitle?: string | null;
+  title: string;
+  activity: string;
+  riskLevel: string;
+  status: string;
+  hazards: RamsHazard[];
+  ppe: string[];
+  /** @nullable */
+  briefedAt?: string | null;
+  /** @nullable */
+  briefedBy?: string | null;
+  attendees: RamsAttendee[];
+  /** @nullable */
+  reviewDate?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  createdAt: string;
+}
+
+export type RamsInputAttendeesItem = {
+  name?: string;
+  role?: string;
+  subcontractorId?: string;
+};
+
+export interface RamsInput {
+  jobId?: string;
+  title: string;
+  activity: string;
+  riskLevel?: string;
+  status?: string;
+  hazards?: RamsHazard[];
+  ppe?: string[];
+  attendees?: RamsInputAttendeesItem[];
+  reviewDate?: string;
+  notes?: string;
+}
+
+export type RamsUpdateAttendeesItem = {
+  name?: string;
+  role?: string;
+  subcontractorId?: string;
+};
+
+export interface RamsUpdate {
+  jobId?: string;
+  title?: string;
+  activity?: string;
+  riskLevel?: string;
+  status?: string;
+  hazards?: RamsHazard[];
+  ppe?: string[];
+  attendees?: RamsUpdateAttendeesItem[];
+  reviewDate?: string;
+  notes?: string;
+}
+
+export interface RamsAcknowledgeInput {
+  name: string;
+  role?: string;
+  subcontractorId?: string;
+}
+
 export interface RateBookRecord {
   id: string;
   category: string;

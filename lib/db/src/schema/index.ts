@@ -6,6 +6,7 @@ export * from "./subcontractors";
 export * from "./documents";
 export * from "./schedule";
 export * from "./plant";
+export * from "./rams";
 export * from "./rate_book";
 export * from "./xero";
 export * from "./quickbooks";

@@ -40,6 +40,10 @@ import type {
   QuoteInput,
   QuoteRecord,
   QuoteUpdate,
+  RamsAcknowledgeInput,
+  RamsInput,
+  RamsRecord,
+  RamsUpdate,
   RateBookInput,
   RateBookRecord,
   RateBookUpdate,
@@ -2997,6 +3001,445 @@ export const useDeletePlantItem = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeletePlantItemMutationOptions(options));
+    }
+
+export const getGetRamsUrl = () => {
+
+
+
+
+  return `/api/rams`
+}
+
+/**
+ * @summary List all RAMS (Risk Assessment & Method Statement) records
+ */
+export const getRams = async ( options?: RequestInit): Promise<RamsRecord[]> => {
+
+  return customFetch<RamsRecord[]>(getGetRamsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRamsQueryKey = () => {
+    return [
+    `/api/rams`
+    ] as const;
+    }
+
+
+export const getGetRamsQueryOptions = <TData = Awaited<ReturnType<typeof getRams>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRams>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRamsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRams>>> = ({ signal }) => getRams({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRams>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRamsQueryResult = NonNullable<Awaited<ReturnType<typeof getRams>>>
+export type GetRamsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all RAMS (Risk Assessment & Method Statement) records
+ */
+
+export function useGetRams<TData = Awaited<ReturnType<typeof getRams>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRams>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRamsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateRamsRecordUrl = () => {
+
+
+
+
+  return `/api/rams`
+}
+
+/**
+ * @summary Create a RAMS record
+ */
+export const createRamsRecord = async (ramsInput: RamsInput, options?: RequestInit): Promise<RamsRecord> => {
+
+  return customFetch<RamsRecord>(getCreateRamsRecordUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      ramsInput,)
+  }
+);}
+
+
+
+
+export const getCreateRamsRecordMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRamsRecord>>, TError,{data: BodyType<RamsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createRamsRecord>>, TError,{data: BodyType<RamsInput>}, TContext> => {
+
+const mutationKey = ['createRamsRecord'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createRamsRecord>>, {data: BodyType<RamsInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createRamsRecord(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateRamsRecordMutationResult = NonNullable<Awaited<ReturnType<typeof createRamsRecord>>>
+    export type CreateRamsRecordMutationBody = BodyType<RamsInput>
+    export type CreateRamsRecordMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create a RAMS record
+ */
+export const useCreateRamsRecord = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRamsRecord>>, TError,{data: BodyType<RamsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createRamsRecord>>,
+        TError,
+        {data: BodyType<RamsInput>},
+        TContext
+      > => {
+      return useMutation(getCreateRamsRecordMutationOptions(options));
+    }
+
+export const getGetRamsRecordUrl = (id: string,) => {
+
+
+
+
+  return `/api/rams/${id}`
+}
+
+/**
+ * @summary Get a single RAMS record
+ */
+export const getRamsRecord = async (id: string, options?: RequestInit): Promise<RamsRecord> => {
+
+  return customFetch<RamsRecord>(getGetRamsRecordUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRamsRecordQueryKey = (id: string,) => {
+    return [
+    `/api/rams/${id}`
+    ] as const;
+    }
+
+
+export const getGetRamsRecordQueryOptions = <TData = Awaited<ReturnType<typeof getRamsRecord>>, TError = ErrorType<unknown>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRamsRecord>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRamsRecordQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRamsRecord>>> = ({ signal }) => getRamsRecord(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRamsRecord>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRamsRecordQueryResult = NonNullable<Awaited<ReturnType<typeof getRamsRecord>>>
+export type GetRamsRecordQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get a single RAMS record
+ */
+
+export function useGetRamsRecord<TData = Awaited<ReturnType<typeof getRamsRecord>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRamsRecord>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRamsRecordQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateRamsRecordUrl = (id: string,) => {
+
+
+
+
+  return `/api/rams/${id}`
+}
+
+/**
+ * @summary Update a RAMS record
+ */
+export const updateRamsRecord = async (id: string,
+    ramsUpdate: RamsUpdate, options?: RequestInit): Promise<RamsRecord> => {
+
+  return customFetch<RamsRecord>(getUpdateRamsRecordUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      ramsUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateRamsRecordMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateRamsRecord>>, TError,{id: string;data: BodyType<RamsUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateRamsRecord>>, TError,{id: string;data: BodyType<RamsUpdate>}, TContext> => {
+
+const mutationKey = ['updateRamsRecord'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateRamsRecord>>, {id: string;data: BodyType<RamsUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateRamsRecord(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateRamsRecordMutationResult = NonNullable<Awaited<ReturnType<typeof updateRamsRecord>>>
+    export type UpdateRamsRecordMutationBody = BodyType<RamsUpdate>
+    export type UpdateRamsRecordMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update a RAMS record
+ */
+export const useUpdateRamsRecord = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateRamsRecord>>, TError,{id: string;data: BodyType<RamsUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateRamsRecord>>,
+        TError,
+        {id: string;data: BodyType<RamsUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateRamsRecordMutationOptions(options));
+    }
+
+export const getDeleteRamsRecordUrl = (id: string,) => {
+
+
+
+
+  return `/api/rams/${id}`
+}
+
+/**
+ * @summary Delete a RAMS record
+ */
+export const deleteRamsRecord = async (id: string, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteRamsRecordUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteRamsRecordMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteRamsRecord>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteRamsRecord>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['deleteRamsRecord'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteRamsRecord>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteRamsRecord(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteRamsRecordMutationResult = NonNullable<Awaited<ReturnType<typeof deleteRamsRecord>>>
+
+    export type DeleteRamsRecordMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete a RAMS record
+ */
+export const useDeleteRamsRecord = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteRamsRecord>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteRamsRecord>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getDeleteRamsRecordMutationOptions(options));
+    }
+
+export const getAcknowledgeRamsUrl = (id: string,) => {
+
+
+
+
+  return `/api/rams/${id}/acknowledge`
+}
+
+/**
+ * @summary Record a toolbox-talk sign-off against a RAMS record
+ */
+export const acknowledgeRams = async (id: string,
+    ramsAcknowledgeInput: RamsAcknowledgeInput, options?: RequestInit): Promise<RamsRecord> => {
+
+  return customFetch<RamsRecord>(getAcknowledgeRamsUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      ramsAcknowledgeInput,)
+  }
+);}
+
+
+
+
+export const getAcknowledgeRamsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof acknowledgeRams>>, TError,{id: string;data: BodyType<RamsAcknowledgeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof acknowledgeRams>>, TError,{id: string;data: BodyType<RamsAcknowledgeInput>}, TContext> => {
+
+const mutationKey = ['acknowledgeRams'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof acknowledgeRams>>, {id: string;data: BodyType<RamsAcknowledgeInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  acknowledgeRams(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AcknowledgeRamsMutationResult = NonNullable<Awaited<ReturnType<typeof acknowledgeRams>>>
+    export type AcknowledgeRamsMutationBody = BodyType<RamsAcknowledgeInput>
+    export type AcknowledgeRamsMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Record a toolbox-talk sign-off against a RAMS record
+ */
+export const useAcknowledgeRams = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof acknowledgeRams>>, TError,{id: string;data: BodyType<RamsAcknowledgeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof acknowledgeRams>>,
+        TError,
+        {id: string;data: BodyType<RamsAcknowledgeInput>},
+        TContext
+      > => {
+      return useMutation(getAcknowledgeRamsMutationOptions(options));
     }
 
 export const getGetRateBookUrl = () => {

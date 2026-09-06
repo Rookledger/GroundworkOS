@@ -27,6 +27,7 @@ import { ClientsPage } from "./pages/ClientsPage";
 import { SubcontractorsPage } from "./pages/SubcontractorsPage";
 import { DocumentsPage } from "./pages/DocumentsPage";
 import { PlantPage } from "./pages/PlantPage";
+import { RamsPage } from "./pages/RamsPage";
 import { ReportsPage } from "./pages/ReportsPage";
 import { TimesheetsPage } from "./pages/TimesheetsPage";
 import { PurchaseOrdersPage } from "./pages/PurchaseOrdersPage";
@@ -603,6 +604,7 @@ function AppRoutes() {
             <Route path="/subcontractors" component={SubcontractorsPage} />
             <Route path="/documents" component={DocumentsPage} />
             <Route path="/plant" component={PlantPage} />
+            <Route path="/rams" component={RamsPage} />
             <Route path="/timesheets" component={TimesheetsPage} />
             <Route path="/purchase-orders" component={PurchaseOrdersPage} />
             <Route path="/reports" component={ReportsPage} />

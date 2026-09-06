@@ -65,6 +65,17 @@ export default tseslint.config(
     rules: reactHooks.configs.recommended.rules,
     settings: { react: { version: "19" } },
   })),
+  {
+    // The service worker (registerServiceWorker.ts's target) runs in its
+    // own worker global scope, not a browser window - `self`/`caches`
+    // aren't part of globals.browser above.
+    files: ["artifacts/groundworkos/public/sw.js"],
+    languageOptions: {
+      globals: {
+        ...globals.serviceworker,
+      },
+    },
+  },
   ...frontendPackages.map((pkg) => ({
     files: [`${pkg}/**/*.{ts,tsx}`],
     rules: {
