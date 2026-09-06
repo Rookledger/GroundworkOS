@@ -309,6 +309,10 @@ type AccountingProviderConfig = {
   /** Shows default sales/purchases account-code selectors backed by
    * GET /api/{key}/accounts and PUT /api/{key}/settings. */
   supportsAccountCodes?: boolean;
+  /** Set to false for a provider whose OAuth/sync backend isn't wired up yet.
+   * The panel shows a "Coming soon" badge and skips all status/sync calls
+   * instead of offering a Connect button that would fail. */
+  available?: boolean;
 };
 
 const ACCOUNTING_PROVIDERS: AccountingProviderConfig[] = [
@@ -347,6 +351,7 @@ const ACCOUNTING_PROVIDERS: AccountingProviderConfig[] = [
     orgFallback: "QuickBooks Company",
     description:
       "Connect to QuickBooks Online to sync your invoices, estimates, and customer contacts automatically.",
+    available: false,
   },
   {
     key: "sage",
@@ -355,6 +360,7 @@ const ACCOUNTING_PROVIDERS: AccountingProviderConfig[] = [
     orgFallback: "Sage Business",
     description:
       "Connect to Sage Accounting to sync your sales invoices, quotes, and contacts automatically.",
+    available: false,
   },
   {
     key: "freeagent",
@@ -363,6 +369,7 @@ const ACCOUNTING_PROVIDERS: AccountingProviderConfig[] = [
     orgFallback: "FreeAgent Company",
     description:
       "Connect to FreeAgent to sync your invoices, estimates, and contacts automatically.",
+    available: false,
   },
 ];
 
@@ -459,6 +466,10 @@ function AccountingProviderPanel({
   }
 
   useEffect(() => {
+    if (provider.available === false) {
+      setLoading(false);
+      return;
+    }
     fetchStatus();
     if (provider.supportsSyncLog) fetchSyncLog();
     if (provider.supportsAccountCodes) fetchAccounts();
@@ -571,6 +582,29 @@ function AccountingProviderPanel({
   const connectedAt = connected
     ? (status as { connectedAt: string }).connectedAt
     : null;
+
+  if (provider.available === false) {
+    return (
+      <Panel
+        title={
+          <CardTitle icon={Link2} label={`${provider.label} integration`} />
+        }
+        badge="Coming soon"
+        noPad
+      >
+        <div className="px-5 py-6">
+          <p className="text-sm mb-1" style={{ color: "var(--ink-2)" }}>
+            {provider.description}
+          </p>
+          <p className="text-xs" style={{ color: "var(--muted)" }}>
+            {provider.label} isn't available to connect yet — this
+            integration is still being built. Xero is the only accounting
+            connection supported right now.
+          </p>
+        </div>
+      </Panel>
+    );
+  }
 
   return (
     <Panel
