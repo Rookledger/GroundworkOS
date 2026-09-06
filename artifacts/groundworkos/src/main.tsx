@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { registerServiceWorker } from "./lib/registerServiceWorker";
 import "./index.css";
 
 createRoot(document.getElementById("root")!).render(
@@ -8,3 +9,5 @@ createRoot(document.getElementById("root")!).render(
     <App />
   </ErrorBoundary>,
 );
+
+registerServiceWorker();

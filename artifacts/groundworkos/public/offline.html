@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Offline — GroundworkOS</title>
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f4f4f5;
+        color: #1d2d3d;
+        font-family:
+          "Barlow",
+          system-ui,
+          -apple-system,
+          sans-serif;
+        text-align: center;
+        padding: 24px;
+        box-sizing: border-box;
+      }
+      .card {
+        max-width: 360px;
+      }
+      h1 {
+        font-family: "Barlow Condensed", sans-serif;
+        font-size: 22px;
+        font-weight: 600;
+        margin: 16px 0 8px;
+      }
+      p {
+        color: #5d5d60;
+        font-size: 14px;
+        line-height: 1.5;
+        margin: 0 0 20px;
+      }
+      button {
+        background: #1b5e78;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        padding: 10px 20px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #164d62;
+      }
+      svg {
+        opacity: 0.8;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#5980a6" stroke-width="1.8">
+        <path d="M12 2 2 20h20L12 2z" />
+        <line x1="12" y1="9" x2="12" y2="13" />
+        <line x1="12" y1="16" x2="12.01" y2="16" />
+      </svg>
+      <h1>No connection right now</h1>
+      <p>
+        GroundworkOS couldn't reach the server. Check your signal on site —
+        any page you've already opened today may still be available.
+      </p>
+      <button onclick="location.reload()">Try again</button>
+    </div>
+  </body>
+</html>
