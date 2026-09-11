@@ -77,29 +77,45 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      # The schema has exactly three foreign keys in the whole database -
+      # account.user_id, session.user_id and invitations.invited_by all
+      # point at user.id, and nothing else references anything (confirmed
+      # by querying pragma_foreign_key_list across every table, and zero
+      # orphaned rows exist in the source). PRAGMA defer_foreign_keys did
+      # NOT fix the previous two failed runs, which means Cloudflare's
+      # remote D1 import applies a large file in multiple internal chunks
+      # rather than as one SQLite transaction, so a same-transaction
+      # pragma can't span the whole file. The reliable fix is to import
+      # "user" by itself first, so by the time account/session/invitations
+      # are inserted, the rows they reference already exist - no pragma
+      # or ordering trick required.
 
-      - name: Export data-only dump from groundworkos
+      - name: Export and import the "user" table first (everything else depends on it)
+        working-directory: artifacts/api-server
+        run: |
+          pnpm exec wrangler d1 export groundworkos --remote --no-schema --table=user --output=/tmp/user-backup.sql
+          pnpm exec wrangler d1 execute groundworkos-eu --remote --file=/tmp/user-backup.sql
+          rm -f /tmp/user-backup.sql
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Export data-only dump from groundworkos (all tables)
         working-directory: artifacts/api-server
         run: pnpm exec wrangler d1 export groundworkos --remote --no-schema --output=/tmp/groundworkos-backup.sql
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-      - name: Defer foreign key checks until the whole import commits
-        # The export's INSERT order follows table order, not dependency
-        # order - a row can reference another row that appears later in
-        # the same file (e.g. an invoice before the client it belongs to).
-        # SQLite checks foreign keys per-statement by default, which
-        # rejects that even though the referenced row exists elsewhere in
-        # the same import. PRAGMA defer_foreign_keys postpones the check
-        # to the end of the transaction, so ordering within the file no
-        # longer matters - it still fails (and still rolls back) if a
-        # reference is genuinely missing.
-        run: |
-          { echo "PRAGMA defer_foreign_keys=TRUE;"; cat /tmp/groundworkos-backup.sql; } > /tmp/groundworkos-backup-deferred.sql
-          mv /tmp/groundworkos-backup-deferred.sql /tmp/groundworkos-backup.sql
+      - name: Skip re-inserting rows already loaded by the user-first step
+        # The full dump above still contains the user table's rows (there
+        # is no "export all except one table" flag) - rewriting INSERT
+        # INTO to INSERT OR IGNORE INTO means those specific rows are
+        # silently skipped as already-present duplicates, while every
+        # other row inserts normally.
+        run: sed -i 's/^INSERT INTO/INSERT OR IGNORE INTO/' /tmp/groundworkos-backup.sql
 
-      - name: Import into groundworkos-eu
+      - name: Import everything else into groundworkos-eu
         working-directory: artifacts/api-server
         run: pnpm exec wrangler d1 execute groundworkos-eu --remote --file=/tmp/groundworkos-backup.sql
         env:
@@ -108,7 +124,7 @@ jobs:
 
       - name: Delete local backup (contains personal/financial data)
         if: always()
-        run: rm -f /tmp/groundworkos-backup.sql
+        run: rm -f /tmp/groundworkos-backup.sql /tmp/user-backup.sql
 
       - name: Verify row counts match between source and target
         working-directory: artifacts/api-server
