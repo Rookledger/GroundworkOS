@@ -48,6 +48,19 @@ pnpm exec wrangler kv namespace create KV
 pnpm exec wrangler r2 bucket create <your-bucket-name>
 ```
 
+> **Data residency (GDPR/UK, or any jurisdiction-restricted client):** if
+> this deployment must keep data in a specific region, add `--jurisdiction
+> eu` to the `r2 bucket create` command above. R2 bucket names are unique
+> **within a jurisdiction, not globally** — creating `<your-bucket-name>`
+> once without the flag and once with `--jurisdiction eu` silently produces
+> two separate buckets that share the same name but live in different
+> regions, with no error or warning either time. Always confirm a newly
+> created bucket's actual location in the dashboard (bucket → Settings →
+> General → Jurisdiction) rather than trusting the name — this exact
+> mistake happened during GroundworkOS's own EU migration and left a stray
+> non-EU bucket sitting under the "-eu" name until it was caught during a
+> manual review.
+
 Each command prints an id. Open `artifacts/api-server/wrangler.jsonc` and
 set:
 
@@ -307,6 +320,10 @@ Cloudflare account via `.github/workflows/deploy.yml`.
    pnpm exec wrangler kv namespace create KV
    pnpm exec wrangler r2 bucket create <slug>-docs
    ```
+
+   If this client requires EU (or other) data residency, add `--jurisdiction
+   eu` to the `r2 bucket create` command — see the data residency warning in
+   Step 1 above; the same same-name-different-region trap applies here.
 
 2. In `artifacts/api-server/wrangler.jsonc`, copy the `env.ktr` block,
    rename it to the client's slug, and fill in the ids from Step 1 plus
