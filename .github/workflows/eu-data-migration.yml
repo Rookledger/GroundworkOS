@@ -85,6 +85,20 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
+      - name: Defer foreign key checks until the whole import commits
+        # The export's INSERT order follows table order, not dependency
+        # order - a row can reference another row that appears later in
+        # the same file (e.g. an invoice before the client it belongs to).
+        # SQLite checks foreign keys per-statement by default, which
+        # rejects that even though the referenced row exists elsewhere in
+        # the same import. PRAGMA defer_foreign_keys postpones the check
+        # to the end of the transaction, so ordering within the file no
+        # longer matters - it still fails (and still rolls back) if a
+        # reference is genuinely missing.
+        run: |
+          { echo "PRAGMA defer_foreign_keys=TRUE;"; cat /tmp/groundworkos-backup.sql; } > /tmp/groundworkos-backup-deferred.sql
+          mv /tmp/groundworkos-backup-deferred.sql /tmp/groundworkos-backup.sql
+
       - name: Import into groundworkos-eu
         working-directory: artifacts/api-server
         run: pnpm exec wrangler d1 execute groundworkos-eu --remote --file=/tmp/groundworkos-backup.sql
