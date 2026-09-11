@@ -1,0 +1,121 @@
+name: EU data migration (one-off)
+
+# One-off, manually-triggered workflow to copy the live "groundworkos" D1
+# database's DATA (not schema - groundworkos-eu already has the same
+# schema applied via migrations) into the new EU-jurisdiction database
+# "groundworkos-eu", as part of the UK data-residency migration. Uses the
+# same CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID already configured on
+# the "ktr" GitHub Environment for deploy-auto.yml - no new secrets.
+#
+# Safety:
+#   - Only exports/imports D1 row data - never touches Worker bindings, so
+#     this alone cannot cut production over to anything.
+#   - Refuses to run if groundworkos-eu already has non-empty data tables,
+#     to avoid silently duplicating or corrupting a previous import.
+#   - The exported SQL dump (contains real client/financial/personal data)
+#     is written to the runner's temp directory only and deleted at the end
+#     of the job - it is never uploaded as a workflow artifact, which for a
+#     public repository would make it downloadable by anyone.
+#   - Manual trigger only (workflow_dispatch) - never runs on push.
+#
+# After this succeeds, do NOT repoint bindings on your own - come back and
+# tell me it passed, and I'll prepare that as a separate, reviewed step.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: ktr
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Confirm target schema is present
+        working-directory: artifacts/api-server
+        run: |
+          set -euo pipefail
+          COUNT=$(pnpm exec wrangler d1 execute groundworkos-eu --remote --json \
+            --command "SELECT count(*) as c FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' AND name NOT LIKE 'd1_%'" \
+            | jq '.[0].results[0].c')
+          echo "groundworkos-eu has $COUNT application tables"
+          if [ "$COUNT" -lt 1 ]; then
+            echo "::error::groundworkos-eu has no schema yet - run 'wrangler d1 migrations apply groundworkos-eu --remote' first, then re-run this workflow."
+            exit 1
+          fi
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Refuse to run if groundworkos-eu already has data
+        working-directory: artifacts/api-server
+        run: |
+          set -euo pipefail
+          TOTAL=$(pnpm exec wrangler d1 execute groundworkos-eu --remote --json \
+            --command "SELECT (SELECT count(*) FROM clients) + (SELECT count(*) FROM jobs) + (SELECT count(*) FROM invoices) + (SELECT count(*) FROM user) as c" \
+            | jq '.[0].results[0].c')
+          echo "groundworkos-eu currently has $TOTAL rows across a sample of key tables"
+          if [ "$TOTAL" -gt 0 ]; then
+            echo "::error::groundworkos-eu is not empty - refusing to import on top of existing data. Investigate manually before re-running."
+            exit 1
+          fi
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Export data-only dump from groundworkos
+        working-directory: artifacts/api-server
+        run: pnpm exec wrangler d1 export groundworkos --remote --no-schema --output=/tmp/groundworkos-backup.sql
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Import into groundworkos-eu
+        working-directory: artifacts/api-server
+        run: pnpm exec wrangler d1 execute groundworkos-eu --remote --file=/tmp/groundworkos-backup.sql
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Delete local backup (contains personal/financial data)
+        if: always()
+        run: rm -f /tmp/groundworkos-backup.sql
+
+      - name: Verify row counts match between source and target
+        working-directory: artifacts/api-server
+        run: |
+          set -euo pipefail
+          FAIL=0
+          for t in clients jobs line_items quotes invoices subcontractors documents schedule_entries plant rate_book company_settings timesheets purchase_orders audit_logs id_counters account invitations session user verification rams_records xero_client_map xero_connection xero_invoice_map xero_quote_map xero_bill_map xero_credit_note_map xero_supplier_map xero_sync_log quickbooks_client_map quickbooks_connection quickbooks_invoice_map quickbooks_quote_map sage_client_map sage_connection sage_invoice_map sage_quote_map freeagent_client_map freeagent_connection freeagent_invoice_map freeagent_quote_map; do
+            SRC=$(pnpm exec wrangler d1 execute groundworkos --remote --json --command "SELECT count(*) as c FROM $t" | jq '.[0].results[0].c')
+            DST=$(pnpm exec wrangler d1 execute groundworkos-eu --remote --json --command "SELECT count(*) as c FROM $t" | jq '.[0].results[0].c')
+            if [ "$SRC" != "$DST" ]; then
+              echo "::error::Row count mismatch on $t: source=$SRC target=$DST"
+              FAIL=1
+            else
+              echo "OK  $t: $SRC rows"
+            fi
+          done
+          if [ "$FAIL" -ne 0 ]; then
+            echo "::error::One or more tables did not migrate cleanly - do NOT repoint bindings until this is resolved."
+            exit 1
+          fi
+          echo "All table row counts match. Data migration verified."
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
