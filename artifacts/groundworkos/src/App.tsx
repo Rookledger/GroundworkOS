@@ -40,6 +40,14 @@ import { ImportPage } from "./pages/ImportPage";
 import { AuditLogPage } from "./pages/AuditLogPage";
 import NotFound from "./pages/not-found";
 import { useApp } from "./store/AppContext";
+import {
+  AuthPage,
+  AuthCard,
+  AuthField,
+  AuthError,
+  AuthSubmit,
+} from "./components/ui/Auth";
+import { ConfirmProvider } from "./components/ui/ConfirmDialog";
 
 const queryClient = new QueryClient();
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -104,50 +112,6 @@ function AutoAdminBootstrap() {
   return null;
 }
 
-const authCardStyle: React.CSSProperties = {
-  width: 400,
-  maxWidth: "100%",
-  backgroundColor: "var(--surface)",
-  border: "1px solid var(--border)",
-  borderRadius: 12,
-  padding: 32,
-  boxShadow: "0 8px 32px rgba(24,20,16,0.08)",
-};
-
-const authLabelStyle: React.CSSProperties = {
-  fontFamily: "'Space Grotesk', sans-serif",
-  fontWeight: 600,
-  fontSize: 11,
-  color: "var(--muted)",
-  textTransform: "uppercase",
-  letterSpacing: "0.06em",
-};
-
-const authInputStyle: React.CSSProperties = {
-  fontFamily: "'Inter', sans-serif",
-  fontSize: 14,
-  padding: "10px 12px",
-  borderRadius: 6,
-  border: "1px solid var(--border)",
-  backgroundColor: "#ffffff",
-  color: "var(--ink)",
-  width: "100%",
-};
-
-const authButtonStyle = (disabled: boolean): React.CSSProperties => ({
-  padding: "10px 20px",
-  borderRadius: 6,
-  backgroundColor: "var(--accent)",
-  color: "#fff",
-  fontFamily: "'Space Grotesk', sans-serif",
-  fontWeight: 600,
-  fontSize: 13,
-  border: "none",
-  cursor: disabled ? "default" : "pointer",
-  opacity: disabled ? 0.6 : 1,
-  width: "100%",
-});
-
 /**
  * Whether POST /setup/first-admin is currently usable - i.e. the workspace
  * has zero users. Shared by SignInPage (to decide whether to show the
@@ -204,69 +168,16 @@ function SignInPage() {
   }
 
   return (
-    <div
-      className="flex min-h-dvh items-center justify-center px-4"
-      style={{ backgroundColor: "var(--bg)" }}
-    >
-      <form onSubmit={handleSubmit} style={authCardStyle}>
-        <h1
-          style={{
-            fontFamily: "'Space Grotesk', sans-serif",
-            fontWeight: 700,
-            fontSize: 20,
-            color: "var(--ink)",
-            letterSpacing: "-0.02em",
-            marginBottom: 4,
-          }}
-        >
-          Welcome back
-        </h1>
-        <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 24 }}>
-          Sign in to GroundworkOS
-        </p>
-        <div style={{ display: "grid", gap: 16 }}>
-          <div style={{ display: "grid", gap: 6 }}>
-            <label style={authLabelStyle}>Email</label>
-            <input
-              type="email"
-              required
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              style={authInputStyle}
-            />
-          </div>
-          <div style={{ display: "grid", gap: 6 }}>
-            <label style={authLabelStyle}>Password</label>
-            <input
-              type="password"
-              required
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={authInputStyle}
-            />
-          </div>
-          {error && (
-            <p style={{ color: "var(--danger)", fontSize: 12 }}>{error}</p>
-          )}
-          <button type="submit" disabled={loading} style={authButtonStyle(loading)}>
-            {loading ? "Signing in..." : "Sign in"}
-          </button>
-        </div>
-        <p
-          style={{
-            marginTop: 20,
-            fontSize: 12,
-            color: "var(--muted-2)",
-            textAlign: "center",
-            lineHeight: 1.6,
-          }}
-        >
-          {setupOpen ? (
+    <AuthPage>
+      <AuthCard
+        title="Welcome back"
+        subtitle="Sign in to GroundworkOS"
+        onSubmit={handleSubmit}
+        footer={
+          setupOpen ? (
             <>
               No account yet?{" "}
-              <Link to="/setup" style={{ color: "var(--accent)" }}>
+              <Link to="/setup" style={{ color: "var(--accent-hover)" }}>
                 Set up GroundworkOS
               </Link>{" "}
               to create the first (admin) account.
@@ -276,10 +187,33 @@ function SignInPage() {
               GroundworkOS is invite-only. If you've received an invitation
               email, follow its link to set up your account instead.
             </>
-          )}
-        </p>
-      </form>
-    </div>
+          )
+        }
+      >
+        <AuthField
+          id="email"
+          label="Email"
+          type="email"
+          required
+          autoComplete="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <AuthField
+          id="password"
+          label="Password"
+          type="password"
+          required
+          autoComplete="current-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <AuthError>{error}</AuthError>
+        <AuthSubmit loading={loading}>
+          {loading ? "Signing in..." : "Sign in"}
+        </AuthSubmit>
+      </AuthCard>
+    </AuthPage>
   );
 }
 
@@ -328,71 +262,46 @@ function SetupPage() {
   }
 
   return (
-    <div
-      className="flex min-h-dvh items-center justify-center px-4"
-      style={{ backgroundColor: "var(--bg)" }}
-    >
-      <form onSubmit={handleSubmit} style={authCardStyle}>
-        <h1
-          style={{
-            fontFamily: "'Space Grotesk', sans-serif",
-            fontWeight: 700,
-            fontSize: 20,
-            color: "var(--ink)",
-            letterSpacing: "-0.02em",
-            marginBottom: 4,
-          }}
-        >
-          Set up GroundworkOS
-        </h1>
-        <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 24 }}>
-          Create the first account. It becomes the admin - everyone after
-          this signs up by invitation only.
-        </p>
-        <div style={{ display: "grid", gap: 16 }}>
-          <div style={{ display: "grid", gap: 6 }}>
-            <label style={authLabelStyle}>Your name</label>
-            <input
-              type="text"
-              required
-              autoComplete="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              style={authInputStyle}
-            />
-          </div>
-          <div style={{ display: "grid", gap: 6 }}>
-            <label style={authLabelStyle}>Email</label>
-            <input
-              type="email"
-              required
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              style={authInputStyle}
-            />
-          </div>
-          <div style={{ display: "grid", gap: 6 }}>
-            <label style={authLabelStyle}>Password</label>
-            <input
-              type="password"
-              required
-              minLength={8}
-              autoComplete="new-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={authInputStyle}
-            />
-          </div>
-          {error && (
-            <p style={{ color: "var(--danger)", fontSize: 12 }}>{error}</p>
-          )}
-          <button type="submit" disabled={loading} style={authButtonStyle(loading)}>
-            {loading ? "Creating account..." : "Create admin account"}
-          </button>
-        </div>
-      </form>
-    </div>
+    <AuthPage>
+      <AuthCard
+        title="Set up GroundworkOS"
+        subtitle="Create the first account. It becomes the admin - everyone after this signs up by invitation only."
+        onSubmit={handleSubmit}
+      >
+        <AuthField
+          id="name"
+          label="Your name"
+          type="text"
+          required
+          autoComplete="name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <AuthField
+          id="email"
+          label="Email"
+          type="email"
+          required
+          autoComplete="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <AuthField
+          id="password"
+          label="Password"
+          type="password"
+          required
+          minLength={8}
+          autoComplete="new-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <AuthError>{error}</AuthError>
+        <AuthSubmit loading={loading}>
+          {loading ? "Creating account..." : "Create admin account"}
+        </AuthSubmit>
+      </AuthCard>
+    </AuthPage>
   );
 }
 
@@ -446,74 +355,49 @@ function AcceptInvitePage() {
 
   if (!token) {
     return (
-      <div
-        className="flex min-h-dvh items-center justify-center px-4"
-        style={{ backgroundColor: "var(--bg)" }}
-      >
-        <div style={authCardStyle}>
-          <p style={{ color: "var(--danger)", fontSize: 14 }}>
+      <AuthPage>
+        <AuthCard title="Invitation link problem">
+          <AuthError>
             This invitation link is missing its token. Ask your admin to
             resend the invitation.
-          </p>
-        </div>
-      </div>
+          </AuthError>
+        </AuthCard>
+      </AuthPage>
     );
   }
 
   return (
-    <div
-      className="flex min-h-dvh items-center justify-center px-4"
-      style={{ backgroundColor: "var(--bg)" }}
-    >
-      <form onSubmit={handleSubmit} style={authCardStyle}>
-        <h1
-          style={{
-            fontFamily: "'Space Grotesk', sans-serif",
-            fontWeight: 700,
-            fontSize: 20,
-            color: "var(--ink)",
-            letterSpacing: "-0.02em",
-            marginBottom: 4,
-          }}
-        >
-          Accept your invitation
-        </h1>
-        <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 24 }}>
-          Set your name and password to finish joining GroundworkOS
-        </p>
-        <div style={{ display: "grid", gap: 16 }}>
-          <div style={{ display: "grid", gap: 6 }}>
-            <label style={authLabelStyle}>Your name</label>
-            <input
-              type="text"
-              required
-              autoComplete="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              style={authInputStyle}
-            />
-          </div>
-          <div style={{ display: "grid", gap: 6 }}>
-            <label style={authLabelStyle}>Password</label>
-            <input
-              type="password"
-              required
-              minLength={8}
-              autoComplete="new-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={authInputStyle}
-            />
-          </div>
-          {error && (
-            <p style={{ color: "var(--danger)", fontSize: 12 }}>{error}</p>
-          )}
-          <button type="submit" disabled={loading} style={authButtonStyle(loading)}>
-            {loading ? "Setting up..." : "Accept and sign in"}
-          </button>
-        </div>
-      </form>
-    </div>
+    <AuthPage>
+      <AuthCard
+        title="Accept your invitation"
+        subtitle="Set your name and password to finish joining GroundworkOS"
+        onSubmit={handleSubmit}
+      >
+        <AuthField
+          id="name"
+          label="Your name"
+          type="text"
+          required
+          autoComplete="name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <AuthField
+          id="password"
+          label="Password"
+          type="password"
+          required
+          minLength={8}
+          autoComplete="new-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <AuthError>{error}</AuthError>
+        <AuthSubmit loading={loading}>
+          {loading ? "Setting up..." : "Accept and sign in"}
+        </AuthSubmit>
+      </AuthCard>
+    </AuthPage>
   );
 }
 
@@ -554,7 +438,7 @@ function ForemanRedirect({ children }: { children: React.ReactNode }) {
           alignItems: "center",
           justifyContent: "center",
           color: "var(--muted)",
-          fontFamily: "'Inter', sans-serif",
+          fontFamily: "var(--font-body)",
           fontSize: 14,
         }}
       >
@@ -626,9 +510,11 @@ function AppRoutes() {
 function AuthenticatedApp() {
   return (
     <AppProvider>
-      <AutoAdminBootstrap />
-      <DataLoader />
-      <AppRoutes />
+      <ConfirmProvider>
+        <AutoAdminBootstrap />
+        <DataLoader />
+        <AppRoutes />
+      </ConfirmProvider>
     </AppProvider>
   );
 }

@@ -23,6 +23,7 @@ import {
 import { toSubcontractor } from "../lib/apiTransforms";
 import { toast } from "sonner";
 import type { CISStatus, Subcontractor } from "../types";
+import { useConfirm } from "../components/ui/ConfirmDialog";
 
 const CIS_STATUSES: CISStatus[] = ["gross", "net", "unverified"];
 
@@ -42,6 +43,7 @@ const emptyForm = {
 };
 
 export function SubcontractorsPage() {
+  const confirm = useConfirm();
   const { state, dispatch } = useApp();
   const { subcontractors } = state;
 
@@ -190,7 +192,10 @@ export function SubcontractorsPage() {
   }
 
   async function handleDelete(id: string, name: string) {
-    if (!confirm(`Delete ${name}? This cannot be undone.`)) return;
+    const ok = await confirm(
+      `Delete ${name}? This cannot be undone.`,
+    );
+    if (!ok) return;
     try {
       await deleteSubcontractor(id);
       dispatch({ type: "REMOVE_SUBCONTRACTOR", id });
@@ -209,7 +214,7 @@ export function SubcontractorsPage() {
             className="text-2xl font-semibold"
             style={{
               color: "var(--ink)",
-              fontFamily: "'Space Grotesk', sans-serif",
+              fontFamily: "var(--font-heading)",
               letterSpacing: "-0.02em",
             }}
           >
@@ -390,7 +395,7 @@ export function SubcontractorsPage() {
                               : "var(--surface-3)",
                           color:
                             selected === sub.id ? "#ffffff" : "var(--muted-2)",
-                          fontFamily: "'Space Grotesk', sans-serif",
+                          fontFamily: "var(--font-heading)",
                         }}
                       >
                         {sub.company_name[0]}
@@ -467,7 +472,7 @@ export function SubcontractorsPage() {
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => openEdit(selectedSub)}
-                      className="p-1 rounded hover:bg-[var(--surface-3)] transition-colors"
+                      className="gw-icon-btn hover:bg-[var(--surface-3)] transition-colors"
                       style={{ color: "var(--muted)" }}
                       title="Edit subcontractor"
                     >
@@ -477,14 +482,14 @@ export function SubcontractorsPage() {
                       onClick={() =>
                         handleDelete(selectedSub.id, selectedSub.company_name)
                       }
-                      className="p-1 rounded hover:bg-red-50 transition-colors"
+                      className="gw-icon-btn hover:bg-red-50 transition-colors"
                       style={{ color: "var(--danger)" }}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => setSelected(null)}
-                      className="p-1 rounded hover:bg-[var(--surface-3)] transition-colors"
+                      className="gw-icon-btn hover:bg-[var(--surface-3)] transition-colors"
                       style={{ color: "var(--muted)" }}
                     >
                       <X className="w-4 h-4" />
@@ -509,7 +514,7 @@ export function SubcontractorsPage() {
                       className="text-lg font-semibold"
                       style={{
                         color: "var(--ink)",
-                        fontFamily: "'Space Grotesk', sans-serif",
+                        fontFamily: "var(--font-heading)",
                       }}
                     >
                       {selectedSub.company_name}

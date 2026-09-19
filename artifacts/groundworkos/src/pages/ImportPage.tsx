@@ -529,7 +529,7 @@ export function ImportPage() {
                   )}
                   <button
                     onClick={reset}
-                    className="p-1 hover:bg-[var(--surface-2)]"
+                    className="gw-icon-btn hover:bg-[var(--surface-2)]"
                   >
                     <X className="w-4 h-4" style={{ color: "var(--muted)" }} strokeWidth={1.5} />
                   </button>

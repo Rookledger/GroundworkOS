@@ -2,7 +2,7 @@ import { cn } from "../../lib/utils";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 
 interface BtnProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "ghost" | "danger" | "outline";
+  variant?: "primary" | "ghost" | "danger" | "outline" | "destructive";
   size?: "sm" | "md";
   loading?: boolean;
   children: ReactNode;
@@ -20,8 +20,8 @@ export function Btn({
   const base =
     "inline-flex items-center gap-1.5 transition-all duration-100 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed";
   const sizes = {
-    sm: "px-3 py-1.5 text-xs",
-    md: "px-4 py-2 text-sm",
+    sm: "gw-btn-sm px-3 py-1.5 text-xs",
+    md: "gw-btn-md px-4 py-2 text-sm",
   };
   const fonts = {
     fontFamily: "var(--font-heading)",
@@ -30,12 +30,21 @@ export function Btn({
   };
 
   const variantStyles: Record<string, React.CSSProperties> = {
-    primary: { backgroundColor: "var(--accent)", color: "#ffffff", ...fonts },
+    primary: {
+      backgroundColor: "var(--accent-hover)",
+      color: "#ffffff",
+      ...fonts,
+    },
     ghost: { backgroundColor: "transparent", color: "var(--muted)", ...fonts },
     danger: {
       backgroundColor: "var(--danger-bg)",
       color: "var(--danger)",
       border: "1px solid rgba(178,58,38,0.4)",
+      ...fonts,
+    },
+    destructive: {
+      backgroundColor: "var(--danger)",
+      color: "#ffffff",
       ...fonts,
     },
     outline: {

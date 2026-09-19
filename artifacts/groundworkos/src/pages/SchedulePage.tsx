@@ -13,6 +13,7 @@ import {
 import type { ScheduleEntry } from "../types";
 import { toScheduleEntry } from "../lib/apiTransforms";
 import { toast } from "sonner";
+import { useConfirm } from "../components/ui/ConfirmDialog";
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -40,6 +41,7 @@ const emptyForm = {
 };
 
 export function SchedulePage() {
+  const confirm = useConfirm();
   const { state, dispatch } = useApp();
   const { schedule, jobs } = state;
 
@@ -184,7 +186,10 @@ export function SchedulePage() {
   }
 
   async function handleDelete(id: string, title: string) {
-    if (!confirm(`Delete "${title}"?`)) return;
+    const ok = await confirm(
+      `Delete "${title}"?`,
+    );
+    if (!ok) return;
     try {
       await deleteScheduleEntry(id);
       dispatch({ type: "REMOVE_SCHEDULE", id });
@@ -202,7 +207,7 @@ export function SchedulePage() {
             className="text-xl font-semibold"
             style={{
               color: "var(--ink)",
-              fontFamily: "'Space Grotesk', sans-serif",
+              fontFamily: "var(--font-heading)",
             }}
           >
             Schedule
@@ -264,10 +269,10 @@ export function SchedulePage() {
               onClick={() => setCurrentDate(new Date())}
               className="ml-1 px-2.5 py-1 text-xs rounded-md transition-colors hover:bg-[var(--surface-2)]"
               style={{
-                backgroundColor: "#f5f1ec",
+                backgroundColor: "var(--surface-2)",
                 color: "var(--muted-2)",
                 border: "1px solid var(--border)",
-                fontFamily: "'Space Grotesk', sans-serif",
+                fontFamily: "var(--font-heading)",
                 fontWeight: 600,
               }}
             >
@@ -307,7 +312,7 @@ export function SchedulePage() {
                       className="text-xs uppercase font-bold"
                       style={{
                         color: isToday ? "var(--accent)" : "var(--muted)",
-                        fontFamily: "'Space Grotesk', sans-serif",
+                        fontFamily: "var(--font-heading)",
                       }}
                     >
                       {DAY_LABELS[i]}
@@ -359,7 +364,7 @@ export function SchedulePage() {
                       className="text-xs font-bold uppercase"
                       style={{
                         color: dateStr === today ? "var(--accent)" : "var(--muted)",
-                        fontFamily: "'Space Grotesk', sans-serif",
+                        fontFamily: "var(--font-heading)",
                       }}
                     >
                       {DAY_LABELS[dayIdx % 7]}
@@ -515,7 +520,7 @@ export function SchedulePage() {
           <div
             key={type}
             className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider"
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            style={{ fontFamily: "var(--font-heading)" }}
           >
             <span
               className="w-2.5 h-2.5 rounded-sm"

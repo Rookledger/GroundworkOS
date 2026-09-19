@@ -326,7 +326,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             )}
           </Link>
           <button
-            className="lg:hidden p-1"
+            className="gw-icon-btn lg:hidden" aria-label="Close menu"
             onClick={() => setSidebarOpen(false)}
             style={{ color: "rgba(233,237,241,.7)" }}
           >
@@ -358,7 +358,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 key={item.href}
                 href={item.href}
                 onClick={() => setSidebarOpen(false)}
-                className="relative flex items-center gap-2.5 px-3 py-2 text-xs font-medium transition-colors no-underline mb-0.5"
+                className="gw-btn-sm relative flex items-center gap-2.5 px-3 py-2 text-xs font-medium transition-colors no-underline mb-0.5"
                 style={{
                   backgroundColor: isActive ? "rgba(89,128,166,0.22)" : "transparent",
                   color: isActive ? "#ffffff" : "rgba(233,237,241,.75)",
@@ -444,7 +444,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               <button
                 onClick={() => setAccountModalOpen(true)}
                 title="Account / change password"
-                className="flex-shrink-0 p-1 transition-colors hover:bg-[rgba(255,255,255,.1)]"
+                className="gw-icon-btn flex-shrink-0 transition-colors hover:bg-[rgba(255,255,255,.1)]"
                 style={{ color: "rgba(233,237,241,.55)" }}
               >
                 <KeyRound className="w-3.5 h-3.5" />
@@ -458,7 +458,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                   })
                 }
                 title="Sign out"
-                className="flex-shrink-0 p-1 transition-colors hover:bg-[rgba(255,255,255,.1)]"
+                className="gw-icon-btn flex-shrink-0 transition-colors hover:bg-[rgba(255,255,255,.1)]"
                 style={{ color: "rgba(233,237,241,.55)" }}
               >
                 <LogOut className="w-3.5 h-3.5" />
@@ -495,7 +495,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         >
           <div className="flex items-center gap-3">
             <button
-              className="lg:hidden p-2"
+              className="gw-icon-btn lg:hidden" aria-label="Open menu"
               onClick={() => setSidebarOpen(true)}
               style={{ color: "var(--muted)" }}
             >
@@ -546,7 +546,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             <div ref={bellRef} className="relative">
               <button
                 onClick={() => setBellOpen((o) => !o)}
-                className="relative p-2 transition-colors hover:bg-[var(--surface-2)]"
+                className="gw-icon-btn relative transition-colors hover:bg-[var(--surface-2)]"
+                aria-label="Alerts"
                 style={{ color: bellCount > 0 ? "var(--danger)" : "var(--muted)" }}
                 title={
                   bellCount > 0
@@ -560,7 +561,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                     className="absolute -top-0.5 -right-0.5 w-4 h-4 flex items-center justify-center text-[9px] font-bold"
                     style={{
                       backgroundColor:
-                        criticalCount > 0 ? "var(--danger)" : "#d87c2a",
+                        criticalCount > 0 ? "var(--danger)" : "var(--warning-ink)",
                       color: "#ffffff",
                       fontFamily: "var(--font-heading)",
                     }}
@@ -598,7 +599,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                     </span>
                     <button
                       onClick={() => setBellOpen(false)}
-                      style={{ color: "var(--muted-2)" }}
+                      aria-label="Close alerts"
+                      className="gw-icon-btn"
+                      style={{ color: "var(--muted)" }}
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -630,14 +633,14 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                               className="w-7 h-7 flex items-center justify-center flex-shrink-0 mt-0.5"
                               style={{
                                 backgroundColor: isCritical
-                                  ? "rgba(178,58,38,0.1)"
-                                  : "rgba(216,124,42,0.1)",
+                                  ? "var(--danger-bg)"
+                                  : "var(--warning-bg)",
                               }}
                             >
                               <Icon
                                 className="w-3.5 h-3.5"
                                 style={{
-                                  color: isCritical ? "var(--danger)" : "#d87c2a",
+                                  color: isCritical ? "var(--danger)" : "var(--warning)",
                                 }}
                               />
                             </div>

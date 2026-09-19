@@ -30,6 +30,7 @@ import {
 import { toClient } from "../lib/apiTransforms";
 import type { Client } from "../types";
 import { toast } from "sonner";
+import { useConfirm } from "../components/ui/ConfirmDialog";
 
 const emptyForm = {
   company_name: "",
@@ -42,6 +43,7 @@ const emptyForm = {
 };
 
 export function ClientsPage() {
+  const confirm = useConfirm();
   const { state, dispatch } = useApp();
   const { clients } = state;
   const [, navigate] = useLocation();
@@ -149,7 +151,10 @@ export function ClientsPage() {
   }
 
   async function handleDelete(id: string, name: string) {
-    if (!confirm(`Delete ${name}? This cannot be undone.`)) return;
+    const ok = await confirm(
+      `Delete ${name}? This cannot be undone.`,
+    );
+    if (!ok) return;
     try {
       await deleteClient(id);
       dispatch({ type: "REMOVE_CLIENT", id });
