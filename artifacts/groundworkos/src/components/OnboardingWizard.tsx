@@ -116,7 +116,7 @@ export function OnboardingWizard({ onComplete }: Props) {
   }
 
   const inputCls =
-    "w-full py-2.5 px-3 rounded-lg text-sm focus:outline-none transition-all";
+    "w-full py-2.5 px-3 rounded-none text-sm focus:outline-none transition-all";
   const inputStyle = {
     backgroundColor: "#ffffff",
     border: "1.5px solid var(--border)",
@@ -136,7 +136,7 @@ export function OnboardingWizard({ onComplete }: Props) {
           <div className="inline-flex items-center gap-2.5 mb-4">
             <span
               style={{
-                fontFamily: "'Space Grotesk', sans-serif",
+                fontFamily: "var(--font-heading)",
                 fontWeight: 700,
                 fontSize: "15px",
                 color: "var(--ink)",
@@ -148,7 +148,7 @@ export function OnboardingWizard({ onComplete }: Props) {
           </div>
           <h1
             style={{
-              fontFamily: "'Space Grotesk', sans-serif",
+              fontFamily: "var(--font-heading)",
               fontWeight: 700,
               fontSize: "24px",
               color: "var(--ink)",
@@ -198,11 +198,11 @@ export function OnboardingWizard({ onComplete }: Props) {
 
         {/* Card */}
         <div
-          className="rounded-xl overflow-hidden"
+          className="rounded-none overflow-hidden"
           style={{
             backgroundColor: "var(--surface)",
             border: "1px solid var(--border)",
-            boxShadow: "0 8px 32px rgba(24,20,16,0.08)",
+            boxShadow: "0 8px 32px rgba(29,45,61,0.08)",
           }}
         >
           <div
@@ -222,7 +222,7 @@ export function OnboardingWizard({ onComplete }: Props) {
               <div>
                 <h2
                   style={{
-                    fontFamily: "'Space Grotesk', sans-serif",
+                    fontFamily: "var(--font-heading)",
                     fontWeight: 600,
                     fontSize: "16px",
                     color: "var(--ink)",
@@ -411,7 +411,7 @@ export function OnboardingWizard({ onComplete }: Props) {
             {step === 2 && (
               <>
                 <div
-                  className="p-3 rounded-lg text-sm"
+                  className="p-3 rounded-none text-sm"
                   style={{ backgroundColor: "var(--accent-bg)", color: "var(--accent)" }}
                 >
                   These details appear on your invoices so clients know where to

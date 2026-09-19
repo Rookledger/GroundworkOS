@@ -18,6 +18,7 @@ import { useApp } from "../store/AppContext";
 import { toTimesheet } from "../lib/apiTransforms";
 import { toast } from "sonner";
 import type { Timesheet } from "../types";
+import { useConfirm } from "../components/ui/ConfirmDialog";
 
 /**
  * The Timesheet data model has no approval workflow field yet, so approval
@@ -101,6 +102,7 @@ const TABS = [
 ];
 
 export function TimesheetsPage() {
+  const confirm = useConfirm();
   const { state, dispatch } = useApp();
   const { timesheets, jobs } = state;
 
@@ -254,7 +256,10 @@ export function TimesheetsPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Delete this timesheet entry?")) return;
+    const ok = await confirm(
+      "Delete this timesheet entry?",
+    );
+    if (!ok) return;
     try {
       await apiDelete(`/api/timesheets/${id}`);
       dispatch({ type: "REMOVE_TIMESHEET", id });
@@ -798,7 +803,7 @@ export function TimesheetsPage() {
                     <div
                       className="text-2xl font-bold font-mono"
                       style={{
-                        color: selectedEntry.cost ? "var(--ink)" : "#c0bab4",
+                        color: selectedEntry.cost ? "var(--ink)" : "var(--muted-2)",
                         fontFamily: "var(--font-body)",
                       }}
                     >

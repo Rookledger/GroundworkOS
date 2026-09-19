@@ -200,17 +200,17 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
       <div
         className="absolute inset-0"
         style={{
-          backgroundColor: "rgba(24,20,16,0.32)",
+          backgroundColor: "var(--overlay)",
           backdropFilter: "blur(2px)",
         }}
       />
       <div
-        className="relative w-full max-w-xl mx-4 rounded-xl overflow-hidden"
+        className="relative w-full max-w-xl mx-4 rounded-none overflow-hidden"
         style={{
           backgroundColor: "var(--surface)",
           border: "1px solid var(--border)",
           boxShadow:
-            "0 24px 60px -12px rgba(24,20,16,0.22), 0 8px 20px -8px rgba(24,20,16,0.12)",
+            "var(--shadow-pop)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -229,7 +229,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
             onKeyDown={handleKey}
             placeholder="Search jobs, invoices, clients, quotes..."
             className="flex-1 bg-transparent text-sm focus:outline-none"
-            style={{ color: "var(--ink)", fontFamily: "'Inter', sans-serif" }}
+            style={{ color: "var(--ink)", fontFamily: "var(--font-body)" }}
           />
           {query && (
             <button onClick={() => setQuery("")} style={{ color: "var(--muted-2)" }}>
@@ -237,7 +237,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
             </button>
           )}
           <kbd
-            className="hidden md:flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs"
+            className="hidden md:flex items-center gap-0.5 px-1.5 py-0.5 rounded-none text-xs"
             style={{
               backgroundColor: "var(--surface-2)",
               color: "var(--muted)",
@@ -260,7 +260,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                     navigate(r.href);
                     onClose();
                   }}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors mx-1 rounded-md"
+                  className="w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors mx-1 rounded-none"
                   style={{
                     backgroundColor: i === selected ? "var(--accent-bg)" : "transparent",
                     width: "calc(100% - 8px)",
@@ -268,7 +268,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                   onMouseEnter={() => setSelected(i)}
                 >
                   <div
-                    className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0"
+                    className="w-8 h-8 rounded-none flex items-center justify-center flex-shrink-0"
                     style={{
                       backgroundColor: i === selected ? "#d4e9f0" : "var(--surface-2)",
                     }}
@@ -283,7 +283,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                       className="text-sm font-medium truncate"
                       style={{
                         color: "var(--ink)",
-                        fontFamily: "'Inter', sans-serif",
+                        fontFamily: "var(--font-body)",
                       }}
                     >
                       {r.title}
@@ -301,7 +301,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {r.badge && (
                       <span
-                        className="text-xs px-1.5 py-0.5 rounded"
+                        className="text-xs px-1.5 py-0.5 rounded-none"
                         style={{
                           color: r.badgeColor,
                           backgroundColor: `${r.badgeColor}1f`,
@@ -315,7 +315,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                       className="text-xs uppercase tracking-wider"
                       style={{
                         color: "var(--muted-2)",
-                        fontFamily: "'Space Grotesk', sans-serif",
+                        fontFamily: "var(--font-heading)",
                       }}
                     >
                       {TYPE_LABEL[r.type]}
@@ -351,11 +351,11 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                     navigate(`/${page}`);
                     onClose();
                   }}
-                  className="flex-1 py-2 rounded-md text-xs uppercase tracking-wider transition-colors hover:bg-[var(--surface-2)]"
+                  className="flex-1 py-2 rounded-none text-xs uppercase tracking-wider transition-colors hover:bg-[var(--surface-2)]"
                   style={{
                     color: "var(--muted)",
                     border: "1px solid var(--border)",
-                    fontFamily: "'Space Grotesk', sans-serif",
+                    fontFamily: "var(--font-heading)",
                   }}
                 >
                   {page}

@@ -35,6 +35,7 @@ import type {
   DocumentRelatedTo,
   Document as Doc,
 } from "../types";
+import { useConfirm } from "../components/ui/ConfirmDialog";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -69,6 +70,7 @@ const emptyForm = {
 };
 
 export function DocumentsPage() {
+  const confirm = useConfirm();
   const { state, dispatch } = useApp();
   const { documents } = state;
   const [, setLocation] = useLocation();
@@ -207,7 +209,10 @@ export function DocumentsPage() {
   }
 
   async function handleDelete(id: string, name: string) {
-    if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+    const ok = await confirm(
+      `Delete "${name}"? This cannot be undone.`,
+    );
+    if (!ok) return;
     try {
       await deleteDocument(id);
       dispatch({ type: "REMOVE_DOCUMENT", id });

@@ -25,6 +25,7 @@ import {
 import { toPlant } from "../lib/apiTransforms";
 import { toast } from "sonner";
 import type { PlantStatus } from "../types";
+import { useConfirm } from "../components/ui/ConfirmDialog";
 
 const PLANT_STATUSES: PlantStatus[] = [
   "available",
@@ -50,6 +51,7 @@ const emptyForm = {
 };
 
 export function PlantPage() {
+  const confirm = useConfirm();
   const { state, dispatch } = useApp();
   const { plant } = state;
   const [, setLocation] = useLocation();
@@ -149,7 +151,10 @@ export function PlantPage() {
   }
 
   async function handleDelete(id: string, name: string) {
-    if (!confirm(`Delete ${name}? This cannot be undone.`)) return;
+    const ok = await confirm(
+      `Delete ${name}? This cannot be undone.`,
+    );
+    if (!ok) return;
     try {
       await deletePlantItem(id);
       dispatch({ type: "REMOVE_PLANT", id });

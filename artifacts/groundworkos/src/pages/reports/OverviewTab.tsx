@@ -256,7 +256,7 @@ export function OverviewTab({ data }: { data: ReportsOverviewData }) {
                 />
                 <Tooltip
                   content={<CustomTooltip />}
-                  cursor={{ stroke: "#c0bab4", strokeDasharray: "4 4" }}
+                  cursor={{ stroke: "var(--border-2)", strokeDasharray: "4 4" }}
                 />
                 <Area
                   type="monotone"

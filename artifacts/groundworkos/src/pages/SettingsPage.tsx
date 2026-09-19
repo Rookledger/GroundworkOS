@@ -23,6 +23,8 @@ import { Btn } from "../components/ui/Btn";
 import { useApp } from "../store/AppContext";
 import { toast } from "sonner";
 import type { CompanySettings } from "../store/AppContext";
+import { useConfirm } from "../components/ui/ConfirmDialog";
+import { Eyebrow } from "../components/ui/Eyebrow";
 
 function CardTitle({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
   return (
@@ -378,6 +380,7 @@ function AccountingProviderPanel({
 }: {
   provider: AccountingProviderConfig;
 }) {
+  const confirm = useConfirm();
   const [status, setStatus] = useState<ProviderStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState<string | null>(null);
@@ -511,12 +514,14 @@ function AccountingProviderPanel({
   }
 
   async function handleDisconnect() {
-    if (
-      !confirm(
-        `This will remove the ${provider.label} connection and all sync mapping data. Continue?`,
-      )
-    )
-      return;
+    const ok = await confirm(
+      `This will remove the ${provider.label} connection and all sync mapping data. Continue?`,
+      {
+        title: `Disconnect ${provider.label}?`,
+        confirmLabel: "Disconnect",
+      },
+    );
+    if (!ok) return;
     setDisconnecting(true);
     try {
       await fetch(`/api/${provider.key}/disconnect`, { method: "DELETE" });
@@ -699,15 +704,7 @@ function AccountingProviderPanel({
             className="px-5 py-4 space-y-4"
             style={{ borderBottom: "1px solid var(--border)" }}
           >
-            <p
-              className="text-[11px] font-bold uppercase tracking-widest mb-3"
-              style={{
-                color: "var(--muted)",
-                fontFamily: "var(--font-heading)",
-              }}
-            >
-              Push to {provider.label}
-            </p>
+            <Eyebrow className="mb-3">Push to {provider.label}</Eyebrow>
             <SyncBtn
               label="Sync Clients"
               syncKey="contacts"
@@ -747,15 +744,7 @@ function AccountingProviderPanel({
             className="px-5 py-4"
             style={{ borderBottom: "1px solid var(--border)" }}
           >
-            <p
-              className="text-[11px] font-bold uppercase tracking-widest mb-3"
-              style={{
-                color: "var(--muted)",
-                fontFamily: "var(--font-heading)",
-              }}
-            >
-              Pull from {provider.label}
-            </p>
+            <Eyebrow className="mb-3">Pull from {provider.label}</Eyebrow>
             <SyncBtn
               label="Pull Payment Status"
               syncKey="payments"
@@ -788,15 +777,7 @@ function AccountingProviderPanel({
               className="px-5 py-4 space-y-3"
               style={{ borderBottom: "1px solid var(--border)" }}
             >
-              <p
-                className="text-[11px] font-bold uppercase tracking-widest mb-1"
-                style={{
-                  color: "var(--muted)",
-                  fontFamily: "var(--font-heading)",
-                }}
-              >
-                Default account codes
-              </p>
+              <Eyebrow className="mb-1">Default account codes</Eyebrow>
               <p className="text-xs" style={{ color: "var(--muted)" }}>
                 Applied to line items when pushing sales documents and purchase
                 bills. Leave blank to use {provider.label}'s own default
@@ -871,16 +852,8 @@ function AccountingProviderPanel({
               className="px-5 py-4"
               style={{ borderBottom: "1px solid var(--border)" }}
             >
-              <p
-                className="text-[11px] font-bold uppercase tracking-widest mb-3 flex items-center gap-2"
-                style={{
-                  color: "var(--muted)",
-                  fontFamily: "var(--font-heading)",
-                }}
-              >
-                <History className="w-3.5 h-3.5" strokeWidth={1.5} />
-                Recent activity
-              </p>
+              <Eyebrow className="mb-3 flex items-center gap-2"><History className="w-3.5 h-3.5" strokeWidth={1.5} />
+                Recent activity</Eyebrow>
               {syncLog.length === 0 ? (
                 <p className="text-xs" style={{ color: "var(--muted)" }}>
                   Nothing synced yet.

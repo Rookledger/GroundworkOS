@@ -26,7 +26,7 @@ const S = StyleSheet.create({
   logo: {
     fontSize: 18,
     fontFamily: "Helvetica-Bold",
-    color: "#1b5e78",
+    color: "#41617f",
     letterSpacing: 1,
   },
   logoSub: { fontSize: 8, color: "#7a7469", marginTop: 3, letterSpacing: 0.5 },
@@ -40,7 +40,7 @@ const S = StyleSheet.create({
   poNum: {
     fontSize: 11,
     fontFamily: "Helvetica-Bold",
-    color: "#1b5e78",
+    color: "#41617f",
     textAlign: "right",
     marginTop: 4,
   },
@@ -98,7 +98,7 @@ const S = StyleSheet.create({
     paddingTop: 10,
     marginTop: 4,
     borderTopWidth: 2,
-    borderTopColor: "#1b5e78",
+    borderTopColor: "#41617f",
   },
   grandTotalLabel: {
     fontSize: 11,
@@ -108,12 +108,12 @@ const S = StyleSheet.create({
   grandTotalValue: {
     fontSize: 13,
     fontFamily: "Courier-Bold",
-    color: "#1b5e78",
+    color: "#41617f",
   },
   notes: {
     marginTop: 32,
     padding: 16,
-    backgroundColor: "#f5f1ec",
+    backgroundColor: "#f0f1f2",
     borderRadius: 4,
   },
   notesLabel: {
@@ -133,15 +133,15 @@ const S = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
   },
-  footerText: { fontSize: 7, color: "#a8a099", fontFamily: "Courier" },
+  footerText: { fontSize: 7, color: "#6b6b70", fontFamily: "Courier" },
   infoBox: {
     marginTop: 16,
     padding: 12,
     backgroundColor: "#e8f3f7",
     borderLeftWidth: 3,
-    borderLeftColor: "#1b5e78",
+    borderLeftColor: "#41617f",
   },
-  infoText: { fontSize: 8, color: "#1b5e78", lineHeight: 1.5 },
+  infoText: { fontSize: 8, color: "#41617f", lineHeight: 1.5 },
 });
 
 const STATUS_LABELS: Record<string, string> = {

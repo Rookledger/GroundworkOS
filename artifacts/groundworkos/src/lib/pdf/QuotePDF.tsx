@@ -26,7 +26,7 @@ const S = StyleSheet.create({
   logo: {
     fontSize: 18,
     fontFamily: "Helvetica-Bold",
-    color: "#1b5e78",
+    color: "#41617f",
     letterSpacing: 1,
   },
   logoSub: { fontSize: 8, color: "#7a7469", marginTop: 3, letterSpacing: 0.5 },
@@ -40,7 +40,7 @@ const S = StyleSheet.create({
   quoteNum: {
     fontSize: 11,
     fontFamily: "Helvetica-Bold",
-    color: "#1b5e78",
+    color: "#41617f",
     textAlign: "right",
     marginTop: 4,
   },
@@ -91,7 +91,7 @@ const S = StyleSheet.create({
     paddingTop: 10,
     marginTop: 4,
     borderTopWidth: 2,
-    borderTopColor: "#1b5e78",
+    borderTopColor: "#41617f",
   },
   grandTotalLabel: {
     fontSize: 11,
@@ -101,12 +101,12 @@ const S = StyleSheet.create({
   grandTotalValue: {
     fontSize: 13,
     fontFamily: "Courier-Bold",
-    color: "#1b5e78",
+    color: "#41617f",
   },
   terms: {
     marginTop: 32,
     padding: 16,
-    backgroundColor: "#f5f1ec",
+    backgroundColor: "#f0f1f2",
     borderRadius: 4,
   },
   termsLabel: {
@@ -126,15 +126,15 @@ const S = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
   },
-  footerText: { fontSize: 7, color: "#a8a099", fontFamily: "Courier" },
+  footerText: { fontSize: 7, color: "#6b6b70", fontFamily: "Courier" },
   validBox: {
     marginTop: 20,
     padding: 12,
     backgroundColor: "#e8f3f7",
     borderLeftWidth: 3,
-    borderLeftColor: "#1b5e78",
+    borderLeftColor: "#41617f",
   },
-  validText: { fontSize: 8, color: "#1b5e78" },
+  validText: { fontSize: 8, color: "#41617f" },
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -173,7 +173,7 @@ export function QuotePDF({ quote, company }: Props) {
 
   const statusColors: Record<string, string> = {
     accepted: "#2a6e45",
-    sent: "#1b5e78",
+    sent: "#41617f",
     draft: "#7a7469",
     declined: "#c13a2a",
   };

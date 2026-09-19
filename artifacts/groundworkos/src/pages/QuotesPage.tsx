@@ -30,6 +30,8 @@ import {
 import { toQuote } from "../lib/apiTransforms";
 import { toast } from "sonner";
 import type { LineItem } from "../types";
+import { useConfirm } from "../components/ui/ConfirmDialog";
+import { Eyebrow } from "../components/ui/Eyebrow";
 
 const TABS = [
   { id: "all", label: "All" },
@@ -61,6 +63,7 @@ const makeEmptyForm = () => ({
 });
 
 export function QuotesPage() {
+  const confirm = useConfirm();
   const { state, dispatch } = useApp();
   const { quotes, clients, settings } = state;
   const [, navigate] = useLocation();
@@ -296,7 +299,10 @@ export function QuotesPage() {
   }
 
   async function handleDelete(id: string, quoteNumber: string) {
-    if (!confirm(`Delete quote ${quoteNumber}? This cannot be undone.`)) return;
+    const ok = await confirm(
+      `Delete quote ${quoteNumber}? This cannot be undone.`,
+    );
+    if (!ok) return;
     try {
       await deleteQuote(id);
       dispatch({ type: "REMOVE_QUOTE", id });
@@ -544,14 +550,14 @@ export function QuotesPage() {
                     onClick={() =>
                       handleDelete(selectedQuote.id, selectedQuote.quote_number)
                     }
-                    className="p-1 hover:bg-red-50 transition-colors"
+                    className="gw-icon-btn hover:bg-red-50 transition-colors"
                     style={{ color: "var(--danger)" }}
                   >
                     <Trash2 className="w-4 h-4" strokeWidth={1.5} />
                   </button>
                   <button
                     onClick={() => setSelected(null)}
-                    className="p-1 hover:bg-[var(--surface-3)] transition-colors"
+                    className="gw-icon-btn hover:bg-[var(--surface-3)] transition-colors"
                     style={{ color: "var(--muted)" }}
                   >
                     <X className="w-4 h-4" strokeWidth={1.5} />
@@ -622,15 +628,7 @@ export function QuotesPage() {
 
                 {selectedQuote.line_items.length > 0 && (
                   <div>
-                    <p
-                      className="text-[11px] font-bold uppercase tracking-widest mb-3"
-                      style={{
-                        color: "var(--muted)",
-                        fontFamily: "var(--font-heading)",
-                      }}
-                    >
-                      Line Items
-                    </p>
+                    <Eyebrow className="mb-3">Line Items</Eyebrow>
                     <div className="space-y-2">
                       {selectedQuote.line_items.map((li) => (
                         <div
@@ -715,15 +713,7 @@ export function QuotesPage() {
 
                 {selectedQuote.notes && (
                   <div>
-                    <p
-                      className="text-[11px] font-bold uppercase tracking-widest mb-2"
-                      style={{
-                        color: "var(--muted)",
-                        fontFamily: "var(--font-heading)",
-                      }}
-                    >
-                      Notes
-                    </p>
+                    <Eyebrow className="mb-2">Notes</Eyebrow>
                     <p
                       className="text-sm leading-relaxed"
                       style={{ color: "var(--ink-2)" }}
@@ -1014,7 +1004,7 @@ export function QuotesPage() {
       {showEmailModal && selectedQuote && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ backgroundColor: "rgba(24,20,16,0.5)" }}
+          style={{ backgroundColor: "var(--overlay)" }}
         >
           <div
             className="w-full max-w-md shadow-2xl overflow-hidden"

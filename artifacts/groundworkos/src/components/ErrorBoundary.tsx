@@ -67,7 +67,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
           <h1
             style={{
-              fontFamily: "'Space Grotesk', Arial, sans-serif",
+              fontFamily: "var(--font-heading)",
               fontWeight: 700,
               fontSize: "20px",
               color: "#1a1814",

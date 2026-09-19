@@ -36,6 +36,7 @@ import { CornerMarks } from "../components/ui/Blueprint";
 import { formatCurrency, formatDate } from "../lib/utils";
 import { useApp } from "../store/AppContext";
 import { useRole, isAtLeast } from "../hooks/useRole";
+import { ProgressBar } from "../components/ui/ProgressBar";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -906,18 +907,7 @@ export function DashboardPage() {
                             {job.progress_percent}%
                           </span>
                         </div>
-                        <div
-                          className="h-1.5 overflow-hidden"
-                          style={{ backgroundColor: "var(--surface-3)" }}
-                        >
-                          <div
-                            className="h-full"
-                            style={{
-                              width: `${job.progress_percent}%`,
-                              backgroundColor: "var(--success)",
-                            }}
-                          />
-                        </div>
+                        <ProgressBar value={job.progress_percent} />
                       </div>
                       <div className="w-28 hidden md:block flex-shrink-0 text-right">
                         <div

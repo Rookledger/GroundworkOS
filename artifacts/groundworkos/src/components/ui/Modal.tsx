@@ -1,6 +1,7 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useId, type ReactNode } from "react";
 import { X } from "lucide-react";
 import { cn } from "../../lib/utils";
+import { CornerMarks } from "./Blueprint";
 
 interface ModalProps {
   open: boolean;
@@ -11,6 +12,8 @@ interface ModalProps {
 }
 
 export function Modal({ open, onClose, title, children, wide }: ModalProps) {
+  const titleId = useId();
+
   useEffect(() => {
     if (!open) return;
     document.body.style.overflow = "hidden";
@@ -29,38 +32,39 @@ export function Modal({ open, onClose, title, children, wide }: ModalProps) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{
-        backgroundColor: "rgba(24,20,16,0.32)",
-        backdropFilter: "blur(2px)",
-      }}
+      style={{ backgroundColor: "var(--overlay)", backdropFilter: "blur(2px)" }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
         className={cn(
-          "w-full max-h-[90vh] overflow-y-auto rounded-xl",
+          "blueprint w-full max-h-[90vh] overflow-y-auto",
           wide ? "max-w-2xl" : "max-w-lg",
         )}
         style={{
           backgroundColor: "var(--surface)",
-          border: "1px solid var(--border)",
-          boxShadow:
-            "0 24px 60px -12px rgba(24,20,16,0.22), 0 8px 20px -8px rgba(24,20,16,0.12)",
+          boxShadow: "var(--shadow-pop)",
         }}
       >
+        <CornerMarks />
         <div
-          className="flex items-center justify-between px-5 py-4 sticky top-0 z-10"
+          className="flex items-center justify-between px-5 py-3 sticky top-0 z-10"
           style={{
             borderBottom: "1px solid var(--border)",
             backgroundColor: "var(--surface)",
           }}
         >
           <h2
-            className="text-base font-semibold"
+            id={titleId}
             style={{
               color: "var(--ink)",
-              fontFamily: "'Space Grotesk', sans-serif",
+              fontFamily: "var(--font-heading)",
+              fontWeight: 600,
+              fontSize: 18,
               letterSpacing: "-0.01em",
             }}
           >
@@ -68,7 +72,8 @@ export function Modal({ open, onClose, title, children, wide }: ModalProps) {
           </h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-md hover:bg-[var(--surface-2)] transition-colors"
+            aria-label="Close"
+            className="gw-icon-btn hover:bg-[var(--surface-2)]"
             style={{ color: "var(--muted)" }}
           >
             <X className="w-4 h-4" />
@@ -92,20 +97,24 @@ export function Field({ label, required, children, hint, error }: FieldProps) {
   return (
     <div>
       <label
-        className="block text-xs font-medium uppercase tracking-widest mb-1.5"
-        style={{ color: "var(--muted)", letterSpacing: "0.07em" }}
+        className="block text-xs font-bold uppercase mb-1.5"
+        style={{
+          color: "var(--muted)",
+          fontFamily: "var(--font-heading)",
+          letterSpacing: "0.08em",
+        }}
       >
         {label}
         {required && <span style={{ color: "var(--danger)" }}> *</span>}
       </label>
       {children}
       {error && (
-        <p className="mt-1 text-xs" style={{ color: "var(--danger)" }}>
+        <p className="mt-1 text-xs" style={{ color: "var(--danger-ink)" }}>
           {error}
         </p>
       )}
       {hint && !error && (
-        <p className="mt-1 text-xs" style={{ color: "#c0bab4" }}>
+        <p className="mt-1 text-xs" style={{ color: "var(--muted)" }}>
           {hint}
         </p>
       )}
@@ -113,83 +122,41 @@ export function Field({ label, required, children, hint, error }: FieldProps) {
   );
 }
 
-const inputCls =
-  "w-full py-2 px-3 rounded-md text-sm focus:outline-none transition-colors";
-const inputStyle = {
-  backgroundColor: "#ffffff",
-  border: "1px solid var(--border)",
-  color: "var(--ink)",
-};
-const inputErrorStyle = {
-  backgroundColor: "#ffffff",
-  border: "1px solid var(--danger)",
-  color: "var(--ink)",
-};
-const inputFocusBorder = "var(--accent)";
-const inputBlurBorder = "var(--border)";
-
 export function Input({
   error,
+  className,
   ...props
 }: React.InputHTMLAttributes<HTMLInputElement> & { error?: boolean }) {
   return (
     <input
       {...props}
-      className={cn(inputCls, props.className)}
-      style={error ? inputErrorStyle : inputStyle}
-      onFocus={(e) => {
-        (e.target as HTMLInputElement).style.borderColor = inputFocusBorder;
-        props.onFocus?.(e);
-      }}
-      onBlur={(e) => {
-        (e.target as HTMLInputElement).style.borderColor = error
-          ? "var(--danger)"
-          : inputBlurBorder;
-        props.onBlur?.(e);
-      }}
+      aria-invalid={error || undefined}
+      className={cn("gw-input", className)}
     />
   );
 }
 
 export function Select({
   children,
+  className,
   ...props
 }: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
-    <select
-      {...props}
-      className={cn(inputCls, props.className)}
-      style={inputStyle}
-      onFocus={(e) => {
-        (e.target as HTMLSelectElement).style.borderColor = inputFocusBorder;
-        props.onFocus?.(e);
-      }}
-      onBlur={(e) => {
-        (e.target as HTMLSelectElement).style.borderColor = inputBlurBorder;
-        props.onBlur?.(e);
-      }}
-    >
+    <select {...props} className={cn("gw-input", className)}>
       {children}
     </select>
   );
 }
 
 export function Textarea({
+  className,
   ...props
 }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return (
     <textarea
       {...props}
-      className={cn(inputCls, "resize-none", props.className)}
-      style={{ ...inputStyle, minHeight: "80px" }}
-      onFocus={(e) => {
-        (e.target as HTMLTextAreaElement).style.borderColor = inputFocusBorder;
-        props.onFocus?.(e);
-      }}
-      onBlur={(e) => {
-        (e.target as HTMLTextAreaElement).style.borderColor = inputBlurBorder;
-        props.onBlur?.(e);
-      }}
+      className={cn("gw-input resize-none", className)}
+      style={{ minHeight: "80px", ...props.style }}
     />
   );
 }

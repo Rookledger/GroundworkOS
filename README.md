@@ -234,7 +234,7 @@ A few non-obvious design decisions and gotchas worth knowing before making chang
 
 **Hono middleware typing** — Any middleware factory meant to sit in front of a typed route handler (e.g. `requireRole` in `lib/auth.ts`) should be typed `MiddlewareHandler<AppEnv>` (see `types.ts` for `AppEnv`'s `Bindings`/`Variables`), not a bare untyped handler — otherwise `c.env`/`c.get(...)` lose their types for every handler in that route's chain.
 
-**Design tokens** — The UI's "Technical Survey" theme (warm concrete background, Survey Blue `#1b5e78` accent, Space Grotesk/Inter/JetBrains Mono type) is defined as CSS variables in `index.css`. Reuse those tokens for new UI work rather than hardcoding new colors.
+**Design tokens** — The UI's "Technical Survey" theme (light concrete background, navy `#1d2d3d` sidebar, amber `#f0a11e` highlight, Survey Blue `#5980a6` accent, Barlow Condensed headings / Barlow body) is defined as CSS variables in `index.css`. Reuse those tokens (and the shared `.gw-input`, `.gw-icon-btn`, `Btn`, `Modal`, `Auth*`, `Eyebrow`, `ProgressBar` and `useConfirm()` building blocks) for new UI work rather than hardcoding colours, fonts or `window.confirm`. Body text must keep at least 4.5:1 contrast, and tappable controls at least 32px (44px on touch devices).
 
 ---
 

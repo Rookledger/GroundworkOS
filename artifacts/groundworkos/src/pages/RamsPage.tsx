@@ -26,6 +26,7 @@ import {
 import { toRamsRecord } from "../lib/apiTransforms";
 import { toast } from "sonner";
 import type { RamsRecord, RamsRiskLevel, RamsStatus } from "../types";
+import { useConfirm } from "../components/ui/ConfirmDialog";
 
 const RISK_LEVELS: RamsRiskLevel[] = ["low", "medium", "high"];
 const STATUSES: RamsStatus[] = ["draft", "active", "archived"];
@@ -44,6 +45,7 @@ const emptyForm = {
 };
 
 export function RamsPage() {
+  const confirm = useConfirm();
   const { state, dispatch } = useApp();
   const { rams, jobs } = state;
   const role = useRole();
@@ -150,7 +152,10 @@ export function RamsPage() {
   }
 
   async function handleDelete(id: string, title: string) {
-    if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
+    const ok = await confirm(
+      `Delete "${title}"? This cannot be undone.`,
+    );
+    if (!ok) return;
     try {
       await deleteRamsRecord(id);
       dispatch({ type: "REMOVE_RAMS", id });

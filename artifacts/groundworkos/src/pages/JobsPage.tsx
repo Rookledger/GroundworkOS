@@ -23,6 +23,9 @@ import { createJob, updateJob, deleteJob } from "@workspace/api-client-react";
 import { toJob } from "../lib/apiTransforms";
 import { toast } from "sonner";
 import type { JobType, JobStatus } from "../types";
+import { useConfirm } from "../components/ui/ConfirmDialog";
+import { ProgressBar } from "../components/ui/ProgressBar";
+import { Eyebrow } from "../components/ui/Eyebrow";
 
 const TABS: { id: string; label: string }[] = [
   { id: "all", label: "All" },
@@ -70,6 +73,7 @@ const emptyForm = {
 };
 
 export function JobsPage() {
+  const confirm = useConfirm();
   const { state, dispatch } = useApp();
   const { jobs, clients } = state;
   const [, navigate] = useLocation();
@@ -252,7 +256,10 @@ export function JobsPage() {
   }
 
   async function handleDelete(id: string, jobNumber: string) {
-    if (!confirm(`Delete job ${jobNumber}? This cannot be undone.`)) return;
+    const ok = await confirm(
+      `Delete job ${jobNumber}? This cannot be undone.`,
+    );
+    if (!ok) return;
     try {
       await deleteJob(id);
       dispatch({ type: "REMOVE_JOB", id });
@@ -364,7 +371,7 @@ export function JobsPage() {
           <div className="relative flex-1 sm:w-64">
             <Search
               className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5"
-              style={{ color: "#c0bab4" }}
+              style={{ color: "var(--muted-2)" }}
             strokeWidth={1.5} />
             <input
               type="text"
@@ -616,18 +623,7 @@ export function JobsPage() {
                                 {job.progress_percent}%
                               </span>
                             </div>
-                            <div
-                              className="h-1.5 overflow-hidden"
-                              style={{ backgroundColor: "var(--surface-3)" }}
-                            >
-                              <div
-                                className="h-full"
-                                style={{
-                                  width: `${job.progress_percent}%`,
-                                  backgroundColor: "#2a6e45",
-                                }}
-                              />
-                            </div>
+                            <ProgressBar value={job.progress_percent} />
                           </div>
                         )}
                       </div>
@@ -652,18 +648,7 @@ export function JobsPage() {
                               {job.progress_percent}%
                             </span>
                           </div>
-                          <div
-                            className="h-1.5 overflow-hidden"
-                            style={{ backgroundColor: "var(--surface-3)" }}
-                          >
-                            <div
-                              className="h-full"
-                              style={{
-                                width: `${job.progress_percent}%`,
-                                backgroundColor: "#2a6e45",
-                              }}
-                            />
-                          </div>
+                          <ProgressBar value={job.progress_percent} />
                         </div>
                       )}
                       <div className="w-28 flex-shrink-0 text-right">
@@ -704,7 +689,7 @@ export function JobsPage() {
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => openEdit(selectedJob)}
-                    className="px-2 py-1 hover:bg-[var(--surface-3)] transition-colors text-xs font-medium"
+                    className="gw-btn-sm px-2 py-1 hover:bg-[var(--surface-3)] transition-colors text-xs font-medium"
                     style={{ color: "var(--accent)" }}
                     title="Edit job"
                   >
@@ -714,7 +699,7 @@ export function JobsPage() {
                     onClick={() =>
                       handleDelete(selectedJob.id, selectedJob.job_number)
                     }
-                    className="p-1 hover:bg-red-50 transition-colors"
+                    className="gw-icon-btn hover:bg-red-50 transition-colors"
                     style={{ color: "var(--danger)" }}
                     title="Delete job"
                   >
@@ -722,7 +707,7 @@ export function JobsPage() {
                   </button>
                   <button
                     onClick={() => setSelected(null)}
-                    className="p-1 hover:bg-[var(--surface-3)] transition-colors"
+                    className="gw-icon-btn hover:bg-[var(--surface-3)] transition-colors"
                     style={{ color: "var(--muted)" }}
                   >
                     <X className="w-4 h-4" strokeWidth={1.5} />
@@ -753,15 +738,7 @@ export function JobsPage() {
                 </div>
 
                 <div>
-                  <p
-                    className="text-[11px] font-bold uppercase tracking-widest mb-2.5"
-                    style={{
-                      color: "var(--muted)",
-                      fontFamily: "var(--font-heading)",
-                    }}
-                  >
-                    Status Workflow
-                  </p>
+                  <Eyebrow className="mb-2.5">Status Workflow</Eyebrow>
                   <div className="flex flex-wrap gap-1.5">
                     {JOB_STATUSES.map((s) => (
                       <button
@@ -794,15 +771,7 @@ export function JobsPage() {
                     style={{ border: "1px solid var(--surface-3)" }}
                   >
                     <div className="flex items-center justify-between mb-3">
-                      <p
-                        className="text-[11px] font-bold uppercase tracking-widest"
-                        style={{
-                          color: "var(--muted)",
-                          fontFamily: "var(--font-heading)",
-                        }}
-                      >
-                        Job Progress
-                      </p>
+                      <Eyebrow>Job Progress</Eyebrow>
                       <span className="text-sm font-bold font-mono text-[#2a6e45]">
                         {selectedJob.progress_percent}%
                       </span>
@@ -818,31 +787,12 @@ export function JobsPage() {
                       }
                       className="w-full accent-[var(--accent)] cursor-pointer"
                     />
-                    <div
-                      className="mt-3 h-2 overflow-hidden"
-                      style={{ backgroundColor: "var(--surface-3)" }}
-                    >
-                      <div
-                        className="h-full transition-all"
-                        style={{
-                          width: `${selectedJob.progress_percent}%`,
-                          backgroundColor: "#2a6e45",
-                        }}
-                      />
-                    </div>
+                    <ProgressBar value={selectedJob.progress_percent} height="h-2" className="mt-3" />
                   </div>
                 )}
 
                 <div className="pt-2">
-                  <p
-                    className="text-[11px] font-bold uppercase tracking-widest mb-3"
-                    style={{
-                      color: "var(--muted)",
-                      fontFamily: "var(--font-heading)",
-                    }}
-                  >
-                    Job Details
-                  </p>
+                  <Eyebrow className="mb-3">Job Details</Eyebrow>
                   <div
                     className="space-y-0 text-sm"
                     style={{
@@ -906,7 +856,7 @@ export function JobsPage() {
                         className="flex justify-between items-baseline gap-4 px-4 py-2.5"
                         style={{
                           backgroundColor:
-                            idx % 2 === 0 ? "var(--surface)" : "#f5f1ec",
+                            idx % 2 === 0 ? "var(--surface)" : "var(--surface-2)",
                         }}
                       >
                         <span style={{ color: "var(--muted)", flexShrink: 0 }}>
@@ -947,15 +897,7 @@ export function JobsPage() {
 
                 {selectedJob.description && (
                   <div className="pt-2">
-                    <p
-                      className="text-[11px] font-bold uppercase tracking-widest mb-2"
-                      style={{
-                        color: "var(--muted)",
-                        fontFamily: "var(--font-heading)",
-                      }}
-                    >
-                      Scope of Works
-                    </p>
+                    <Eyebrow className="mb-2">Scope of Works</Eyebrow>
                     <p
                       className="text-sm leading-relaxed whitespace-pre-wrap p-4 bg-[var(--surface)]"
                       style={{ color: "var(--ink-2)", border: "1px solid var(--surface-3)" }}

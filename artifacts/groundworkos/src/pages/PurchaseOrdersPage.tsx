@@ -26,6 +26,7 @@ import { toPurchaseOrder } from "../lib/apiTransforms";
 import { PurchaseOrderPDF } from "../lib/pdf/PurchaseOrderPDF";
 import { toast } from "sonner";
 import type { PurchaseOrder, PurchaseOrderStatus } from "../types";
+import { useConfirm } from "../components/ui/ConfirmDialog";
 
 const BASE = (import.meta as any).env?.BASE_URL?.replace(/\/$/, "") ?? "";
 
@@ -83,6 +84,7 @@ const EMPTY_FORM = {
 type FormState = typeof EMPTY_FORM;
 
 export function PurchaseOrdersPage() {
+  const confirm = useConfirm();
   const { state, dispatch } = useApp();
   const { purchaseOrders, jobs, settings } = state;
   const [, setLocation] = useLocation();
@@ -237,7 +239,10 @@ export function PurchaseOrdersPage() {
   }
 
   async function handleDelete(o: PurchaseOrder) {
-    if (!confirm(`Delete ${o.po_number}? This cannot be undone.`)) return;
+    const ok = await confirm(
+      `Delete ${o.po_number}? This cannot be undone.`,
+    );
+    if (!ok) return;
     setDeleting(true);
     try {
       const res = await fetch(`${BASE}/api/purchase-orders/${o.id}`, {
@@ -666,7 +671,7 @@ export function PurchaseOrdersPage() {
                 </div>
                 <button
                   onClick={() => setSelected(null)}
-                  className="p-1 hover:bg-[var(--surface-2)]"
+                  className="gw-icon-btn hover:bg-[var(--surface-2)]"
                 >
                   <X className="w-4 h-4" strokeWidth={1.5} style={{ color: "var(--muted-2)" }} />
                 </button>
@@ -879,7 +884,7 @@ export function PurchaseOrdersPage() {
       {showModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ backgroundColor: "rgba(24,20,16,0.5)" }}
+          style={{ backgroundColor: "var(--overlay)" }}
         >
           <div
             className="w-full max-w-lg shadow-2xl overflow-hidden"

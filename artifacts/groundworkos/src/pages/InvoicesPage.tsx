@@ -27,6 +27,7 @@ import {
 } from "@workspace/api-client-react";
 import { toInvoice } from "../lib/apiTransforms";
 import { toast } from "sonner";
+import { useConfirm } from "../components/ui/ConfirmDialog";
 
 const TABS = [
   { id: "all", label: "All" },
@@ -50,6 +51,7 @@ const emptyForm = {
 };
 
 export function InvoicesPage() {
+  const confirm = useConfirm();
   const { state, dispatch } = useApp();
   const { invoices, clients, jobs, settings } = state;
   const [, navigate] = useLocation();
@@ -224,8 +226,10 @@ export function InvoicesPage() {
   }
 
   async function handleDelete(id: string, invoiceNumber: string) {
-    if (!confirm(`Delete invoice ${invoiceNumber}? This cannot be undone.`))
-      return;
+    const ok = await confirm(
+      `Delete invoice ${invoiceNumber}? This cannot be undone.`,
+    );
+    if (!ok) return;
     try {
       await deleteInvoice(id);
       dispatch({ type: "REMOVE_INVOICE", id });
@@ -803,7 +807,7 @@ export function InvoicesPage() {
       {showEmailModal && selectedInv && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ backgroundColor: "rgba(24,20,16,0.5)" }}
+          style={{ backgroundColor: "var(--overlay)" }}
         >
           <div
             className="w-full max-w-md shadow-2xl overflow-hidden"
